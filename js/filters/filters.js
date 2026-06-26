@@ -288,13 +288,16 @@ function applyActivityTagColor(button, label, isActive) {
 function renderFilterTags(container, options, selectedSet, type) {
   if (!container) return;
   container.innerHTML = "";
+  const group = container.closest(".filter-group");
 
   if (options.length === 0) {
     container.hidden = true;
+    if (group) group.hidden = true;
     return;
   }
 
   container.hidden = false;
+  if (group) group.hidden = false;
   options.forEach(function (label) {
     const button = document.createElement("button");
     button.type = "button";
@@ -400,12 +403,15 @@ function isMobileLayout() {
   return window.matchMedia(MOBILE_BREAKPOINT).matches;
 }
 
-function syncFilterPanelState() {
+function syncFilterPanelState(options) {
   if (!dom.filterPanel || !dom.filterToggle) return;
   if (!isMobileLayout()) {
     dom.filterPanel.classList.add("filter-panel--open");
     dom.filterToggle.setAttribute("aria-expanded", "true");
     return;
+  }
+  if (options && options.initial) {
+    dom.filterPanel.classList.add("filter-panel--open");
   }
   const isOpen = dom.filterPanel.classList.contains("filter-panel--open");
   dom.filterToggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
@@ -421,7 +427,9 @@ export function setupFilterPanel() {
       dom.filterPanel.classList.toggle("filter-panel--open");
       syncFilterPanelState();
     });
-    window.matchMedia(MOBILE_BREAKPOINT).addEventListener("change", syncFilterPanelState);
-    syncFilterPanelState();
+    window.matchMedia(MOBILE_BREAKPOINT).addEventListener("change", function () {
+      syncFilterPanelState();
+    });
+    syncFilterPanelState({ initial: true });
   }
 }

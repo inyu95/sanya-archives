@@ -224,7 +224,7 @@ body:has(#year-filter-bar:not(.hidden)) {
   left: 8px;
   z-index: 10;
   width: max-content;
-  max-width: min(220px, calc(100vw - 400px));
+  max-width: min(220px, calc(100vw - 16px));
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -307,6 +307,9 @@ body:has(#year-filter-bar:not(.hidden)) {
   letter-spacing: 0.03em;
   text-align: left;
   box-sizing: border-box;
+  -webkit-appearance: none;
+  appearance: none;
+  touch-action: manipulation;
 }
 
 #filter-panel.filter-panel--open .filter-panel-header {
@@ -1049,7 +1052,7 @@ body:has(#year-filter-bar:not(.hidden)) {
   display: flex;
   align-items: center;
   gap: 8px;
-  max-width: min(720px, calc(100vw - 400px));
+  max-width: min(720px, calc(100vw - 16px));
   padding: 8px 12px;
   border-radius: 0;
   background: var(--jdr-surface);
@@ -1313,11 +1316,13 @@ span.cesium-sceneModePicker-wrapper {
   }
 
   #left-panel {
-    top: 44px;
-    left: 8px;
-    right: 8px;
+    position: fixed;
+    top: max(44px, calc(env(safe-area-inset-top, 0px) + 8px));
+    left: max(8px, env(safe-area-inset-left, 0px));
+    right: max(8px, env(safe-area-inset-right, 0px));
     width: auto;
     max-width: none;
+    z-index: 150;
   }
 
   #pin-search {
@@ -1335,6 +1340,10 @@ span.cesium-sceneModePicker-wrapper {
 
   #filter-panel:not(.filter-panel--open) #filter-panel-body {
     display: none;
+  }
+
+  #filter-panel.filter-panel--open #filter-panel-body {
+    display: block;
   }
 
   #filter-panel-body {
@@ -1383,14 +1392,16 @@ span.cesium-sceneModePicker-wrapper {
   }
 
   #year-filter-bar {
-    left: 8px;
-    right: 8px;
-    bottom: 8px;
+    position: fixed;
+    left: max(8px, env(safe-area-inset-left, 0px));
+    right: max(8px, env(safe-area-inset-right, 0px));
+    bottom: max(8px, env(safe-area-inset-bottom, 0px));
     transform: none;
     width: auto;
     max-width: none;
     padding: 6px 8px;
     gap: 4px;
+    z-index: 150;
   }
 
   #year-filter-label {
