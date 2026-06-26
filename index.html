@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Cesium Archive</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+
+    <link rel="stylesheet" href="node_modules/cesium/Build/Cesium/Widgets/widgets.css">
+    <link rel="stylesheet" href="stylesheet.css?v=6">
+  </head>
+
+  <body>
+    <div id="cesium"></div>
+
+    <button id="about-btn" class="cesium-toolbar-btn cesium-toolbar-btn--text" type="button">本アーカイブについて</button>
+
+    <button id="archive-list-btn" class="cesium-toolbar-btn" type="button" aria-label="アーカイブ一覧" title="アーカイブ一覧">
+      <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+        <path fill="currentColor" d="M3 5h18v2H3V5zm0 6h18v2H3v-2zm0 6h18v2H3v-2z"/>
+      </svg>
+    </button>
+
+    <button id="home-btn" class="cesium-toolbar-btn" type="button" aria-label="初期ビューに戻る" title="初期ビューに戻る">
+      <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+        <path fill="currentColor" d="M12 3L2 12h3v8h6v-6h2v6h6v-8h3L12 3z"/>
+      </svg>
+    </button>
+
+    <div id="archive-list-panel" class="hidden">
+      <div id="archive-list-header">
+        <h2>アーカイブ一覧</h2>
+        <button id="archive-list-close" type="button" aria-label="閉じる">×</button>
+      </div>
+      <div id="archive-list"></div>
+    </div>
+
+    <div id="left-panel">
+      <div id="search-panel">
+        <input type="search" id="pin-search" placeholder="検索..." autocomplete="off" spellcheck="false">
+        <span id="search-count"></span>
+      </div>
+
+      <div id="filter-panel">
+        <h3>フィルター</h3>
+        <div class="filter-group">
+          <h4>カテゴリ</h4>
+          <div id="category-filters" class="tag-list"></div>
+        </div>
+        <div class="filter-group">
+          <h4>アクティビティ</h4>
+          <div id="activity-filters" class="tag-list"></div>
+        </div>
+        <button id="filter-clear" type="button">クリア</button>
+      </div>
+    </div>
+
+    <div id="side-panel">
+      <div id="info-panel" class="hidden">
+        <div id="info-card-header">
+          <h2 id="info-name"></h2>
+          <div id="info-header-actions">
+            <button id="fly-to-pin" type="button" aria-label="この場所に移動" title="この場所に移動">
+              <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+                <path fill="currentColor" d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/>
+              </svg>
+            </button>
+            <button id="info-close" type="button" aria-label="閉じる">×</button>
+          </div>
+        </div>
+        <div id="info-card-body">
+          <div id="image-gallery" class="hidden">
+            <button id="image-gallery-prev" type="button" aria-label="前の写真">‹</button>
+            <div id="image-gallery-viewport" role="button" tabindex="0" aria-label="写真を拡大表示">
+              <img id="image-view" alt="">
+              <span class="image-gallery-hint">クリックで拡大表示</span>
+            </div>
+            <button id="image-gallery-next" type="button" aria-label="次の写真">›</button>
+          </div>
+          <span id="image-gallery-counter" class="hidden"></span>
+          <div id="pointcloud-preview-section" class="hidden">
+            <h3>3Dモデル</h3>
+            <div id="pointcloud-preview" class="pointcloud-preview" role="button" tabindex="0" aria-label="3Dモデルを拡大表示">
+              <div id="pointcloud-preview-viewer"></div>
+              <div id="pointcloud-preview-placeholder">
+                <span>3Dモデルを読み込み中...</span>
+              </div>
+              <span class="pointcloud-preview-hint">クリックで拡大表示</span>
+            </div>
+          </div>
+          <p id="text-view"></p>
+          <a id="spot-homepage-btn" class="spot-homepage-btn hidden" target="_blank" rel="noopener noreferrer">リンク</a>
+          <div id="info-meta">
+            <div class="info-meta-item">
+              <span class="info-meta-label">カテゴリ</span>
+              <span id="category-view"></span>
+            </div>
+            <div class="info-meta-item">
+              <span class="info-meta-label">アクティビティ</span>
+              <span id="activity-view"></span>
+            </div>
+            <div class="info-meta-item">
+              <span class="info-meta-label">年代</span>
+              <span id="year-view"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p id="status-view">起動中...</p>
+    </div>
+
+    <div id="year-filter-bar" class="hidden">
+      <button id="year-filter-prev" type="button" aria-label="前の年代">‹</button>
+      <div id="year-filter-track" role="tablist" aria-label="年代フィルター"></div>
+      <button id="year-filter-next" type="button" aria-label="次の年代">›</button>
+      <span id="year-filter-label"></span>
+    </div>
+
+    <div id="photo-modal" class="hidden">
+      <div id="photo-modal-backdrop"></div>
+      <div id="photo-modal-dialog">
+        <div id="photo-modal-header">
+          <h2 id="photo-modal-title">写真</h2>
+          <span id="photo-modal-counter"></span>
+          <button id="photo-modal-close" type="button" aria-label="閉じる">×</button>
+        </div>
+        <div id="photo-modal-body">
+          <button id="photo-modal-prev" type="button" aria-label="前の写真">‹</button>
+          <img id="photo-modal-image" alt="">
+          <button id="photo-modal-next" type="button" aria-label="次の写真">›</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="about-sheet" class="hidden" aria-hidden="true">
+      <div id="about-sheet-backdrop"></div>
+      <div id="about-sheet-panel">
+        <div id="about-sheet-header">
+          <h2>本アーカイブについて</h2>
+          <button id="about-sheet-close" type="button" aria-label="閉じる">×</button>
+        </div>
+        <div id="about-sheet-body"></div>
+      </div>
+    </div>
+
+    <div id="pointcloud-modal" class="hidden">
+      <div id="pointcloud-modal-backdrop"></div>
+      <div id="pointcloud-modal-dialog">
+        <div id="pointcloud-modal-header">
+          <h2 id="pointcloud-modal-title">点群</h2>
+          <button id="pointcloud-modal-reset" type="button" aria-label="表示を元に戻す" title="表示を元に戻す">
+            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+              <path fill="currentColor" d="M12 3L2 12h3v8h6v-6h2v6h6v-8h3L12 3z"/>
+            </svg>
+          </button>
+          <button id="pointcloud-modal-close" type="button" aria-label="閉じる">×</button>
+        </div>
+        <div id="pointcloud-viewer-host">
+          <div id="pointcloud-viewer"></div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      window.CESIUM_BASE_URL = "node_modules/cesium/Build/Cesium/";
+    </script>
+    <script src="node_modules/cesium/Build/Cesium/Cesium.js"></script>
+    <script type="module" src="js/main.js?v=52"></script>
+  </body>
+</html>
