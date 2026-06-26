@@ -9,7 +9,7 @@
     <meta http-equiv="Expires" content="0">
 
     <link rel="stylesheet" href="node_modules/cesium/Build/Cesium/Widgets/widgets.css">
-    <link rel="stylesheet" href="stylesheet.css?v=6">
+    <link rel="stylesheet" href="stylesheet.css?v=7">
   </head>
 
   <body>
@@ -44,16 +44,21 @@
       </div>
 
       <div id="filter-panel">
-        <h3>フィルター</h3>
-        <div class="filter-group">
-          <h4>カテゴリ</h4>
-          <div id="category-filters" class="tag-list"></div>
+        <button type="button" id="filter-toggle" class="filter-panel-header" aria-expanded="false" aria-controls="filter-panel-body">
+          フィルター
+          <span class="filter-toggle-icon" aria-hidden="true"></span>
+        </button>
+        <div id="filter-panel-body">
+          <div class="filter-group">
+            <h4>カテゴリ</h4>
+            <div id="category-filters" class="tag-list"></div>
+          </div>
+          <div class="filter-group">
+            <h4>アクティビティ</h4>
+            <div id="activity-filters" class="tag-list"></div>
+          </div>
+          <button id="filter-clear" type="button">クリア</button>
         </div>
-        <div class="filter-group">
-          <h4>アクティビティ</h4>
-          <div id="activity-filters" class="tag-list"></div>
-        </div>
-        <button id="filter-clear" type="button">クリア</button>
       </div>
     </div>
 

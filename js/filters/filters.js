@@ -394,8 +394,34 @@ export function setupSearchBox() {
   });
 }
 
+const MOBILE_BREAKPOINT = "(max-width: 768px)";
+
+function isMobileLayout() {
+  return window.matchMedia(MOBILE_BREAKPOINT).matches;
+}
+
+function syncFilterPanelState() {
+  if (!dom.filterPanel || !dom.filterToggle) return;
+  if (!isMobileLayout()) {
+    dom.filterPanel.classList.add("filter-panel--open");
+    dom.filterToggle.setAttribute("aria-expanded", "true");
+    return;
+  }
+  const isOpen = dom.filterPanel.classList.contains("filter-panel--open");
+  dom.filterToggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
+}
+
 export function setupFilterPanel() {
   if (dom.filterClear) {
     dom.filterClear.addEventListener("click", clearFilters);
+  }
+  if (dom.filterToggle && dom.filterPanel) {
+    dom.filterToggle.addEventListener("click", function () {
+      if (!isMobileLayout()) return;
+      dom.filterPanel.classList.toggle("filter-panel--open");
+      syncFilterPanelState();
+    });
+    window.matchMedia(MOBILE_BREAKPOINT).addEventListener("change", syncFilterPanelState);
+    syncFilterPanelState();
   }
 }

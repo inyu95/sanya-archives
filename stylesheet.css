@@ -288,22 +288,50 @@ body:has(#year-filter-bar:not(.hidden)) {
   color: var(--jdr-text);
 }
 
-#filter-panel h3 {
+#filter-panel .filter-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
   margin: 0;
   padding: 10px 12px;
+  border: none;
+  border-bottom: 1px solid var(--jdr-border);
+  border-radius: 0;
+  background: var(--jdr-surface);
+  color: var(--jdr-text);
   font-size: 12px;
   font-weight: 600;
+  font-family: inherit;
   letter-spacing: 0.03em;
-  color: var(--jdr-text);
-  background: var(--jdr-surface);
-  border-bottom: 1px solid var(--jdr-border);
+  text-align: left;
+  box-sizing: border-box;
+}
+
+#filter-panel.filter-panel--open .filter-panel-header {
+  border-bottom-color: var(--jdr-border);
+}
+
+.filter-toggle-icon {
+  flex-shrink: 0;
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 5px solid var(--jdr-text-muted);
+  transition: transform 0.2s ease;
+}
+
+#filter-panel.filter-panel--open .filter-toggle-icon {
+  transform: rotate(180deg);
 }
 
 .filter-group {
   margin: 0 12px 8px;
 }
 
-.filter-group:first-of-type {
+#filter-panel-body .filter-group:first-of-type {
   margin-top: 12px;
 }
 
@@ -1253,4 +1281,149 @@ span.cesium-sceneModePicker-wrapper {
 #about-sheet-body p {
   margin: 0 0 8px;
   color: var(--jdr-text-secondary);
+}
+
+/* ── デスクトップ: フィルターは常に展開 ── */
+
+@media (min-width: 769px) {
+  #filter-panel .filter-panel-header {
+    pointer-events: none;
+    cursor: default;
+  }
+
+  .filter-toggle-icon {
+    display: none;
+  }
+
+  #filter-panel-body {
+    display: block;
+  }
+}
+
+/* ── スマホ ── */
+
+@media (max-width: 768px) {
+  :root {
+    --ui-top-inset: 44px;
+    --ui-bottom-inset: 12px;
+  }
+
+  body:has(#year-filter-bar:not(.hidden)) {
+    --ui-bottom-inset: 60px;
+  }
+
+  #left-panel {
+    top: 44px;
+    left: 8px;
+    right: 8px;
+    width: auto;
+    max-width: none;
+  }
+
+  #pin-search {
+    font-size: 16px;
+    padding: 10px 12px;
+  }
+
+  #filter-panel .filter-panel-header {
+    cursor: pointer;
+  }
+
+  #filter-panel:not(.filter-panel--open) .filter-panel-header {
+    border-bottom: none;
+  }
+
+  #filter-panel:not(.filter-panel--open) #filter-panel-body {
+    display: none;
+  }
+
+  #filter-panel-body {
+    max-height: min(50vh, 320px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  #side-panel {
+    top: auto;
+    left: 0;
+    right: 0;
+    width: 100%;
+    max-height: min(58vh, 480px);
+    border-left: none;
+  }
+
+  #side-panel:has(#info-panel:not(.hidden)) {
+    border-top: 1px solid var(--jdr-border);
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.08);
+  }
+
+  #info-card-header {
+    padding: 14px 16px 12px;
+  }
+
+  #info-name {
+    font-size: 16px;
+  }
+
+  #info-card-body {
+    padding: 16px 18px 20px;
+  }
+
+  #status-view {
+    padding: 8px 16px;
+    font-size: 11px;
+  }
+
+  #archive-list-panel {
+    top: 44px;
+    left: 8px;
+    right: 8px;
+    width: auto;
+    max-height: calc(100vh - 52px);
+  }
+
+  #year-filter-bar {
+    left: 8px;
+    right: 8px;
+    bottom: 8px;
+    transform: none;
+    width: auto;
+    max-width: none;
+    padding: 6px 8px;
+    gap: 4px;
+  }
+
+  #year-filter-label {
+    display: none;
+  }
+
+  .cesium-toolbar-btn--text {
+    max-width: 88px;
+    padding: 0 6px;
+    font-size: 10px;
+    white-space: normal;
+    line-height: 1.2;
+    height: auto;
+    min-height: 32px;
+  }
+
+  #photo-modal,
+  #pointcloud-modal,
+  #about-sheet {
+    padding: 12px;
+  }
+
+  #photo-modal-dialog {
+    width: 100%;
+  }
+
+  #pointcloud-modal-dialog {
+    width: 100%;
+    height: min(72vh, 560px);
+  }
+
+  #about-sheet-panel {
+    width: 100%;
+    max-height: 80vh;
+  }
 }
