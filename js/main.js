@@ -13,17 +13,30 @@ import { setupArchiveList } from "./ui/archive-list.js";
 import { setupAboutSheet } from "./ui/about.js";
 import { setupPointCloudModal, clearPointCloudModal } from "./pointcloud/viewer.js";
 
+function configureGlobeForGoogle3DTiles(viewer) {
+  viewer.scene.globe.show = false;
+  viewer.scene.globe.depthTestAgainstTerrain = false;
+}
+
+function configureGlobeForFallback(viewer) {
+  viewer.scene.globe.show = true;
+  viewer.terrainProvider = Cesium.Terrain.fromWorldTerrain();
+  viewer.scene.globe.depthTestAgainstTerrain = true;
+}
+
 export function loadGoogleEarth3D() {
   return Cesium.createGooglePhotorealistic3DTileset({
     onlyUsingWithGoogleGeocoder: true
   }).then(function (tileset) {
     state.google3dTileset = tileset;
     state.viewer.scene.primitives.add(tileset);
+    configureGlobeForGoogle3DTiles(state.viewer);
     state.viewer.scene.requestRender();
   });
 }
 
 export function loadFallbackBuildings() {
+  configureGlobeForFallback(state.viewer);
   return Cesium.createOsmBuildingsAsync().then(function (buildings) {
     state.viewer.scene.primitives.add(buildings);
     state.viewer.scene.requestRender();
@@ -62,7 +75,6 @@ export function init() {
   Cesium.Ion.defaultAccessToken = CESIUM_ION_TOKEN;
 
   state.viewer = new Cesium.Viewer("cesium", {
-    terrain: Cesium.Terrain.fromWorldTerrain(),
     geocoder: false,
     infoBox: false,
     selectionIndicator: false,
@@ -74,7 +86,8 @@ export function init() {
     navigationHelpButton: true
   });
 
-  state.viewer.scene.globe.depthTestAgainstTerrain = true;
+  // Google 3D Tiles 読み込み前はデフォルトの楕円体地形のみ。World Terrain は 3D Tiles と重なってチカチカする。
+  configureGlobeForGoogle3DTiles(state.viewer);
   state.viewer.scene.screenSpaceCameraController.enableCollisionDetection = true;
   setupClickHandler();
   setupSearchBox();
