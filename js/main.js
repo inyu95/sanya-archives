@@ -1,4 +1,7 @@
-import { CESIUM_ION_TOKEN } from "./config/constants.js";
+import {
+  CESIUM_ION_TOKEN,
+  GOOGLE_3D_TILESET_MAXIMUM_SCREEN_SPACE_ERROR
+} from "./config/constants.js";
 import { state } from "./state.js";
 import { setStatus } from "./ui/status.js";
 import { tryLoadSheet } from "./data/sheets.js";
@@ -18,6 +21,24 @@ function configureGlobeForGoogle3DTiles(viewer) {
   viewer.scene.globe.depthTestAgainstTerrain = false;
 }
 
+function configureViewerForHighQuality3D(viewer) {
+  viewer.useBrowserRecommendedResolution = true;
+  viewer.resolutionScale = 1.0;
+  viewer.scene.msaaSamples = 4;
+  viewer.scene.postProcessStages.fxaa.enabled = true;
+  viewer.scene.fog.enabled = false;
+}
+
+function getGoogle3DTilesetOptions() {
+  return {
+    maximumScreenSpaceError: GOOGLE_3D_TILESET_MAXIMUM_SCREEN_SPACE_ERROR,
+    dynamicScreenSpaceError: false,
+    foveatedScreenSpaceError: false,
+    immediatelyLoadDesiredLevelOfDetail: true,
+    loadSiblings: true
+  };
+}
+
 function configureGlobeForFallback(viewer) {
   viewer.scene.globe.show = true;
   viewer.terrainProvider = Cesium.Terrain.fromWorldTerrain();
@@ -25,9 +46,10 @@ function configureGlobeForFallback(viewer) {
 }
 
 export function loadGoogleEarth3D() {
-  return Cesium.createGooglePhotorealistic3DTileset({
-    onlyUsingWithGoogleGeocoder: true
-  }).then(function (tileset) {
+  return Cesium.createGooglePhotorealistic3DTileset(
+    { onlyUsingWithGoogleGeocoder: true },
+    getGoogle3DTilesetOptions()
+  ).then(function (tileset) {
     state.google3dTileset = tileset;
     state.viewer.scene.primitives.add(tileset);
     configureGlobeForGoogle3DTiles(state.viewer);
@@ -86,6 +108,7 @@ export function init() {
     navigationHelpButton: true
   });
 
+  configureViewerForHighQuality3D(state.viewer);
   // Google 3D Tiles 読み込み前はデフォルトの楕円体地形のみ。World Terrain は 3D Tiles と重なってチカチカする。
   configureGlobeForGoogle3DTiles(state.viewer);
   state.viewer.scene.screenSpaceCameraController.enableCollisionDetection = true;
