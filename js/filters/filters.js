@@ -9,19 +9,48 @@ import { renderArchiveList } from "../ui/archive-list.js";
 function getDecadesFromPins(pins) {
   const decades = new Set();
   pins.forEach(function (pin) {
-    const year = parsePinYear(pin.year);
-    if (year !== null) {
-      decades.add(Math.floor(year / 10) * 10);
+    const range = getPinActiveYearRange(pin);
+    if (!range) return;
+
+    const startDecade = Math.floor(range.start / 10) * 10;
+    const endYear = Number.isFinite(range.end) ? range.end : new Date().getFullYear();
+    const endDecade = Math.floor(endYear / 10) * 10;
+    for (let decade = startDecade; decade <= endDecade; decade += 10) {
+      decades.add(decade);
     }
   });
   return Array.from(decades).sort(function (a, b) { return a - b; });
 }
 
+function getPinActiveYearRange(pin) {
+  const openingYear = parsePinYear(pin.openingYear);
+  const closingYear = parsePinYear(pin.closingYear);
+  const legacyYear = parsePinYear(pin.year);
+
+  let start = openingYear;
+  let end = closingYear;
+  if (start === null && end === null && legacyYear !== null) {
+    start = legacyYear;
+    end = legacyYear;
+  }
+  if (start === null && end === null) return null;
+  if (start === null) start = end;
+  if (end === null) end = Number.POSITIVE_INFINITY;
+  if (end < start) {
+    const tmp = start;
+    start = end;
+    end = tmp;
+  }
+  return { start: start, end: end };
+}
+
 function pinMatchesYearFilter(pin) {
   if (state.selectedYearDecade === null) return true;
-  const year = parsePinYear(pin.year);
-  if (year === null) return false;
-  return year >= state.selectedYearDecade && year < state.selectedYearDecade + 10;
+  const range = getPinActiveYearRange(pin);
+  if (!range) return false;
+  const decadeStart = state.selectedYearDecade;
+  const decadeEnd = decadeStart + 9;
+  return range.start <= decadeEnd && range.end >= decadeStart;
 }
 
 function formatYearDecadeLabel(decadeStart) {
@@ -206,7 +235,8 @@ function pinMatchesQuery(pin, query) {
     pin.name,
     pin.text,
     pin.category,
-    pin.year,
+    pin.openingYear,
+    pin.closingYear,
     (pin.activity || []).join(" ")
   ];
   return fields.some(function (field) {

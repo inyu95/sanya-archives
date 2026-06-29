@@ -7,6 +7,15 @@ import { normalizeUrl } from "./utils/parse.js";
 let galleryImages = [];
 let galleryIndex = 0;
 
+function formatActiveYears(openingYear, closingYear) {
+  const open = String(openingYear || "").trim();
+  const close = String(closingYear || "").trim();
+  if (open && close) return open + " - " + close;
+  if (open) return open + " -";
+  if (close) return "- " + close;
+  return "";
+}
+
 function setInfoField(element, value) {
   if (!element) return;
   const text = String(value || "").trim();
@@ -123,7 +132,13 @@ export function showPinInfo(entity) {
   setInfoField(dom.textView, props.text.getValue());
   setInfoField(dom.categoryView, props.category.getValue());
   setInfoField(dom.activityView, activities.join(", "));
-  setInfoField(dom.yearView, props.year.getValue());
+  setInfoField(
+    dom.yearView,
+    formatActiveYears(
+      props.openingYear ? props.openingYear.getValue() : "",
+      props.closingYear ? props.closingYear.getValue() : ""
+    )
+  );
   const assetId = props.pointcloudAssetId.getValue();
   if (assetId) {
     loadPointCloudPreview(assetId, entity.name);

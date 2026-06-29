@@ -178,9 +178,10 @@ function parseRows(rows) {
       pointcloud: cellValue(c[4]) !== "" ? parseInt(cellValue(c[4]), 10) : null,
       url: String(cellValue(c[5]) || "").trim(),
       urlLabel: String(cellValue(c[6]) || "").trim(),
-      year: String(cellValue(c[7]) || ""),
-      category: String(cellValue(c[8]) || ""),
-      activity: parseCommaList(cellValue(c[9]))
+      openingYear: String(cellValue(c[7]) || "").trim(),
+      closingYear: String(cellValue(c[8]) || "").trim(),
+      category: String(cellValue(c[9]) || ""),
+      activity: parseCommaList(cellValue(c[10]))
     });
   }
   return list;
