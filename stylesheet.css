@@ -21,6 +21,7 @@ html, body {
   --jdr-shadow: 0 1px 6px rgba(0, 0, 0, 0.06);
   --ui-top-inset: 48px;
   --ui-bottom-inset: 16px;
+  --side-panel-width: 380px;
 }
 
 body:has(#year-filter-bar:not(.hidden)) {
@@ -1185,6 +1186,16 @@ span.cesium-sceneModePicker-wrapper {
   z-index: 200;
 }
 
+/* 全画面ボタンと情報パネルの重なり回避 */
+.cesium-viewer-fullscreenContainer {
+  right: 8px;
+  bottom: 8px;
+}
+
+body:has(#info-panel:not(.hidden)) .cesium-viewer-fullscreenContainer {
+  right: calc(var(--side-panel-width) + 8px);
+}
+
 /* ── 本アーカイブについて ── */
 
 #about-sheet {
@@ -1359,6 +1370,16 @@ span.cesium-sceneModePicker-wrapper {
     width: 100%;
     max-height: min(58vh, 480px);
     border-left: none;
+  }
+
+  .cesium-viewer-fullscreenContainer {
+    right: max(8px, env(safe-area-inset-right, 0px));
+    bottom: max(8px, env(safe-area-inset-bottom, 0px));
+  }
+
+  body:has(#info-panel:not(.hidden)) .cesium-viewer-fullscreenContainer {
+    right: max(8px, env(safe-area-inset-right, 0px));
+    bottom: calc(min(58vh, 480px) + max(12px, env(safe-area-inset-bottom, 0px)));
   }
 
   #side-panel:has(#info-panel:not(.hidden)) {
