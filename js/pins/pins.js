@@ -86,17 +86,37 @@ export function renderPins(pinDataList, onComplete) {
 
 export function flyToPins() {
   if (state.viewer.entities.values.length === 0) return;
+  const controller = state.viewer.scene.screenSpaceCameraController;
+  const previousCollision = controller.enableCollisionDetection;
+  state.viewer.camera.cancelFlight();
+  controller.enableCollisionDetection = false;
   state.viewer.flyTo(state.viewer.entities, {
     duration: 2,
-    offset: new Cesium.HeadingPitchRange(0, Cesium.Math.toRadians(-55), INITIAL_PIN_VIEW_RANGE)
+    offset: new Cesium.HeadingPitchRange(0, Cesium.Math.toRadians(-55), INITIAL_PIN_VIEW_RANGE),
+    complete: function () {
+      controller.enableCollisionDetection = previousCollision;
+    },
+    cancel: function () {
+      controller.enableCollisionDetection = previousCollision;
+    }
   });
 }
 
 export function flyToPin(entity) {
   if (!entity) return;
+  const controller = state.viewer.scene.screenSpaceCameraController;
+  const previousCollision = controller.enableCollisionDetection;
+  state.viewer.camera.cancelFlight();
+  controller.enableCollisionDetection = false;
   state.viewer.flyTo(entity, {
     duration: 1.5,
-    offset: new Cesium.HeadingPitchRange(0, Cesium.Math.toRadians(-50), 120)
+    offset: new Cesium.HeadingPitchRange(0, Cesium.Math.toRadians(-50), 120),
+    complete: function () {
+      controller.enableCollisionDetection = previousCollision;
+    },
+    cancel: function () {
+      controller.enableCollisionDetection = previousCollision;
+    }
   });
 }
 

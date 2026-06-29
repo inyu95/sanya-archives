@@ -42,6 +42,67 @@ function isHeaderRow(c) {
   return colA === "name" && (colB.indexOf("lat") !== -1 || colB.indexOf("lon") !== -1);
 }
 
+function normalizeHeaderText(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "");
+}
+
+function resolveColumnIndex(headerMap, key, fallback) {
+  return Object.prototype.hasOwnProperty.call(headerMap, key) ? headerMap[key] : fallback;
+}
+
+function getColumnIndexes(rows) {
+  const defaultIndexes = {
+    name: 0,
+    coords: 1,
+    imageFolder: 2,
+    text: 3,
+    pointcloud: 4,
+    url: 5,
+    urlLabel: 6,
+    openingYear: 7,
+    closingYear: 8,
+    category: 9,
+    activity: 10
+  };
+  if (!rows || rows.length === 0) return defaultIndexes;
+
+  const headerRow = rows[0].c || [];
+  const headerMap = {};
+  for (let i = 0; i < headerRow.length; i++) {
+    const header = normalizeHeaderText(cellValue(headerRow[i]));
+    if (!header) continue;
+
+    if (header === "name" || header === "名称" || header === "スポット名") headerMap.name = i;
+    else if (header.indexOf("lat") !== -1 || header.indexOf("lon") !== -1 || header === "座標" || header === "緯度経度") headerMap.coords = i;
+    else if (header === "imagefolder" || header === "image" || header === "写真フォルダ") headerMap.imageFolder = i;
+    else if (header === "text" || header === "説明") headerMap.text = i;
+    else if (header.indexOf("pointcloud") !== -1) headerMap.pointcloud = i;
+    else if (header === "url") headerMap.url = i;
+    else if (header === "url表示名") headerMap.urlLabel = i;
+    else if (header === "開業年") headerMap.openingYear = i;
+    else if (header === "閉業年") headerMap.closingYear = i;
+    else if (header === "category" || header === "カテゴリ") headerMap.category = i;
+    else if (header === "activity" || header === "アクティビティ") headerMap.activity = i;
+  }
+
+  return {
+    name: resolveColumnIndex(headerMap, "name", defaultIndexes.name),
+    coords: resolveColumnIndex(headerMap, "coords", defaultIndexes.coords),
+    imageFolder: resolveColumnIndex(headerMap, "imageFolder", defaultIndexes.imageFolder),
+    text: resolveColumnIndex(headerMap, "text", defaultIndexes.text),
+    pointcloud: resolveColumnIndex(headerMap, "pointcloud", defaultIndexes.pointcloud),
+    url: resolveColumnIndex(headerMap, "url", defaultIndexes.url),
+    urlLabel: resolveColumnIndex(headerMap, "urlLabel", defaultIndexes.urlLabel),
+    openingYear: resolveColumnIndex(headerMap, "openingYear", defaultIndexes.openingYear),
+    closingYear: resolveColumnIndex(headerMap, "closingYear", defaultIndexes.closingYear),
+    category: resolveColumnIndex(headerMap, "category", defaultIndexes.category),
+    activity: resolveColumnIndex(headerMap, "activity", defaultIndexes.activity)
+  };
+}
+
 function resolveImageUrl(path) {
   if (!path) return "";
   if (/^https?:\/\//i.test(path)) return path;
@@ -156,12 +217,13 @@ function resolvePinImages(pins) {
 
 function parseRows(rows) {
   const list = [];
+  const col = getColumnIndexes(rows);
   for (let index = 0; index < rows.length; index++) {
     const c = rows[index].c || [];
     if (isHeaderRow(c)) continue;
 
-    const name = String(cellValue(c[0]) || "");
-    const coords = parseLatLonCell(cellValue(c[1]));
+    const name = String(cellValue(c[col.name]) || "");
+    const coords = parseLatLonCell(cellValue(c[col.coords]));
     if (!coords) {
       console.warn("座標が無効な行をスキップ:", name || "(行 " + (index + 1) + ")");
       continue;
@@ -171,17 +233,17 @@ function parseRows(rows) {
       name: name || "ピン" + index,
       lon: coords.lon,
       lat: coords.lat,
-      imageFolder: String(cellValue(c[2]) || "").trim(),
+      imageFolder: String(cellValue(c[col.imageFolder]) || "").trim(),
       image: "",
       images: [],
-      text: String(cellValue(c[3]) || ""),
-      pointcloud: cellValue(c[4]) !== "" ? parseInt(cellValue(c[4]), 10) : null,
-      url: String(cellValue(c[5]) || "").trim(),
-      urlLabel: String(cellValue(c[6]) || "").trim(),
-      openingYear: String(cellValue(c[7]) || "").trim(),
-      closingYear: String(cellValue(c[8]) || "").trim(),
-      category: String(cellValue(c[9]) || ""),
-      activity: parseCommaList(cellValue(c[10]))
+      text: String(cellValue(c[col.text]) || ""),
+      pointcloud: cellValue(c[col.pointcloud]) !== "" ? parseInt(cellValue(c[col.pointcloud]), 10) : null,
+      url: String(cellValue(c[col.url]) || "").trim(),
+      urlLabel: String(cellValue(c[col.urlLabel]) || "").trim(),
+      openingYear: String(cellValue(c[col.openingYear]) || "").trim(),
+      closingYear: String(cellValue(c[col.closingYear]) || "").trim(),
+      category: String(cellValue(c[col.category]) || ""),
+      activity: parseCommaList(cellValue(c[col.activity]))
     });
   }
   return list;
