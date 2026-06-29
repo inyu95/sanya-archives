@@ -1,6 +1,7 @@
 import {
   CESIUM_ION_TOKEN,
-  GOOGLE_3D_TILESET_MAXIMUM_SCREEN_SPACE_ERROR
+  GOOGLE_3D_TILESET_MAXIMUM_SCREEN_SPACE_ERROR,
+  GOOGLE_MAP_TILES_API_KEY
 } from "./config/constants.js";
 import { state } from "./state.js";
 import { setStatus } from "./ui/status.js";
@@ -22,11 +23,21 @@ function configureGlobeForGoogle3DTiles(viewer) {
 }
 
 function configureViewerForHighQuality3D(viewer) {
-  viewer.useBrowserRecommendedResolution = true;
-  viewer.resolutionScale = 1.0;
+  const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+  viewer.useBrowserRecommendedResolution = false;
+  viewer.resolutionScale = pixelRatio;
   viewer.scene.msaaSamples = 4;
   viewer.scene.postProcessStages.fxaa.enabled = true;
   viewer.scene.fog.enabled = false;
+  viewer.scene.highDynamicRange = true;
+}
+
+function getGoogle3DTilesetApiOptions(useDirectApi) {
+  const options = { onlyUsingWithGoogleGeocoder: true };
+  if (useDirectApi && GOOGLE_MAP_TILES_API_KEY) {
+    options.key = GOOGLE_MAP_TILES_API_KEY;
+  }
+  return options;
 }
 
 function getGoogle3DTilesetOptions() {
@@ -35,8 +46,27 @@ function getGoogle3DTilesetOptions() {
     dynamicScreenSpaceError: false,
     foveatedScreenSpaceError: false,
     immediatelyLoadDesiredLevelOfDetail: true,
-    loadSiblings: true
+    loadSiblings: true,
+    preferLeaves: true,
+    cullRequestsWhileMoving: false,
+    skipLevelOfDetail: true,
+    baseScreenSpaceError: 1024,
+    skipScreenSpaceErrorFactor: 2
   };
+}
+
+function mountGoogle3DTileset(tileset) {
+  state.google3dTileset = tileset;
+  state.viewer.scene.primitives.add(tileset);
+  configureGlobeForGoogle3DTiles(state.viewer);
+  state.viewer.scene.requestRender();
+}
+
+function createGoogle3DTileset(useDirectApi) {
+  return Cesium.createGooglePhotorealistic3DTileset(
+    getGoogle3DTilesetApiOptions(useDirectApi),
+    getGoogle3DTilesetOptions()
+  ).then(mountGoogle3DTileset);
 }
 
 function configureGlobeForFallback(viewer) {
@@ -46,14 +76,12 @@ function configureGlobeForFallback(viewer) {
 }
 
 export function loadGoogleEarth3D() {
-  return Cesium.createGooglePhotorealistic3DTileset(
-    { onlyUsingWithGoogleGeocoder: true },
-    getGoogle3DTilesetOptions()
-  ).then(function (tileset) {
-    state.google3dTileset = tileset;
-    state.viewer.scene.primitives.add(tileset);
-    configureGlobeForGoogle3DTiles(state.viewer);
-    state.viewer.scene.requestRender();
+  return createGoogle3DTileset(true).catch(function (err) {
+    if (!GOOGLE_MAP_TILES_API_KEY) {
+      throw err;
+    }
+    console.warn("Google Map Tiles API 直接接続に失敗、Ion 経由で再試行:", err);
+    return createGoogle3DTileset(false);
   });
 }
 
