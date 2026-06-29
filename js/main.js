@@ -1,8 +1,4 @@
-import {
-  CESIUM_ION_TOKEN,
-  GOOGLE_3D_TILESET_MAXIMUM_SCREEN_SPACE_ERROR,
-  GOOGLE_MAP_TILES_API_KEY
-} from "./config/constants.js";
+import { CESIUM_ION_TOKEN } from "./config/constants.js";
 import { state } from "./state.js";
 import { setStatus } from "./ui/status.js";
 import { tryLoadSheet } from "./data/sheets.js";
@@ -22,53 +18,6 @@ function configureGlobeForGoogle3DTiles(viewer) {
   viewer.scene.globe.depthTestAgainstTerrain = false;
 }
 
-function configureViewerForHighQuality3D(viewer) {
-  const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
-  viewer.useBrowserRecommendedResolution = false;
-  viewer.resolutionScale = pixelRatio;
-  viewer.scene.msaaSamples = 4;
-  viewer.scene.postProcessStages.fxaa.enabled = true;
-  viewer.scene.fog.enabled = false;
-  viewer.scene.highDynamicRange = true;
-}
-
-function getGoogle3DTilesetApiOptions(useDirectApi) {
-  const options = { onlyUsingWithGoogleGeocoder: true };
-  if (useDirectApi && GOOGLE_MAP_TILES_API_KEY) {
-    options.key = GOOGLE_MAP_TILES_API_KEY;
-  }
-  return options;
-}
-
-function getGoogle3DTilesetOptions() {
-  return {
-    maximumScreenSpaceError: GOOGLE_3D_TILESET_MAXIMUM_SCREEN_SPACE_ERROR,
-    dynamicScreenSpaceError: false,
-    foveatedScreenSpaceError: false,
-    immediatelyLoadDesiredLevelOfDetail: true,
-    loadSiblings: true,
-    preferLeaves: true,
-    cullRequestsWhileMoving: false,
-    skipLevelOfDetail: true,
-    baseScreenSpaceError: 1024,
-    skipScreenSpaceErrorFactor: 2
-  };
-}
-
-function mountGoogle3DTileset(tileset) {
-  state.google3dTileset = tileset;
-  state.viewer.scene.primitives.add(tileset);
-  configureGlobeForGoogle3DTiles(state.viewer);
-  state.viewer.scene.requestRender();
-}
-
-function createGoogle3DTileset(useDirectApi) {
-  return Cesium.createGooglePhotorealistic3DTileset(
-    getGoogle3DTilesetApiOptions(useDirectApi),
-    getGoogle3DTilesetOptions()
-  ).then(mountGoogle3DTileset);
-}
-
 function configureGlobeForFallback(viewer) {
   viewer.scene.globe.show = true;
   viewer.terrainProvider = Cesium.Terrain.fromWorldTerrain();
@@ -76,12 +25,13 @@ function configureGlobeForFallback(viewer) {
 }
 
 export function loadGoogleEarth3D() {
-  return createGoogle3DTileset(true).catch(function (err) {
-    if (!GOOGLE_MAP_TILES_API_KEY) {
-      throw err;
-    }
-    console.warn("Google Map Tiles API 直接接続に失敗、Ion 経由で再試行:", err);
-    return createGoogle3DTileset(false);
+  return Cesium.createGooglePhotorealistic3DTileset({
+    onlyUsingWithGoogleGeocoder: true
+  }).then(function (tileset) {
+    state.google3dTileset = tileset;
+    state.viewer.scene.primitives.add(tileset);
+    configureGlobeForGoogle3DTiles(state.viewer);
+    state.viewer.scene.requestRender();
   });
 }
 
@@ -136,7 +86,6 @@ export function init() {
     navigationHelpButton: true
   });
 
-  configureViewerForHighQuality3D(state.viewer);
   // Google 3D Tiles 読み込み前はデフォルトの楕円体地形のみ。World Terrain は 3D Tiles と重なってチカチカする。
   configureGlobeForGoogle3DTiles(state.viewer);
   state.viewer.scene.screenSpaceCameraController.enableCollisionDetection = true;
@@ -150,24 +99,18 @@ export function init() {
   setupAboutSheet();
   setupPointCloudModal();
 
-  setStatus("Google Earth 風3D地図を読み込み中...");
+  setStatus("地図とデータを読み込み中...");
 
-  loadGoogleEarth3D()
-    .then(function () {
-      setStatus("3D地図を読み込みました。ピンを選択すると右側に3Dモデルのプレビューが表示されます。");
-    })
-    .catch(function (err) {
-      console.warn("Google Photorealistic 3D Tiles の読み込みに失敗:", err);
-      setStatus("Google 3D地図は利用できません。OSM建物データで代替表示します...");
-      return loadFallbackBuildings();
-    })
-    .then(function () {
-      tryLoadSheet();
-    })
-    .catch(function (err) {
-      console.error(err);
-      setStatus("3D地図の読み込みに失敗しました: " + err.message, "error");
-    });
+  const google3dPromise = loadGoogleEarth3D().catch(function (err) {
+    console.warn("Google Photorealistic 3D Tiles の読み込みに失敗:", err);
+    setStatus("Google 3D地図は利用できません。OSM建物データで代替表示します...");
+    return loadFallbackBuildings();
+  });
+
+  Promise.all([google3dPromise, tryLoadSheet()]).catch(function (err) {
+    console.error(err);
+    setStatus("読み込みに失敗しました: " + err.message, "error");
+  });
 }
 
 init();
