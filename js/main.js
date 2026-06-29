@@ -99,18 +99,24 @@ export function init() {
   setupAboutSheet();
   setupPointCloudModal();
 
-  setStatus("地図とデータを読み込み中...");
+  setStatus("Google Earth 風3D地図を読み込み中...");
 
-  const google3dPromise = loadGoogleEarth3D().catch(function (err) {
-    console.warn("Google Photorealistic 3D Tiles の読み込みに失敗:", err);
-    setStatus("Google 3D地図は利用できません。OSM建物データで代替表示します...");
-    return loadFallbackBuildings();
-  });
-
-  Promise.all([google3dPromise, tryLoadSheet()]).catch(function (err) {
-    console.error(err);
-    setStatus("読み込みに失敗しました: " + err.message, "error");
-  });
+  loadGoogleEarth3D()
+    .then(function () {
+      setStatus("3D地図を読み込みました。ピンを選択すると右側に3Dモデルのプレビューが表示されます。");
+    })
+    .catch(function (err) {
+      console.warn("Google Photorealistic 3D Tiles の読み込みに失敗:", err);
+      setStatus("Google 3D地図は利用できません。OSM建物データで代替表示します...");
+      return loadFallbackBuildings();
+    })
+    .then(function () {
+      tryLoadSheet();
+    })
+    .catch(function (err) {
+      console.error(err);
+      setStatus("3D地図の読み込みに失敗しました: " + err.message, "error");
+    });
 }
 
 init();

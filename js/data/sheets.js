@@ -434,7 +434,7 @@ function sheetErrorMessage(err) {
 export function tryLoadSheet() {
   setStatus("スプレッドシートを読み込み中...");
 
-  return fetchSheetData(SHEET_MAPPING)
+  fetchSheetData(SHEET_MAPPING)
     .then(function (rows) {
       setStatus("フィルター情報を読み込み中...");
       return Promise.all([
