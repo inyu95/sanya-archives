@@ -3,7 +3,7 @@ import { PIN_CIRCLE_SIZE } from "../config/constants.js";
 const DEFAULT_PIN_BORDER_COLOR = "rgba(255,255,255,0.95)";
 const PIN_BORDER_WIDTH = 1;
 
-export function drawPinCircle(ctx, size, drawCircleContent, borderColor) {
+function drawPinCircle(ctx, size, drawCircleContent, borderColor) {
   const cx = size / 2;
   const cy = size / 2;
   const outerR = size / 2 - 1;

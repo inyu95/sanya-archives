@@ -6,7 +6,7 @@ import {
 } from "../config/constants.js";
 import { state } from "../state.js";
 
-export function getPointCloudScratch() {
+function getPointCloudScratch() {
   if (!state.pointCloudScratchPos) {
     state.pointCloudScratchPos = new Cesium.Cartesian3();
     state.pointCloudScratchA = new Cesium.Cartesian3();
@@ -96,7 +96,7 @@ function getPointCloudZoomLimits(tileset) {
   };
 }
 
-export function getPointCloudCameraRange(viewer, tileset) {
+function getPointCloudCameraRange(viewer, tileset) {
   if (viewer._pointCloudViewState) {
     return viewer._pointCloudViewState.range;
   }
@@ -107,7 +107,7 @@ export function getPointCloudCameraRange(viewer, tileset) {
   return Cesium.Cartesian3.distance(camera.position, tileset.boundingSphere.center);
 }
 
-export function applyPointCloudZoom(viewer, tileset, zoomInAmount) {
+function applyPointCloudZoom(viewer, tileset, zoomInAmount) {
   if (!isViewerUsable(viewer) || !tileset || tileset.isDestroyed()) return;
   const viewState = viewer._pointCloudViewState;
   if (!viewState) return;
@@ -122,7 +122,7 @@ export function applyPointCloudZoom(viewer, tileset, zoomInAmount) {
   applyPointCloudViewState(viewer, tileset);
 }
 
-export function applyPointCloudPanDelta(viewer, tileset, deltaX, deltaY) {
+function applyPointCloudPanDelta(viewer, tileset, deltaX, deltaY) {
   if (!isViewerUsable(viewer) || !tileset || tileset.isDestroyed()) return;
   const viewState = viewer._pointCloudViewState;
   if (!viewState) return;
@@ -142,7 +142,7 @@ export function applyPointCloudPanDelta(viewer, tileset, deltaX, deltaY) {
   applyPointCloudViewState(viewer, tileset);
 }
 
-export function applyPointCloudRotate(viewer, tileset, movement) {
+function applyPointCloudRotate(viewer, tileset, movement) {
   if (!isViewerUsable(viewer) || !tileset || tileset.isDestroyed()) return;
   const viewState = viewer._pointCloudViewState;
   if (!viewState) return;

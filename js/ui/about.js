@@ -1,6 +1,6 @@
 import { dom } from "../config/dom.js";
 import { ABOUT_SECTIONS } from "../content/about.js";
-import { mountCustomToolbarButtons } from "./toolbar.js";
+
 function renderAboutContent() {
   if (!dom.aboutSheetBody) return;
   dom.aboutSheetBody.replaceChildren();
@@ -29,9 +29,9 @@ function closeAboutSheet() {
 
 export function setupAboutSheet() {
   renderAboutContent();
-  mountCustomToolbarButtons();
 
-  if (dom.aboutBtn) {    dom.aboutBtn.addEventListener("click", openAboutSheet);
+  if (dom.aboutBtn) {
+    dom.aboutBtn.addEventListener("click", openAboutSheet);
   }
   if (dom.aboutSheetClose) {
     dom.aboutSheetClose.addEventListener("click", closeAboutSheet);

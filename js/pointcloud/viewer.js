@@ -312,12 +312,12 @@ function mountTilesetInViewer(tileset, targetViewer, isPreview, isLoadActive) {
     requestAnimationFrame(function () {
       try {
         assertLoadActive();
-        const pitch = Cesium.Math.toRadians(-35);
-        const range = getPointCloudDefaultRange(tileset, false);
         const flyPromise = flyToPointCloudInViewer(targetViewer, tileset, isPreview);
         if (!isPreview) {
           Promise.resolve(flyPromise).then(function () {
             if (!isLoadActive() || !isViewerUsable(targetViewer)) return;
+            const pitch = Cesium.Math.toRadians(-35);
+            const range = getPointCloudDefaultRange(tileset, false);
             setupPointCloudModalZoom(targetViewer, tileset, 0, pitch, range);
           });
         }

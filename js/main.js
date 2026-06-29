@@ -12,6 +12,7 @@ import { setupHomeButton } from "./ui/home.js";
 import { setupArchiveList } from "./ui/archive-list.js";
 import { setupAboutSheet } from "./ui/about.js";
 import { setupPointCloudModal, clearPointCloudModal } from "./pointcloud/viewer.js";
+import { mountCustomToolbarButtons } from "./ui/toolbar.js";
 
 function configureGlobeForGoogle3DTiles(viewer) {
   viewer.scene.globe.show = false;
@@ -24,7 +25,7 @@ function configureGlobeForFallback(viewer) {
   viewer.scene.globe.depthTestAgainstTerrain = true;
 }
 
-export function loadGoogleEarth3D() {
+function loadGoogleEarth3D() {
   return Cesium.createGooglePhotorealistic3DTileset({
     onlyUsingWithGoogleGeocoder: true
   }).then(function (tileset) {
@@ -35,7 +36,7 @@ export function loadGoogleEarth3D() {
   });
 }
 
-export function loadFallbackBuildings() {
+function loadFallbackBuildings() {
   configureGlobeForFallback(state.viewer);
   return Cesium.createOsmBuildingsAsync().then(function (buildings) {
     state.viewer.scene.primitives.add(buildings);
@@ -43,7 +44,7 @@ export function loadFallbackBuildings() {
   });
 }
 
-export function setupClickHandler() {
+function setupClickHandler() {
   const handler = new Cesium.ScreenSpaceEventHandler(state.viewer.scene.canvas);
   handler.setInputAction(function (click) {
     const picked = state.viewer.scene.pick(click.position);
@@ -59,7 +60,7 @@ export function setupClickHandler() {
   }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 }
 
-export function init() {
+function init() {
   if (location.protocol === "file:") {
     setStatus("npm start 後に http://localhost:8080 を開いてください。", "error");
     return;
@@ -89,6 +90,7 @@ export function init() {
   // Google 3D Tiles 読み込み前はデフォルトの楕円体地形のみ。World Terrain は 3D Tiles と重なってチカチカする。
   configureGlobeForGoogle3DTiles(state.viewer);
   state.viewer.scene.screenSpaceCameraController.enableCollisionDetection = true;
+  mountCustomToolbarButtons();
   setupClickHandler();
   setupSearchBox();
   setupFilterPanel();

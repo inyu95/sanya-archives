@@ -15,7 +15,6 @@ import { setStatus } from "../ui/status.js";
 function cellValue(cell) {
   if (!cell) return "";
   if (cell.v != null) return cell.v;
-  if (cell.f) return cell.f;
   return "";
 }
 
@@ -54,7 +53,7 @@ function resolveColumnIndex(headerMap, key, fallback) {
 }
 
 function getColumnIndexes(rows) {
-  const defaultIndexes = {
+  const defaults = {
     name: 0,
     coords: 1,
     imageFolder: 2,
@@ -67,7 +66,7 @@ function getColumnIndexes(rows) {
     category: 9,
     activity: 10
   };
-  if (!rows || rows.length === 0) return defaultIndexes;
+  if (!rows || rows.length === 0) return defaults;
 
   const headerRow = rows[0].c || [];
   const headerMap = {};
@@ -88,19 +87,11 @@ function getColumnIndexes(rows) {
     else if (header === "activity" || header === "アクティビティ") headerMap.activity = i;
   }
 
-  return {
-    name: resolveColumnIndex(headerMap, "name", defaultIndexes.name),
-    coords: resolveColumnIndex(headerMap, "coords", defaultIndexes.coords),
-    imageFolder: resolveColumnIndex(headerMap, "imageFolder", defaultIndexes.imageFolder),
-    text: resolveColumnIndex(headerMap, "text", defaultIndexes.text),
-    pointcloud: resolveColumnIndex(headerMap, "pointcloud", defaultIndexes.pointcloud),
-    url: resolveColumnIndex(headerMap, "url", defaultIndexes.url),
-    urlLabel: resolveColumnIndex(headerMap, "urlLabel", defaultIndexes.urlLabel),
-    openingYear: resolveColumnIndex(headerMap, "openingYear", defaultIndexes.openingYear),
-    closingYear: resolveColumnIndex(headerMap, "closingYear", defaultIndexes.closingYear),
-    category: resolveColumnIndex(headerMap, "category", defaultIndexes.category),
-    activity: resolveColumnIndex(headerMap, "activity", defaultIndexes.activity)
-  };
+  const indexes = {};
+  Object.keys(defaults).forEach(function (key) {
+    indexes[key] = resolveColumnIndex(headerMap, key, defaults[key]);
+  });
+  return indexes;
 }
 
 function resolveImageUrl(path) {

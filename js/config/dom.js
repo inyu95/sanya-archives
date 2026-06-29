@@ -14,7 +14,6 @@ export const dom = {
   searchCount: document.getElementById("search-count"),
   filterPanel: document.getElementById("filter-panel"),
   filterToggle: document.getElementById("filter-toggle"),
-  filterPanelBody: document.getElementById("filter-panel-body"),
   categoryFilters: document.getElementById("category-filters"),
   activityFilters: document.getElementById("activity-filters"),
   filterClear: document.getElementById("filter-clear"),

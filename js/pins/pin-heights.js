@@ -1,6 +1,6 @@
 import { state } from "../state.js";
 
-export function sampleTerrainHeight(lon, lat) {
+function sampleTerrainHeight(lon, lat) {
   return new Promise(function (resolve) {
     const carto = Cesium.Cartographic.fromDegrees(lon, lat);
     const timer = setTimeout(function () { resolve(40); }, 5000);
@@ -17,7 +17,7 @@ export function sampleTerrainHeight(lon, lat) {
   });
 }
 
-export function waitFor3DTiles() {
+function waitFor3DTiles() {
   return new Promise(function (resolve) {
     if (!state.google3dTileset || !state.google3dTileset.readyPromise) {
       resolve();
@@ -27,7 +27,7 @@ export function waitFor3DTiles() {
   });
 }
 
-export function sampleGroundHeights(pinDataList) {
+function sampleGroundHeights(pinDataList) {
   const cartographics = pinDataList.map(function (pin) {
     return Cesium.Cartographic.fromDegrees(pin.lon, pin.lat);
   });

@@ -25,14 +25,9 @@ function getDecadesFromPins(pins) {
 function getPinActiveYearRange(pin) {
   const openingYear = parsePinYear(pin.openingYear);
   const closingYear = parsePinYear(pin.closingYear);
-  const legacyYear = parsePinYear(pin.year);
 
   let start = openingYear;
   let end = closingYear;
-  if (start === null && end === null && legacyYear !== null) {
-    start = legacyYear;
-    end = legacyYear;
-  }
   if (start === null && end === null) return null;
   if (start === null) start = end;
   if (end === null) end = Number.POSITIVE_INFINITY;
@@ -146,7 +141,7 @@ function shiftYearFilter(direction) {
   setYearFilter(state.yearDecadeOptions[nextIndex]);
 }
 
-export function renderYearFilterBar() {
+function renderYearFilterBar() {
   if (!dom.yearFilterBar || !dom.yearFilterTrack) return;
 
   state.yearDecadeOptions = getDecadesFromPins(state.allPins);
@@ -259,7 +254,7 @@ function pinMatchesActivityFilter(pin) {
   });
 }
 
-export function getFilteredPins() {
+function getFilteredPins() {
   const query = dom.searchInput ? dom.searchInput.value.trim() : "";
   return state.allPins.filter(function (pin) {
     return pinMatchesQuery(pin, query)
@@ -286,11 +281,16 @@ function updateSearchCount(filteredCount) {
   dom.searchCount.textContent = filteredCount + " / " + state.allPins.length + " 件";
 }
 
-export function applyFilters() {
+function syncFilteredView() {
   const filtered = getFilteredPins();
   state.filteredPins = filtered;
   updateSearchCount(filtered.length);
   hidePinInfo();
+  return filtered;
+}
+
+export function applyFilters() {
+  const filtered = syncFilteredView();
   renderPins(filtered);
   renderArchiveList(filtered);
 }
@@ -401,11 +401,7 @@ export function loadPinData(pins, options) {
   }
 
   renderYearFilterBar();
-
-  const filtered = getFilteredPins();
-  state.filteredPins = filtered;
-  updateSearchCount(filtered.length);
-  hidePinInfo();
+  const filtered = syncFilteredView();
   renderPins(filtered, function () {
     renderArchiveList(filtered);
     if (opts.flyTo !== false && filtered.length > 0) flyToPins();

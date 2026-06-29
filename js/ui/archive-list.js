@@ -4,7 +4,6 @@ import { normalizeUrl } from "../utils/parse.js";
 import { findPinEntity, flyToPin } from "../pins/pins.js";
 import { showPinInfo, resetCameraZoomState } from "../info-panel.js";
 import { clearPointCloudModal } from "../pointcloud/viewer.js";
-import { mountCustomToolbarButtons } from "./toolbar.js";
 
 let isOpen = false;
 
@@ -94,7 +93,7 @@ export function renderArchiveList(pins) {
   });
 }
 
-export function openArchiveList() {
+function openArchiveList() {
   if (!dom.archiveListPanel) return;
   renderArchiveList(state.filteredPins);
   dom.archiveListPanel.classList.remove("hidden");
@@ -102,7 +101,7 @@ export function openArchiveList() {
   isOpen = true;
 }
 
-export function closeArchiveList() {
+function closeArchiveList() {
   if (!dom.archiveListPanel) return;
   dom.archiveListPanel.classList.add("hidden");
   if (dom.archiveListBtn) dom.archiveListBtn.classList.remove("active");
@@ -117,14 +116,8 @@ function toggleArchiveList() {
   }
 }
 
-export function mountArchiveListButton() {
-  mountCustomToolbarButtons();
-}
-
 export function setupArchiveList() {
   if (!dom.archiveListBtn) return;
-
-  mountArchiveListButton();
 
   dom.archiveListBtn.addEventListener("click", function (event) {
     event.stopPropagation();
