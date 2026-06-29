@@ -132,12 +132,15 @@ export function showPinInfo(entity) {
   }
 
   const url = normalizeUrl(props.url ? props.url.getValue() : "");
+  const urlLabel = String(props.urlLabel ? props.urlLabel.getValue() : "").trim() || "リンク";
   if (dom.spotHomepageBtn) {
     if (url) {
       dom.spotHomepageBtn.href = url;
+      dom.spotHomepageBtn.textContent = urlLabel;
       dom.spotHomepageBtn.classList.remove("hidden");
     } else {
       dom.spotHomepageBtn.removeAttribute("href");
+      dom.spotHomepageBtn.textContent = "リンク";
       dom.spotHomepageBtn.classList.add("hidden");
     }
   }

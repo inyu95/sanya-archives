@@ -48,7 +48,7 @@ function createArchiveCard(pin) {
     link.href = url;
     link.target = "_blank";
     link.rel = "noopener noreferrer";
-    link.textContent = "リンク";
+    link.textContent = String(pin.urlLabel || "").trim() || "リンク";
     link.addEventListener("click", function (event) {
       event.stopPropagation();
     });

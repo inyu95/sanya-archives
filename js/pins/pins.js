@@ -26,6 +26,7 @@ function addPhotoPin(pin, groundH, onDone) {
     text: pin.text || "",
     pointcloudAssetId: pin.pointcloud,
     url: pin.url || "",
+    urlLabel: pin.urlLabel || "",
     category: pin.category || "",
     year: pin.year || "",
     activity: pin.activity || [],
