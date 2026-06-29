@@ -215,7 +215,17 @@ body:has(#year-filter-bar:not(.hidden)) {
   color: var(--jdr-text-secondary);
 }
 
-#archive-list .spot-homepage-btn {
+.spot-homepage-links {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.spot-homepage-links.hidden {
+  display: none;
+}
+
+#archive-list .spot-homepage-links {
   margin-top: 4px;
 }
 

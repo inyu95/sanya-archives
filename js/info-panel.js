@@ -2,7 +2,7 @@ import { dom } from "./config/dom.js";
 import { state } from "./state.js";
 import { flyToPin } from "./pins/pins.js";
 import { clearPointCloud, clearPointCloudPreview, loadPointCloudPreview } from "./pointcloud/viewer.js";
-import { normalizeUrl } from "./utils/parse.js";
+import { renderSpotLinks } from "./ui/spot-links.js";
 
 let galleryImages = [];
 let galleryIndex = 0;
@@ -146,19 +146,11 @@ export function showPinInfo(entity) {
     clearPointCloudPreview();
   }
 
-  const url = normalizeUrl(props.url ? props.url.getValue() : "");
-  const urlLabel = String(props.urlLabel ? props.urlLabel.getValue() : "").trim() || "リンク";
-  if (dom.spotHomepageBtn) {
-    if (url) {
-      dom.spotHomepageBtn.href = url;
-      dom.spotHomepageBtn.textContent = urlLabel;
-      dom.spotHomepageBtn.classList.remove("hidden");
-    } else {
-      dom.spotHomepageBtn.removeAttribute("href");
-      dom.spotHomepageBtn.textContent = "リンク";
-      dom.spotHomepageBtn.classList.add("hidden");
-    }
-  }
+  renderSpotLinks(
+    dom.spotHomepageLinks,
+    props.url ? props.url.getValue() : "",
+    props.urlLabel ? props.urlLabel.getValue() : ""
+  );
 
   dom.infoPanel.classList.remove("hidden");
 }

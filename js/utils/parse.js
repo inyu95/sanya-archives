@@ -3,6 +3,11 @@ export function parseCommaList(value) {
   return String(value).split(",").map(function (item) { return item.trim(); }).filter(Boolean);
 }
 
+export function parseLineList(value) {
+  if (!value) return [];
+  return String(value).split(/\r?\n/).map(function (item) { return item.trim(); }).filter(Boolean);
+}
+
 export function parsePinYear(yearStr) {
   if (!yearStr) return null;
   const match = String(yearStr).trim().match(/(\d{4})/);
@@ -16,4 +21,16 @@ export function normalizeUrl(value) {
   if (!text) return "";
   if (/^https?:\/\//i.test(text)) return text;
   return "https://" + text;
+}
+
+export function parseUrlLinks(urlValue, labelValue) {
+  const urls = parseLineList(urlValue).map(normalizeUrl).filter(Boolean);
+  const labels = parseLineList(labelValue);
+  const defaultLabel = "リンク";
+  return urls.map(function (href, index) {
+    return {
+      href: href,
+      label: labels[index] || defaultLabel
+    };
+  });
 }

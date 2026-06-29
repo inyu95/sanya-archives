@@ -44,7 +44,7 @@ export const dom = {
   categoryView: document.getElementById("category-view"),
   activityView: document.getElementById("activity-view"),
   yearView: document.getElementById("year-view"),
-  spotHomepageBtn: document.getElementById("spot-homepage-btn"),
+  spotHomepageLinks: document.getElementById("spot-homepage-links"),
   flyToPinBtn: document.getElementById("fly-to-pin"),
   infoCloseBtn: document.getElementById("info-close"),
   pointcloudModal: document.getElementById("pointcloud-modal"),

@@ -1,6 +1,6 @@
 import { dom } from "../config/dom.js";
 import { state } from "../state.js";
-import { normalizeUrl } from "../utils/parse.js";
+import { renderSpotLinks } from "./spot-links.js";
 import { findPinEntity, flyToPin } from "../pins/pins.js";
 import { showPinInfo, resetCameraZoomState } from "../info-panel.js";
 import { clearPointCloudModal } from "../pointcloud/viewer.js";
@@ -40,19 +40,10 @@ function createArchiveCard(pin) {
   card.appendChild(top);
   if (pin.text) card.appendChild(desc);
 
-  const url = normalizeUrl(pin.url);
-  if (url) {
-    const link = document.createElement("a");
-    link.className = "spot-homepage-btn";
-    link.href = url;
-    link.target = "_blank";
-    link.rel = "noopener noreferrer";
-    link.textContent = String(pin.urlLabel || "").trim() || "リンク";
-    link.addEventListener("click", function (event) {
-      event.stopPropagation();
-    });
-    card.appendChild(link);
-  }
+  const linksContainer = document.createElement("div");
+  linksContainer.className = "spot-homepage-links";
+  const links = renderSpotLinks(linksContainer, pin.url, pin.urlLabel, { stopPropagation: true });
+  if (links.length > 0) card.appendChild(linksContainer);
 
   function selectPin() {
     const entity = findPinEntity(pin);
