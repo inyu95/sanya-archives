@@ -1,6 +1,6 @@
 import { dom } from "../config/dom.js";
 import { state } from "../state.js";
-import { parseCommaList, parsePinYear } from "../utils/parse.js?v=59";
+import { parseCommaList, parsePinYear } from "../utils/parse.js?v=60";
 import { renderPins, flyToPins } from "../pins/pins.js";
 import { setStatus, hideStatus } from "../ui/status.js";
 import { hidePinInfo } from "../info-panel.js";
@@ -10,7 +10,7 @@ import {
   EARLIEST_MAPPED_DECADE,
   YEAR_FILTER_BEFORE,
   getAvailableMapDecades
-} from "../imagery/historical-maps.js?v=59";
+} from "../imagery/historical-maps.js?v=60";
 
 function pinOverlapsDecade(range, decadeStart) {
   const decadeEnd = decadeStart + 9;

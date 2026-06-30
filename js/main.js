@@ -6,14 +6,16 @@ import {
   setupSearchBox,
   setupFilterPanel,
   setupYearFilterBar
-} from "./filters/filters.js?v=59";
+} from "./filters/filters.js?v=60";
 import { setupInfoPanel, showPinInfo, hidePinInfo, resetCameraZoomState } from "./info-panel.js";
 import { setupHomeButton } from "./ui/home.js";
 import { setupArchiveList } from "./ui/archive-list.js";
 import { setupAboutSheet } from "./ui/about.js";
 import { setupPointCloudModal, clearPointCloudModal } from "./pointcloud/viewer.js";
 import { mountCustomToolbarButtons } from "./ui/toolbar.js";
-import { initHistoricalMaps, syncMapDisplayMode } from "./imagery/historical-maps.js?v=59";
+import { initHistoricalMaps, syncMapDisplayMode } from "./imagery/historical-maps.js?v=60";
+
+const GOOGLE_3D_TILES_TIMEOUT_MS = 45000;
 
 function configureGlobeForGoogle3DTiles(viewer) {
   viewer.scene.globe.show = false;
@@ -26,12 +28,33 @@ function configureGlobeForFallback(viewer) {
   viewer.scene.globe.depthTestAgainstTerrain = true;
 }
 
+function withTimeout(promise, timeoutMs, message) {
+  return new Promise(function (resolve, reject) {
+    const timer = window.setTimeout(function () {
+      reject(new Error(message));
+    }, timeoutMs);
+    promise.then(function (value) {
+      window.clearTimeout(timer);
+      resolve(value);
+    }).catch(function (err) {
+      window.clearTimeout(timer);
+      reject(err);
+    });
+  });
+}
+
 function loadGoogleEarth3D() {
-  return Cesium.createGooglePhotorealistic3DTileset({
+  const tilesetPromise = Cesium.createGooglePhotorealistic3DTileset({
     onlyUsingWithGoogleGeocoder: true
-  }).then(function (tileset) {
+  });
+  return withTimeout(
+    tilesetPromise,
+    GOOGLE_3D_TILES_TIMEOUT_MS,
+    "Google 3D Tiles"
+  ).then(function (tileset) {
     state.google3dTileset = tileset;
     state.viewer.scene.primitives.add(tileset);
+    configureGlobeForGoogle3DTiles(state.viewer);
     syncMapDisplayMode();
     state.viewer.scene.requestRender();
   });
@@ -92,8 +115,9 @@ function init() {
 
   initHistoricalMaps(state.viewer);
 
-  // Google 3D Tiles 読み込み前はデフォルトの楕円体地形のみ。World Terrain は 3D Tiles と重なってチカチカする。
-  configureGlobeForGoogle3DTiles(state.viewer);
+  // 3D Tiles 読み込み完了までは Cesium 標準地図を表示（白画面を防ぐ）
+  state.viewer.scene.globe.show = true;
+  state.viewer.scene.globe.depthTestAgainstTerrain = false;
   state.viewer.scene.screenSpaceCameraController.enableCollisionDetection = true;
   mountCustomToolbarButtons();
   setupClickHandler();
@@ -127,4 +151,9 @@ function init() {
     });
 }
 
-init();
+try {
+  init();
+} catch (err) {
+  console.error(err);
+  setStatus("起動に失敗しました: " + err.message, "error");
+}
