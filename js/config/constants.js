@@ -1,14 +1,15 @@
 /** デプロイ時に increment して ES モジュールのブラウザキャッシュを無効化 */
-export const APP_MODULE_VERSION = "68";
+export const APP_MODULE_VERSION = "69";
 
 export const PIN_CIRCLE_SIZE = 60;
 export const INITIAL_PIN_VIEW_RANGE = 3500;
-/** 過去地図の重ね合わせ範囲（山谷地域周辺・西・南・東・北） */
-export const HISTORICAL_MAP_BOUNDS = {
-  west: 139.788,
-  south: 35.722,
-  east: 139.810,
-  north: 35.736
+export const HISTORICAL_MAP_PADDING_DEGREES = 0.012;
+/** ピン未取得時の山谷エリア周辺（西・南・東・北） */
+export const HISTORICAL_MAP_FALLBACK_BOUNDS = {
+  west: 139.778,
+  south: 35.714,
+  east: 139.821,
+  north: 35.742
 };
 export const HISTORICAL_MAP_MAX_ZOOM_LEVEL = 15;
 export const HISTORICAL_MAP_MAX_CAMERA_DISTANCE = 3500;

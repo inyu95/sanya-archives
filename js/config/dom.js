@@ -22,6 +22,8 @@ export const dom = {
   yearFilterSliderWrap: document.getElementById("year-filter-slider-wrap"),
   yearFilterSlider: document.getElementById("year-filter-slider"),
   yearFilterTicks: document.getElementById("year-filter-ticks"),
+  yearFilterTickLabels: document.getElementById("year-filter-tick-labels"),
+  yearFilterThumbLabel: document.getElementById("year-filter-thumb-label"),
   yearFilterLabel: document.getElementById("year-filter-label"),
   infoPanel: document.getElementById("info-panel"),
   infoName: document.getElementById("info-name"),

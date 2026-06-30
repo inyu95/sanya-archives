@@ -1,6 +1,6 @@
 import { dom } from "../config/dom.js";
 import { state } from "../state.js";
-import { parseCommaList, parsePinYear } from "../utils/parse.js?v=68";
+import { parseCommaList, parsePinYear } from "../utils/parse.js?v=69";
 import { renderPins, flyToPins } from "../pins/pins.js";
 import { setStatus, hideStatus } from "../ui/status.js";
 import { hidePinInfo } from "../info-panel.js";
@@ -9,7 +9,7 @@ import {
   applyHistoricalMapLayer,
   EARLIEST_MAPPED_DECADE,
   resolveLayerForYear
-} from "../imagery/historical-maps.js?v=68";
+} from "../imagery/historical-maps.js?v=69";
 
 /** 地図レイヤー切替の重複呼び出しを防ぐ */
 let activeHistoricalLayerId = null;
@@ -61,26 +61,42 @@ function pinMatchesYearFilter(pin) {
   return range.start <= year && range.end >= year;
 }
 
-function formatYearLabel(year) {
-  if (year === null) return "すべて";
-  const layer = resolveLayerForYear(year);
-  return year + "年 · " + layer.label;
-}
-
 function yearToSliderPercent(year, min, max) {
   if (max <= min) return 0;
   return ((year - min) / (max - min)) * 100;
+}
+
+function getDisplayYear(year) {
+  if (year !== null) return year;
+  if (!dom.yearFilterSlider) return state.yearSliderMin;
+  return parseInt(dom.yearFilterSlider.value, 10);
 }
 
 function updateYearFilterSliderFill(year) {
   if (!dom.yearFilterSlider) return;
   const min = state.yearSliderMin;
   const max = state.yearSliderMax;
-  const displayYear = year !== null
-    ? year
-    : parseInt(dom.yearFilterSlider.value, 10);
+  const displayYear = getDisplayYear(year);
   const percent = yearToSliderPercent(displayYear, min, max);
   dom.yearFilterSlider.style.setProperty("--year-fill", percent + "%");
+  updateYearFilterThumbLabel(year, percent);
+}
+
+function updateYearFilterThumbLabel(year, percent) {
+  if (!dom.yearFilterThumbLabel) return;
+  const isAll = year === null;
+  dom.yearFilterThumbLabel.hidden = isAll;
+  if (dom.yearFilterSliderWrap) {
+    dom.yearFilterSliderWrap.classList.toggle("year-filter-slider-wrap--has-year", !isAll);
+  }
+  if (isAll) return;
+
+  const displayYear = getDisplayYear(year);
+  dom.yearFilterThumbLabel.textContent = displayYear + "年";
+  if (percent === undefined) {
+    percent = yearToSliderPercent(displayYear, state.yearSliderMin, state.yearSliderMax);
+  }
+  dom.yearFilterThumbLabel.style.left = percent + "%";
 }
 
 function updateYearFilterAllButton() {
@@ -93,9 +109,15 @@ function updateYearFilterAllButton() {
 }
 
 function updateYearFilterLabel(year) {
-  if (dom.yearFilterLabel) {
-    dom.yearFilterLabel.textContent = formatYearLabel(year);
+  if (!dom.yearFilterLabel) return;
+  if (year === null) {
+    dom.yearFilterLabel.textContent = "すべて";
+    dom.yearFilterLabel.classList.remove("year-filter-label--active");
+    return;
   }
+  const layer = resolveLayerForYear(year);
+  dom.yearFilterLabel.textContent = layer.label;
+  dom.yearFilterLabel.classList.add("year-filter-label--active");
 }
 
 function syncHistoricalMapForYear(year, force) {
@@ -140,6 +162,9 @@ function setYearFilterAll() {
 function renderYearFilterTicks(min, max) {
   if (!dom.yearFilterTicks) return;
   dom.yearFilterTicks.innerHTML = "";
+  if (dom.yearFilterTickLabels) {
+    dom.yearFilterTickLabels.innerHTML = "";
+  }
 
   const boundaries = [min];
   const eraStarts = [2020, 2010, 2000, 1990, 1980, 1970, 1960, 1940, 1930];
@@ -148,13 +173,25 @@ function renderYearFilterTicks(min, max) {
       boundaries.push(eraStart);
     }
   });
+  if (max !== min && boundaries.indexOf(max) === -1) {
+    boundaries.push(max);
+  }
+  boundaries.sort(function (a, b) { return a - b; });
 
   boundaries.forEach(function (year) {
+    const percent = yearToSliderPercent(year, min, max) + "%";
     const tick = document.createElement("span");
     tick.className = "year-filter-tick";
-    tick.style.left = yearToSliderPercent(year, min, max) + "%";
+    tick.style.left = percent;
     tick.title = year + "年";
     dom.yearFilterTicks.appendChild(tick);
+
+    if (!dom.yearFilterTickLabels) return;
+    const label = document.createElement("span");
+    label.className = "year-filter-tick-label";
+    label.textContent = String(year);
+    label.style.left = percent;
+    dom.yearFilterTickLabels.appendChild(label);
   });
 }
 
