@@ -8,6 +8,7 @@ import { renderArchiveList } from "../ui/archive-list.js";
 import {
   applyHistoricalMapLayer,
   EARLIEST_MAPPED_DECADE,
+  getCurrentMapYear,
   resolveLayerForYear
 } from "../imagery/historical-maps.js?v=71";
 
@@ -16,7 +17,16 @@ let activeHistoricalLayerId = null;
 /** スライダー操作中のプレビュー年（マウスを離すまで地図は切り替えない） */
 let yearSliderPreviewYear = null;
 
-function getYearSliderBounds(pins) {
+function getDefaultMapYear(bounds) {
+  const currentYear = getCurrentMapYear();
+  if (!bounds) return currentYear;
+  return Math.max(bounds.min, Math.min(bounds.max, currentYear));
+}
+
+function getSliderPositionYear() {
+  if (!dom.yearFilterSlider) return getCurrentMapYear();
+  return parseInt(dom.yearFilterSlider.value, 10);
+}
   let minYear = EARLIEST_MAPPED_DECADE;
   let maxYear = new Date().getFullYear();
   let hasYearData = false;

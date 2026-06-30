@@ -24,7 +24,7 @@ export const state = {
   activityColors: {},
   selectedCategories: new Set(),
   selectedActivities: new Set(),
-  selectedYear: null,
+  selectedYear: new Date().getFullYear(),
   yearSliderMin: 1930,
   yearSliderMax: new Date().getFullYear(),
   usesGoogle3DTiles: true,
