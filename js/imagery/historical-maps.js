@@ -5,11 +5,12 @@ import {
   HISTORICAL_MAP_GAMMA,
   HISTORICAL_MAP_MAX_CAMERA_DISTANCE,
   HISTORICAL_MAP_MAX_ZOOM_LEVEL,
-  HISTORICAL_MAP_PADDING_DEGREES,
-  INITIAL_PIN_VIEW_RANGE
+  HISTORICAL_MAP_PADDING_DEGREES
 } from "../config/constants.js";
 
 const GSI_TILE_BASE = "https://cyberjapandata.gsi.go.jp/xyz/";
+
+const MODERN_MAP_LAYER = { id: "modern3d", label: "3D地図（現在）" };
 
 const DECADE_MAP_LAYERS = [
   { from: 2020, id: "seamlessphoto", min: 14, max: 18, ext: "jpg", label: "最新空中写真" },
@@ -40,7 +41,18 @@ export function syncMapDisplayMode() {
   applyHistoricalMapLayer(state.selectedYear);
 }
 
+export function getCurrentMapYear() {
+  return new Date().getFullYear();
+}
+
+export function isModernMapYear(year) {
+  return year !== null && year >= getCurrentMapYear();
+}
+
 export function resolveLayerForYear(year) {
+  if (isModernMapYear(year)) {
+    return MODERN_MAP_LAYER;
+  }
   for (let i = 0; i < DECADE_MAP_LAYERS.length; i++) {
     if (year >= DECADE_MAP_LAYERS[i].from) {
       return DECADE_MAP_LAYERS[i];
@@ -50,9 +62,9 @@ export function resolveLayerForYear(year) {
 }
 
 function getHistoricalMapRectangle() {
+  const b = HISTORICAL_MAP_FALLBACK_BOUNDS;
   const pins = state.allPins;
   if (!pins || pins.length === 0) {
-    const b = HISTORICAL_MAP_FALLBACK_BOUNDS;
     return Cesium.Rectangle.fromDegrees(b.west, b.south, b.east, b.north);
   }
 
@@ -70,10 +82,10 @@ function getHistoricalMapRectangle() {
 
   const pad = HISTORICAL_MAP_PADDING_DEGREES;
   return Cesium.Rectangle.fromDegrees(
-    west - pad,
-    south - pad,
-    east + pad,
-    north + pad
+    Math.max(b.west, west - pad),
+    Math.max(b.south, south - pad),
+    Math.min(b.east, east + pad),
+    Math.min(b.north, north + pad)
   );
 }
 
@@ -119,12 +131,65 @@ function removeHistoricalLayers() {
   }
 }
 
+function clampCameraToRectangle(viewer) {
+  const carto = viewer.camera.positionCartographic;
+  if (!carto) return;
+
+  const rectangle = getHistoricalMapRectangle();
+  const lon = Cesium.Math.clamp(carto.longitude, rectangle.west, rectangle.east);
+  const lat = Cesium.Math.clamp(carto.latitude, rectangle.south, rectangle.north);
+  if (lon === carto.longitude && lat === carto.latitude) return;
+
+  viewer.camera.setView({
+    destination: Cesium.Cartesian3.fromRadians(lon, lat, carto.height)
+  });
+}
+
+function applyHistoricalCameraConstraints(viewer) {
+  const controller = viewer.scene.screenSpaceCameraController;
+
+  if (!state.historicalCameraSaved) {
+    state.historicalCameraSaved = {
+      maximumZoomDistance: controller.maximumZoomDistance,
+      minimumZoomDistance: controller.minimumZoomDistance
+    };
+  }
+
+  controller.maximumZoomDistance = HISTORICAL_MAP_MAX_CAMERA_DISTANCE;
+  controller.minimumZoomDistance = 50;
+
+  if (state.historicalCameraClamp) {
+    viewer.camera.moveEnd.removeEventListener(state.historicalCameraClamp);
+  }
+
+  state.historicalCameraClamp = function () {
+    clampCameraToRectangle(viewer);
+  };
+  viewer.camera.moveEnd.addEventListener(state.historicalCameraClamp);
+}
+
+function restoreCameraConstraints(viewer) {
+  const controller = viewer.scene.screenSpaceCameraController;
+
+  if (state.historicalCameraClamp) {
+    viewer.camera.moveEnd.removeEventListener(state.historicalCameraClamp);
+    state.historicalCameraClamp = null;
+  }
+
+  if (state.historicalCameraSaved) {
+    controller.maximumZoomDistance = state.historicalCameraSaved.maximumZoomDistance;
+    controller.minimumZoomDistance = state.historicalCameraSaved.minimumZoomDistance;
+    state.historicalCameraSaved = null;
+  }
+}
+
 function setModernView() {
   const viewer = state.viewer;
   if (!viewer) return;
 
   ensureDefaultImageryLayer();
   removeHistoricalLayers();
+  restoreCameraConstraints(viewer);
   viewer.scene.globe.baseColor = Cesium.Color.BLACK;
   showDefaultImageryLayer();
 
@@ -173,6 +238,7 @@ function mountHistoricalImageryLayer(viewer, config) {
   state.historicalImageryLayer.brightness = HISTORICAL_MAP_BRIGHTNESS;
   state.historicalImageryLayer.gamma = HISTORICAL_MAP_GAMMA;
   state.historicalMapActive = true;
+  clampCameraToRectangle(viewer);
   viewer.scene.requestRender();
 }
 
@@ -187,16 +253,9 @@ function isCameraInHistoricalArea(viewer, rectangle) {
 }
 
 function flyToHistoricalArea(viewer, rectangle, onComplete) {
-  const center = Cesium.Rectangle.center(rectangle);
-  const height = Math.min(INITIAL_PIN_VIEW_RANGE, HISTORICAL_MAP_MAX_CAMERA_DISTANCE);
   viewer.camera.cancelFlight();
   viewer.camera.flyTo({
-    destination: Cesium.Cartesian3.fromRadians(center.longitude, center.latitude, height),
-    orientation: {
-      heading: 0,
-      pitch: Cesium.Math.toRadians(-55),
-      roll: 0
-    },
+    destination: rectangle,
     duration: 0.8,
     complete: onComplete,
     cancel: onComplete
@@ -217,8 +276,9 @@ function setHistoricalView(year) {
   viewer.scene.globe.depthTestAgainstTerrain = false;
   viewer.scene.globe.baseColor = Cesium.Color.BLACK;
   showDefaultImageryLayer();
+  applyHistoricalCameraConstraints(viewer);
 
-  if (!wasActive && !isCameraInHistoricalArea(viewer, rectangle)) {
+  if (!wasActive || !isCameraInHistoricalArea(viewer, rectangle)) {
     flyToHistoricalArea(viewer, rectangle, function () {
       mountHistoricalImageryLayer(viewer, config);
     });
@@ -229,7 +289,7 @@ function setHistoricalView(year) {
 }
 
 export function applyHistoricalMapLayer(year) {
-  if (year === null) {
+  if (year === null || isModernMapYear(year)) {
     setModernView();
   } else {
     setHistoricalView(year);
