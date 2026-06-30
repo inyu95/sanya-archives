@@ -27,6 +27,8 @@ function getSliderPositionYear() {
   if (!dom.yearFilterSlider) return getCurrentMapYear();
   return parseInt(dom.yearFilterSlider.value, 10);
 }
+
+function getYearSliderBounds(pins) {
   let minYear = EARLIEST_MAPPED_DECADE;
   let maxYear = new Date().getFullYear();
   let hasYearData = false;
@@ -183,7 +185,8 @@ function updateYearFilterAllButton() {
 function updateYearFilterLabel(year) {
   if (!dom.yearFilterLabel) return;
   if (year === null) {
-    dom.yearFilterLabel.textContent = "すべて";
+    const layer = resolveLayerForYear(getSliderPositionYear());
+    dom.yearFilterLabel.textContent = layer.label;
     dom.yearFilterLabel.classList.remove("year-filter-label--active");
     return;
   }
@@ -306,12 +309,10 @@ function renderYearFilterBar() {
   if (dom.yearFilterSlider) {
     dom.yearFilterSlider.min = String(bounds.min);
     dom.yearFilterSlider.max = String(bounds.max);
-    const defaultYear = state.selectedYear !== null
-      ? state.selectedYear
-      : Math.round((bounds.min + bounds.max) / 2);
-    dom.yearFilterSlider.value = String(defaultYear);
-    if (state.selectedYear === null) {
-      dom.yearFilterSlider.value = String(defaultYear);
+    if (state.selectedYear !== null) {
+      dom.yearFilterSlider.value = String(state.selectedYear);
+    } else if (!dom.yearFilterSlider.value) {
+      dom.yearFilterSlider.value = String(getDefaultMapYear(bounds));
     }
   }
 
@@ -532,7 +533,8 @@ export function loadPinData(pins, options) {
   if (opts.resetSearch) {
     state.selectedCategories.clear();
     state.selectedActivities.clear();
-    state.selectedYear = null;
+    state.selectedYear = getDefaultMapYear();
+    yearSliderPreviewYear = null;
     if (dom.searchInput) dom.searchInput.value = "";
     renderAllFilterTags();
   }
