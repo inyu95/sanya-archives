@@ -1,9 +1,9 @@
 import { state } from "../state.js";
 import {
-  HISTORICAL_MAP_FALLBACK_BOUNDS,
+  HISTORICAL_MAP_BOUNDS,
   HISTORICAL_MAP_MAX_CAMERA_DISTANCE,
   HISTORICAL_MAP_MAX_ZOOM_LEVEL,
-  HISTORICAL_MAP_PADDING_DEGREES
+  HISTORICAL_MAP_MIN_ZOOM_LEVEL
 } from "../config/constants.js";
 
 const GSI_TILE_BASE = "https://cyberjapandata.gsi.go.jp/xyz/";
@@ -41,31 +41,8 @@ export function syncMapDisplayMode() {
 }
 
 function getHistoricalMapRectangle() {
-  const pins = state.allPins;
-  if (!pins || pins.length === 0) {
-    const b = HISTORICAL_MAP_FALLBACK_BOUNDS;
-    return Cesium.Rectangle.fromDegrees(b.west, b.south, b.east, b.north);
-  }
-
-  let west = Infinity;
-  let south = Infinity;
-  let east = -Infinity;
-  let north = -Infinity;
-
-  pins.forEach(function (pin) {
-    west = Math.min(west, pin.lon);
-    east = Math.max(east, pin.lon);
-    south = Math.min(south, pin.lat);
-    north = Math.max(north, pin.lat);
-  });
-
-  const pad = HISTORICAL_MAP_PADDING_DEGREES;
-  return Cesium.Rectangle.fromDegrees(
-    west - pad,
-    south - pad,
-    east + pad,
-    north + pad
-  );
+  const b = HISTORICAL_MAP_BOUNDS;
+  return Cesium.Rectangle.fromDegrees(b.west, b.south, b.east, b.north);
 }
 
 function ensureDefaultImageryLayer() {
@@ -88,7 +65,7 @@ function resolveLayerForDecade(decadeStart) {
 function createGsiProvider(config, rectangle) {
   return new Cesium.UrlTemplateImageryProvider({
     url: GSI_TILE_BASE + config.id + "/{z}/{x}/{y}." + config.ext,
-    minimumLevel: config.min,
+    minimumLevel: Math.max(config.min, HISTORICAL_MAP_MIN_ZOOM_LEVEL),
     maximumLevel: Math.min(config.max, HISTORICAL_MAP_MAX_ZOOM_LEVEL),
     rectangle: rectangle,
     credit: "国土地理院"
@@ -205,12 +182,36 @@ function showModernGeometry() {
   }
 }
 
+function mountHistoricalImageryLayer(viewer, config, rectangle) {
+  if (state.historicalImageryLayer) {
+    viewer.imageryLayers.remove(state.historicalImageryLayer, false);
+  }
+  state.historicalImageryLayer = viewer.imageryLayers.addImageryProvider(
+    createGsiProvider(config, rectangle)
+  );
+  state.historicalImageryLayer.alpha = 1.0;
+  state.historicalMapActive = true;
+  clampCameraToRectangle(viewer, rectangle);
+  viewer.scene.requestRender();
+}
+
+function flyToHistoricalArea(viewer, rectangle, onComplete) {
+  viewer.camera.cancelFlight();
+  viewer.camera.flyTo({
+    destination: rectangle,
+    duration: 1.2,
+    complete: onComplete,
+    cancel: onComplete
+  });
+}
+
 function setHistoricalView(decadeStart) {
   const viewer = state.viewer;
   const config = resolveLayerForDecade(decadeStart);
   if (!viewer || !config) return;
 
   const rectangle = getHistoricalMapRectangle();
+  const wasActive = state.historicalMapActive;
 
   ensureDefaultImageryLayer();
 
@@ -226,16 +227,14 @@ function setHistoricalView(decadeStart) {
 
   applyHistoricalCameraConstraints(viewer);
 
-  if (state.historicalImageryLayer) {
-    viewer.imageryLayers.remove(state.historicalImageryLayer, false);
+  if (wasActive) {
+    mountHistoricalImageryLayer(viewer, config, rectangle);
+    return;
   }
-  state.historicalImageryLayer = viewer.imageryLayers.addImageryProvider(
-    createGsiProvider(config, rectangle)
-  );
-  state.historicalImageryLayer.alpha = 1.0;
-  state.historicalMapActive = true;
 
-  viewer.scene.requestRender();
+  flyToHistoricalArea(viewer, rectangle, function () {
+    mountHistoricalImageryLayer(viewer, config, rectangle);
+  });
 }
 
 export function applyHistoricalMapLayer(decadeStart) {
