@@ -61,9 +61,60 @@ function pinMatchesYearFilter(pin) {
   return range.start <= year && range.end >= year;
 }
 
+const YEAR_SLIDER_THUMB_PX = 18;
+const YEAR_LABEL_MIN_GAP_PX = 40;
+
 function yearToSliderPercent(year, min, max) {
   if (max <= min) return 0;
   return ((year - min) / (max - min)) * 100;
+}
+
+function getYearSliderTrackWidth() {
+  return dom.yearFilterSlider ? dom.yearFilterSlider.offsetWidth : 0;
+}
+
+/** スライダーつまみの中心位置（%）— ブラウザのつまみ幅を考慮 */
+function yearToThumbPercent(year, min, max, trackWidthPx) {
+  if (max <= min) return 0;
+  const ratio = (year - min) / (max - min);
+  const width = trackWidthPx || getYearSliderTrackWidth();
+  if (!width || width <= YEAR_SLIDER_THUMB_PX) {
+    return ratio * 100;
+  }
+  const usable = width - YEAR_SLIDER_THUMB_PX;
+  const thumbCenter = YEAR_SLIDER_THUMB_PX / 2 + ratio * usable;
+  return (thumbCenter / width) * 100;
+}
+
+function yearToThumbPx(year, min, max, trackWidthPx) {
+  const width = trackWidthPx || getYearSliderTrackWidth();
+  return (yearToThumbPercent(year, min, max, width) / 100) * width;
+}
+
+function filterYearLabelsForDisplay(years, min, max, trackWidthPx) {
+  if (years.length <= 2) return years;
+  const width = trackWidthPx || getYearSliderTrackWidth();
+  if (!width) return years;
+
+  const shown = [years[0]];
+  for (let i = 1; i < years.length - 1; i++) {
+    const year = years[i];
+    if (yearToThumbPx(year, min, max, width) - yearToThumbPx(shown[shown.length - 1], min, max, width) >= YEAR_LABEL_MIN_GAP_PX) {
+      shown.push(year);
+    }
+  }
+
+  const last = years[years.length - 1];
+  if (last !== shown[shown.length - 1]) {
+    if (shown.length > 1
+      && yearToThumbPx(last, min, max, width) - yearToThumbPx(shown[shown.length - 1], min, max, width) < YEAR_LABEL_MIN_GAP_PX) {
+      shown.pop();
+    }
+    if (shown[shown.length - 1] !== last) {
+      shown.push(last);
+    }
+  }
+  return shown;
 }
 
 function getDisplayYear(year) {
@@ -77,12 +128,12 @@ function updateYearFilterSliderFill(year) {
   const min = state.yearSliderMin;
   const max = state.yearSliderMax;
   const displayYear = getDisplayYear(year);
-  const percent = yearToSliderPercent(displayYear, min, max);
-  dom.yearFilterSlider.style.setProperty("--year-fill", percent + "%");
-  updateYearFilterThumbLabel(year, percent);
+  const fillPercent = yearToSliderPercent(displayYear, min, max);
+  dom.yearFilterSlider.style.setProperty("--year-fill", fillPercent + "%");
+  updateYearFilterThumbLabel(year);
 }
 
-function updateYearFilterThumbLabel(year, percent) {
+function updateYearFilterThumbLabel(year) {
   if (!dom.yearFilterThumbLabel) return;
   const isAll = year === null;
   dom.yearFilterThumbLabel.hidden = isAll;
@@ -93,9 +144,7 @@ function updateYearFilterThumbLabel(year, percent) {
 
   const displayYear = getDisplayYear(year);
   dom.yearFilterThumbLabel.textContent = displayYear + "年";
-  if (percent === undefined) {
-    percent = yearToSliderPercent(displayYear, state.yearSliderMin, state.yearSliderMax);
-  }
+  const percent = yearToThumbPercent(displayYear, state.yearSliderMin, state.yearSliderMax);
   dom.yearFilterThumbLabel.style.left = percent + "%";
 }
 
@@ -178,15 +227,18 @@ function renderYearFilterTicks(min, max) {
   }
   boundaries.sort(function (a, b) { return a - b; });
 
+  const trackWidth = getYearSliderTrackWidth();
+  const visibleLabels = new Set(filterYearLabelsForDisplay(boundaries, min, max, trackWidth));
+
   boundaries.forEach(function (year) {
-    const percent = yearToSliderPercent(year, min, max) + "%";
+    const percent = yearToThumbPercent(year, min, max, trackWidth) + "%";
     const tick = document.createElement("span");
     tick.className = "year-filter-tick";
     tick.style.left = percent;
     tick.title = year + "年";
     dom.yearFilterTicks.appendChild(tick);
 
-    if (!dom.yearFilterTickLabels) return;
+    if (!dom.yearFilterTickLabels || !visibleLabels.has(year)) return;
     const label = document.createElement("span");
     label.className = "year-filter-tick-label";
     label.textContent = String(year);
@@ -235,9 +287,28 @@ function renderYearFilterBar() {
   updateYearFilterLabel(state.selectedYear);
   updateYearFilterSliderFill(state.selectedYear);
   syncHistoricalMapForYear(state.selectedYear, true);
+
+  requestAnimationFrame(function () {
+    renderYearFilterTicks(bounds.min, bounds.max);
+    updateYearFilterSliderFill(state.selectedYear);
+  });
+}
+
+let yearFilterResizeObserver = null;
+
+function setupYearFilterResizeObserver() {
+  if (!dom.yearFilterSliderWrap || yearFilterResizeObserver) return;
+  yearFilterResizeObserver = new ResizeObserver(function () {
+    if (!dom.yearFilterBar || dom.yearFilterBar.classList.contains("hidden")) return;
+    renderYearFilterTicks(state.yearSliderMin, state.yearSliderMax);
+    updateYearFilterSliderFill(state.selectedYear);
+  });
+  yearFilterResizeObserver.observe(dom.yearFilterSliderWrap);
 }
 
 export function setupYearFilterBar() {
+  setupYearFilterResizeObserver();
+
   if (dom.yearFilterAll) {
     dom.yearFilterAll.addEventListener("click", function () {
       setYearFilterAll();
