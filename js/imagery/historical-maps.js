@@ -1,6 +1,9 @@
 import { state } from "../state.js";
 import {
   HISTORICAL_MAP_BOUNDS,
+  HISTORICAL_MAP_BRIGHTNESS,
+  HISTORICAL_MAP_GAMMA,
+  HISTORICAL_MAP_GLOBE_BASE_COLOR,
   HISTORICAL_MAP_MAX_CAMERA_DISTANCE,
   HISTORICAL_MAP_MAX_ZOOM_LEVEL
 } from "../config/constants.js";
@@ -63,6 +66,12 @@ function showDefaultImageryLayer() {
   if (!state.defaultImageryLayer || !state.viewer) return;
   state.defaultImageryLayer.show = true;
   state.viewer.imageryLayers.lowerToBottom(state.defaultImageryLayer);
+}
+
+function hideDefaultImageryLayer() {
+  ensureDefaultImageryLayer();
+  if (!state.defaultImageryLayer) return;
+  state.defaultImageryLayer.show = false;
 }
 
 function createGsiProvider(config) {
@@ -145,6 +154,7 @@ function setModernView() {
   ensureDefaultImageryLayer();
   removeHistoricalLayers();
   restoreCameraConstraints(viewer);
+  viewer.scene.globe.baseColor = Cesium.Color.BLACK;
   showDefaultImageryLayer();
 
   if (state.usesGoogle3DTiles && state.google3dTileset) {
@@ -184,21 +194,31 @@ function showModernGeometry() {
 
 function mountHistoricalImageryLayer(viewer, config) {
   removeHistoricalLayers();
-  showDefaultImageryLayer();
+  hideDefaultImageryLayer();
   state.historicalImageryLayer = viewer.imageryLayers.addImageryProvider(createGsiProvider(config));
   state.historicalImageryLayer.alpha = 1.0;
+  state.historicalImageryLayer.brightness = HISTORICAL_MAP_BRIGHTNESS;
+  state.historicalImageryLayer.gamma = HISTORICAL_MAP_GAMMA;
   state.historicalMapActive = true;
   clampCameraToRectangle(viewer, getHistoricalMapRectangle());
   viewer.scene.requestRender();
 }
 
-function flyToHistoricalArea(viewer, rectangle, onComplete) {
+function isCameraInHistoricalArea(viewer, rectangle) {
+  const carto = viewer.camera.positionCartographic;
+  if (!carto) return false;
+  return carto.longitude >= rectangle.west
+    && carto.longitude <= rectangle.east
+    && carto.latitude >= rectangle.south
+    && carto.latitude <= rectangle.north
+    && carto.height <= HISTORICAL_MAP_MAX_CAMERA_DISTANCE * 1.2;
+}
+
+function flyToHistoricalArea(viewer, rectangle) {
   viewer.camera.cancelFlight();
   viewer.camera.flyTo({
     destination: rectangle,
-    duration: 1.2,
-    complete: onComplete,
-    cancel: onComplete
+    duration: 0.8
   });
 }
 
@@ -214,18 +234,14 @@ function setHistoricalView(year) {
 
   viewer.scene.globe.show = true;
   viewer.scene.globe.depthTestAgainstTerrain = false;
-  viewer.scene.globe.baseColor = Cesium.Color.fromCssColorString("#1a1a1a");
+  viewer.scene.globe.baseColor = Cesium.Color.fromCssColorString(HISTORICAL_MAP_GLOBE_BASE_COLOR);
 
   applyHistoricalCameraConstraints(viewer);
+  mountHistoricalImageryLayer(viewer, config);
 
-  if (wasActive) {
-    mountHistoricalImageryLayer(viewer, config);
-    return;
+  if (!wasActive && !isCameraInHistoricalArea(viewer, rectangle)) {
+    flyToHistoricalArea(viewer, rectangle);
   }
-
-  flyToHistoricalArea(viewer, rectangle, function () {
-    mountHistoricalImageryLayer(viewer, config);
-  });
 }
 
 export function applyHistoricalMapLayer(year) {

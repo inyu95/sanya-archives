@@ -1,5 +1,5 @@
 /** デプロイ時に increment して ES モジュールのブラウザキャッシュを無効化 */
-export const APP_MODULE_VERSION = "66";
+export const APP_MODULE_VERSION = "67";
 
 export const PIN_CIRCLE_SIZE = 60;
 export const INITIAL_PIN_VIEW_RANGE = 3500;
@@ -12,6 +12,11 @@ export const HISTORICAL_MAP_BOUNDS = {
 };
 export const HISTORICAL_MAP_MAX_ZOOM_LEVEL = 15;
 export const HISTORICAL_MAP_MAX_CAMERA_DISTANCE = 3500;
+/** タイル読み込み前の地球色（暗すぎないベージュ系） */
+export const HISTORICAL_MAP_GLOBE_BASE_COLOR = "#e0d8cc";
+/** スキャン地図の明るさ補正 */
+export const HISTORICAL_MAP_BRIGHTNESS = 1.3;
+export const HISTORICAL_MAP_GAMMA = 0.9;
 export const PIN_POLE_HEIGHT_METERS = 60;
 export const PIN_STEM_WIDTH = 1;
 export const PIN_STEM_COLOR = "#ffffff";
