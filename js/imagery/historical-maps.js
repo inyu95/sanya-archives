@@ -2,8 +2,7 @@ import { state } from "../state.js";
 import {
   HISTORICAL_MAP_BOUNDS,
   HISTORICAL_MAP_MAX_CAMERA_DISTANCE,
-  HISTORICAL_MAP_MAX_ZOOM_LEVEL,
-  HISTORICAL_MAP_MIN_ZOOM_LEVEL
+  HISTORICAL_MAP_MAX_ZOOM_LEVEL
 } from "../config/constants.js";
 
 const GSI_TILE_BASE = "https://cyberjapandata.gsi.go.jp/xyz/";
@@ -37,7 +36,11 @@ export function getAvailableMapDecades() {
 }
 
 export function syncMapDisplayMode() {
-  applyHistoricalMapLayer(state.selectedYearDecade);
+  applyHistoricalMapLayer(state.selectedYear);
+}
+
+export function resolveLayerForYear(year) {
+  return resolveLayerForDecade(year);
 }
 
 function getHistoricalMapRectangle() {
@@ -46,10 +49,11 @@ function getHistoricalMapRectangle() {
 }
 
 function ensureDefaultImageryLayer() {
-  if (!state.viewer || state.defaultImageryLayer) return;
+  if (!state.viewer || state.defaultImageryProvider) return;
   const layers = state.viewer.imageryLayers;
   if (layers.length > 0) {
     state.defaultImageryLayer = layers.get(0);
+    state.defaultImageryProvider = state.defaultImageryLayer.imageryProvider;
   }
 }
 
@@ -62,14 +66,20 @@ function resolveLayerForDecade(decadeStart) {
   return DECADE_MAP_LAYERS[DECADE_MAP_LAYERS.length - 1];
 }
 
-function createGsiProvider(config, rectangle) {
+function createGsiProvider(config) {
   return new Cesium.UrlTemplateImageryProvider({
     url: GSI_TILE_BASE + config.id + "/{z}/{x}/{y}." + config.ext,
-    minimumLevel: Math.max(config.min, HISTORICAL_MAP_MIN_ZOOM_LEVEL),
+    minimumLevel: config.min,
     maximumLevel: Math.min(config.max, HISTORICAL_MAP_MAX_ZOOM_LEVEL),
-    rectangle: rectangle,
+    tilingScheme: new Cesium.WebMercatorTilingScheme(),
     credit: "国土地理院"
   });
+}
+
+function clearImageryLayers(viewer) {
+  while (viewer.imageryLayers.length > 0) {
+    viewer.imageryLayers.remove(viewer.imageryLayers.get(0));
+  }
 }
 
 function removeHistoricalLayers() {
@@ -138,6 +148,24 @@ function restoreCameraConstraints(viewer) {
   }
 }
 
+function restoreDefaultImageryLayer(viewer) {
+  clearImageryLayers(viewer);
+  state.historicalImageryLayer = null;
+  state.basePaleLayer = null;
+
+  if (state.defaultImageryProvider) {
+    state.defaultImageryLayer = viewer.imageryLayers.addImageryProvider(state.defaultImageryProvider);
+    state.defaultImageryLayer.show = true;
+    return;
+  }
+
+  return Cesium.createWorldImageryAsync().then(function (provider) {
+    state.defaultImageryProvider = provider;
+    state.defaultImageryLayer = viewer.imageryLayers.addImageryProvider(provider);
+    state.defaultImageryLayer.show = true;
+  });
+}
+
 function setModernView() {
   const viewer = state.viewer;
   if (!viewer) return;
@@ -146,22 +174,31 @@ function setModernView() {
   removeHistoricalLayers();
   restoreCameraConstraints(viewer);
 
-  if (state.defaultImageryLayer) {
-    state.defaultImageryLayer.show = true;
+  const restored = restoreDefaultImageryLayer(viewer);
+  const finalize = function () {
+    if (state.usesGoogle3DTiles) {
+      viewer.scene.globe.show = false;
+      viewer.scene.globe.depthTestAgainstTerrain = false;
+      showModernGeometry();
+    } else {
+      viewer.scene.globe.show = true;
+      viewer.scene.globe.depthTestAgainstTerrain = true;
+      showModernGeometry();
+    }
+
+    state.historicalMapActive = false;
+    viewer.scene.requestRender();
+  };
+
+  if (restored && typeof restored.then === "function") {
+    restored.then(finalize).catch(function (err) {
+      console.warn("デフォルト地図の復元に失敗:", err);
+      finalize();
+    });
+    return;
   }
 
-  if (state.usesGoogle3DTiles) {
-    viewer.scene.globe.show = false;
-    viewer.scene.globe.depthTestAgainstTerrain = false;
-    showModernGeometry();
-  } else {
-    viewer.scene.globe.show = true;
-    viewer.scene.globe.depthTestAgainstTerrain = true;
-    showModernGeometry();
-  }
-
-  state.historicalMapActive = false;
-  viewer.scene.requestRender();
+  finalize();
 }
 
 function hideModernGeometry() {
@@ -182,16 +219,18 @@ function showModernGeometry() {
   }
 }
 
-function mountHistoricalImageryLayer(viewer, config, rectangle) {
-  if (state.historicalImageryLayer) {
+function mountHistoricalImageryLayer(viewer, config, replaceStack) {
+  if (replaceStack) {
+    clearImageryLayers(viewer);
+    state.defaultImageryLayer = null;
+  } else if (state.historicalImageryLayer) {
     viewer.imageryLayers.remove(state.historicalImageryLayer, false);
   }
-  state.historicalImageryLayer = viewer.imageryLayers.addImageryProvider(
-    createGsiProvider(config, rectangle)
-  );
+
+  state.historicalImageryLayer = viewer.imageryLayers.addImageryProvider(createGsiProvider(config));
   state.historicalImageryLayer.alpha = 1.0;
   state.historicalMapActive = true;
-  clampCameraToRectangle(viewer, rectangle);
+  clampCameraToRectangle(viewer, getHistoricalMapRectangle());
   viewer.scene.requestRender();
 }
 
@@ -214,11 +253,6 @@ function setHistoricalView(decadeStart) {
   const wasActive = state.historicalMapActive;
 
   ensureDefaultImageryLayer();
-
-  if (state.defaultImageryLayer) {
-    state.defaultImageryLayer.show = false;
-  }
-
   hideModernGeometry();
 
   viewer.scene.globe.show = true;
@@ -228,12 +262,12 @@ function setHistoricalView(decadeStart) {
   applyHistoricalCameraConstraints(viewer);
 
   if (wasActive) {
-    mountHistoricalImageryLayer(viewer, config, rectangle);
+    mountHistoricalImageryLayer(viewer, config, false);
     return;
   }
 
   flyToHistoricalArea(viewer, rectangle, function () {
-    mountHistoricalImageryLayer(viewer, config, rectangle);
+    mountHistoricalImageryLayer(viewer, config, true);
   });
 }
 

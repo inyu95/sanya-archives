@@ -9,7 +9,7 @@ import {
   ASSETS_PHOTOS_BASE
 } from "../config/constants.js";
 import { parseCommaList } from "../utils/parse.js";
-import { loadPinData } from "../filters/filters.js?v=60";
+import { loadPinData } from "../filters/filters.js?v=62";
 import { setStatus } from "../ui/status.js";
 
 function cellValue(cell) {

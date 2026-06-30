@@ -1,6 +1,6 @@
 import { dom } from "../config/dom.js";
 import { state } from "../state.js";
-import { parseCommaList, parsePinYear } from "../utils/parse.js?v=60";
+import { parseCommaList, parsePinYear } from "../utils/parse.js?v=62";
 import { renderPins, flyToPins } from "../pins/pins.js";
 import { setStatus, hideStatus } from "../ui/status.js";
 import { hidePinInfo } from "../info-panel.js";
@@ -8,46 +8,32 @@ import { renderArchiveList } from "../ui/archive-list.js";
 import {
   applyHistoricalMapLayer,
   EARLIEST_MAPPED_DECADE,
-  YEAR_FILTER_BEFORE,
-  getAvailableMapDecades
-} from "../imagery/historical-maps.js?v=60";
+  resolveLayerForYear
+} from "../imagery/historical-maps.js?v=62";
 
-function pinOverlapsDecade(range, decadeStart) {
-  const decadeEnd = decadeStart + 9;
-  const endYear = Number.isFinite(range.end) ? range.end : new Date().getFullYear();
-  return range.start <= decadeEnd && endYear >= decadeStart;
-}
+/** 地図レイヤー切替の重複呼び出しを防ぐ */
+let activeHistoricalLayerId = null;
 
-function getDecadesFromPins(pins) {
-  const decades = new Set();
-  let hasBeforeMapped = false;
-  const availableDecades = getAvailableMapDecades();
+function getYearSliderBounds(pins) {
+  let minYear = EARLIEST_MAPPED_DECADE;
+  let maxYear = new Date().getFullYear();
+  let hasYearData = false;
 
   pins.forEach(function (pin) {
     const range = getPinActiveYearRange(pin);
     if (!range) return;
-
-    if (range.start < EARLIEST_MAPPED_DECADE) {
-      hasBeforeMapped = true;
+    hasYearData = true;
+    if (range.start < minYear) {
+      minYear = Math.max(1928, range.start);
     }
-
-    availableDecades.forEach(function (decadeStart) {
-      if (pinOverlapsDecade(range, decadeStart)) {
-        decades.add(decadeStart);
-      }
-    });
-  });
-
-  const options = [];
-  if (hasBeforeMapped) {
-    options.push(YEAR_FILTER_BEFORE);
-  }
-  availableDecades.forEach(function (decade) {
-    if (decades.has(decade)) {
-      options.push(decade);
+    const endYear = Number.isFinite(range.end) ? range.end : maxYear;
+    if (endYear > maxYear) {
+      maxYear = endYear;
     }
   });
-  return options;
+
+  if (!hasYearData) return null;
+  return { min: minYear, max: maxYear };
 }
 
 function getPinActiveYearRange(pin) {
@@ -68,205 +54,168 @@ function getPinActiveYearRange(pin) {
 }
 
 function pinMatchesYearFilter(pin) {
-  if (state.selectedYearDecade === null) return true;
+  if (state.selectedYear === null) return true;
   const range = getPinActiveYearRange(pin);
   if (!range) return false;
-  if (state.selectedYearDecade === YEAR_FILTER_BEFORE) {
-    return range.start < EARLIEST_MAPPED_DECADE;
+  const year = state.selectedYear;
+  return range.start <= year && range.end >= year;
+}
+
+function formatYearLabel(year) {
+  if (year === null) return "すべて";
+  const layer = resolveLayerForYear(year);
+  return year + "年 · " + layer.label;
+}
+
+function yearToSliderPercent(year, min, max) {
+  if (max <= min) return 0;
+  return ((year - min) / (max - min)) * 100;
+}
+
+function updateYearFilterSliderFill(year) {
+  if (!dom.yearFilterSlider) return;
+  const min = state.yearSliderMin;
+  const max = state.yearSliderMax;
+  const displayYear = year !== null
+    ? year
+    : parseInt(dom.yearFilterSlider.value, 10);
+  const percent = yearToSliderPercent(displayYear, min, max);
+  dom.yearFilterSlider.style.setProperty("--year-fill", percent + "%");
+}
+
+function updateYearFilterAllButton() {
+  if (!dom.yearFilterAll) return;
+  const isAll = state.selectedYear === null;
+  dom.yearFilterAll.classList.toggle("active", isAll);
+  if (dom.yearFilterSliderWrap) {
+    dom.yearFilterSliderWrap.classList.toggle("year-filter-slider-wrap--inactive", isAll);
   }
-  const decadeStart = state.selectedYearDecade;
-  const decadeEnd = decadeStart + 9;
-  return range.start <= decadeEnd && range.end >= decadeStart;
 }
 
-function formatYearDecadeLabel(decadeStart) {
-  if (decadeStart === null) return "すべて";
-  if (decadeStart === YEAR_FILTER_BEFORE) return "それ以前";
-  return decadeStart + "–" + (decadeStart + 9);
+function updateYearFilterLabel(year) {
+  if (dom.yearFilterLabel) {
+    dom.yearFilterLabel.textContent = formatYearLabel(year);
+  }
 }
 
-function isYearFilterValueActive(buttonValue, decadeStart) {
-  if (buttonValue === "all") return decadeStart === null;
-  if (buttonValue === "before") return decadeStart === YEAR_FILTER_BEFORE;
-  return parseInt(buttonValue, 10) === decadeStart;
-}
-
-function getYearFilterSegmentSelector(decadeStart) {
-  if (decadeStart === null) return ".year-filter-segment[data-decade='all']";
-  if (decadeStart === YEAR_FILTER_BEFORE) return ".year-filter-segment[data-decade='before']";
-  return ".year-filter-segment[data-decade='" + decadeStart + "']";
-}
-
-function updateYearFilterNavButtons() {
-  if (!dom.yearFilterPrev || !dom.yearFilterNext) return;
-  const currentIndex = state.selectedYearDecade === null
-    ? -1
-    : state.yearDecadeOptions.indexOf(state.selectedYearDecade);
-  dom.yearFilterPrev.disabled = currentIndex <= 0;
-  dom.yearFilterNext.disabled = currentIndex >= state.yearDecadeOptions.length - 1;
-}
-
-function getActiveYearFilterSegment(decadeStart) {
-  const root = dom.yearFilterTrackInner || dom.yearFilterTrack;
-  if (!root) return null;
-  return root.querySelector(getYearFilterSegmentSelector(decadeStart));
-}
-
-function updateYearFilterThumb(decadeStart, instant) {
-  const thumb = dom.yearFilterThumb;
-  const inner = dom.yearFilterTrackInner;
-  if (!thumb || !inner) return;
-
-  const activeSegment = getActiveYearFilterSegment(decadeStart);
-  if (!activeSegment) {
-    thumb.style.opacity = "0";
+function syncHistoricalMapForYear(year, force) {
+  if (year === null) {
+    if (force || activeHistoricalLayerId !== null) {
+      activeHistoricalLayerId = null;
+      applyHistoricalMapLayer(null);
+    }
     return;
   }
 
-  const left = activeSegment.offsetLeft;
-  const width = activeSegment.offsetWidth;
-
-  if (instant) {
-    thumb.style.transition = "none";
-  }
-
-  thumb.style.width = width + "px";
-  thumb.style.transform = "translateX(" + left + "px)";
-  thumb.style.opacity = "1";
-
-  if (instant) {
-    requestAnimationFrame(function () {
-      thumb.style.transition = "";
-    });
+  const layer = resolveLayerForYear(year);
+  if (force || layer.id !== activeHistoricalLayerId) {
+    activeHistoricalLayerId = layer.id;
+    applyHistoricalMapLayer(year);
   }
 }
 
-function scrollYearFilterSegmentIntoView(decadeStart) {
-  const activeSegment = getActiveYearFilterSegment(decadeStart);
-  if (activeSegment && activeSegment.scrollIntoView) {
-    activeSegment.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+function setYearFromSlider(year) {
+  const clamped = Math.max(state.yearSliderMin, Math.min(state.yearSliderMax, year));
+  const enteringFromAll = state.selectedYear === null;
+  state.selectedYear = clamped;
+  if (dom.yearFilterSlider) {
+    dom.yearFilterSlider.value = String(clamped);
   }
-}
-
-function setYearFilter(decadeStart) {
-  state.selectedYearDecade = decadeStart;
-  if (dom.yearFilterTrack) {
-    dom.yearFilterTrack.querySelectorAll(".year-filter-segment").forEach(function (button) {
-      const value = button.getAttribute("data-decade");
-      button.classList.toggle("active", isYearFilterValueActive(value, decadeStart));
-    });
-  }
-  if (dom.yearFilterLabel) {
-    dom.yearFilterLabel.textContent = formatYearDecadeLabel(decadeStart);
-  }
-  updateYearFilterNavButtons();
-  updateYearFilterThumb(decadeStart);
-  scrollYearFilterSegmentIntoView(decadeStart);
-  applyHistoricalMapLayer(decadeStart);
+  updateYearFilterAllButton();
+  updateYearFilterLabel(clamped);
+  updateYearFilterSliderFill(clamped);
+  syncHistoricalMapForYear(clamped, enteringFromAll);
   applyFilters();
 }
 
-function shiftYearFilter(direction) {
-  if (state.yearDecadeOptions.length === 0) return;
-  const currentIndex = state.selectedYearDecade === null
-    ? -1
-    : state.yearDecadeOptions.indexOf(state.selectedYearDecade);
-  const nextIndex = currentIndex + direction;
-  if (nextIndex < 0) {
-    setYearFilter(null);
-    return;
-  }
-  if (nextIndex >= state.yearDecadeOptions.length) return;
-  setYearFilter(state.yearDecadeOptions[nextIndex]);
+function setYearFilterAll() {
+  state.selectedYear = null;
+  updateYearFilterAllButton();
+  updateYearFilterLabel(null);
+  updateYearFilterSliderFill(null);
+  syncHistoricalMapForYear(null, true);
+  applyFilters();
+}
+
+function renderYearFilterTicks(min, max) {
+  if (!dom.yearFilterTicks) return;
+  dom.yearFilterTicks.innerHTML = "";
+
+  const boundaries = [min];
+  const eraStarts = [2020, 2010, 2000, 1990, 1980, 1970, 1960, 1940, 1930];
+  eraStarts.forEach(function (eraStart) {
+    if (eraStart > min && eraStart < max) {
+      boundaries.push(eraStart);
+    }
+  });
+
+  boundaries.forEach(function (year) {
+    const tick = document.createElement("span");
+    tick.className = "year-filter-tick";
+    tick.style.left = yearToSliderPercent(year, min, max) + "%";
+    tick.title = year + "年";
+    dom.yearFilterTicks.appendChild(tick);
+  });
 }
 
 function renderYearFilterBar() {
-  if (!dom.yearFilterBar || !dom.yearFilterTrack) return;
+  if (!dom.yearFilterBar) return;
 
-  state.yearDecadeOptions = getDecadesFromPins(state.allPins);
-  if (state.yearDecadeOptions.length === 0) {
+  const bounds = getYearSliderBounds(state.allPins);
+  if (!bounds) {
     dom.yearFilterBar.classList.add("hidden");
-    state.selectedYearDecade = null;
+    state.selectedYear = null;
+    activeHistoricalLayerId = null;
     applyHistoricalMapLayer(null);
     return;
   }
 
-  dom.yearFilterBar.classList.remove("hidden");
-  if (state.selectedYearDecade !== null && state.yearDecadeOptions.indexOf(state.selectedYearDecade) === -1) {
-    state.selectedYearDecade = null;
-  }
+  state.yearSliderMin = bounds.min;
+  state.yearSliderMax = bounds.max;
 
-  dom.yearFilterTrack.innerHTML = "";
-
-  const inner = document.createElement("div");
-  inner.className = "year-filter-track-inner";
-  dom.yearFilterTrack.appendChild(inner);
-  dom.yearFilterTrackInner = inner;
-
-  const thumb = document.createElement("div");
-  thumb.className = "year-filter-thumb";
-  thumb.setAttribute("aria-hidden", "true");
-  inner.appendChild(thumb);
-  dom.yearFilterThumb = thumb;
-
-  const allButton = document.createElement("button");
-  allButton.type = "button";
-  allButton.className = "year-filter-segment" + (state.selectedYearDecade === null ? " active" : "");
-  allButton.setAttribute("data-decade", "all");
-  allButton.setAttribute("role", "tab");
-  allButton.textContent = "すべて";
-  allButton.addEventListener("click", function () {
-    setYearFilter(null);
-  });
-  inner.appendChild(allButton);
-
-  state.yearDecadeOptions.forEach(function (decadeStart) {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "year-filter-segment" + (state.selectedYearDecade === decadeStart ? " active" : "");
-    if (decadeStart === YEAR_FILTER_BEFORE) {
-      button.setAttribute("data-decade", "before");
-      button.textContent = "それ以前";
-    } else {
-      button.setAttribute("data-decade", String(decadeStart));
-      button.textContent = decadeStart + "年代";
+  if (state.selectedYear !== null) {
+    if (state.selectedYear < bounds.min || state.selectedYear > bounds.max) {
+      state.selectedYear = null;
     }
-    button.setAttribute("role", "tab");
-    button.addEventListener("click", function () {
-      setYearFilter(decadeStart);
-    });
-    inner.appendChild(button);
-  });
-
-  if (dom.yearFilterLabel) {
-    dom.yearFilterLabel.textContent = formatYearDecadeLabel(state.selectedYearDecade);
   }
-  updateYearFilterNavButtons();
-  requestAnimationFrame(function () {
-    updateYearFilterThumb(state.selectedYearDecade, true);
-  });
-  applyHistoricalMapLayer(state.selectedYearDecade);
+
+  dom.yearFilterBar.classList.remove("hidden");
+
+  if (dom.yearFilterSlider) {
+    dom.yearFilterSlider.min = String(bounds.min);
+    dom.yearFilterSlider.max = String(bounds.max);
+    const defaultYear = state.selectedYear !== null
+      ? state.selectedYear
+      : Math.round((bounds.min + bounds.max) / 2);
+    dom.yearFilterSlider.value = String(defaultYear);
+    if (state.selectedYear === null) {
+      dom.yearFilterSlider.value = String(defaultYear);
+    }
+  }
+
+  renderYearFilterTicks(bounds.min, bounds.max);
+  updateYearFilterAllButton();
+  updateYearFilterLabel(state.selectedYear);
+  updateYearFilterSliderFill(state.selectedYear);
+  syncHistoricalMapForYear(state.selectedYear, true);
 }
 
 export function setupYearFilterBar() {
-  if (dom.yearFilterPrev) {
-    dom.yearFilterPrev.addEventListener("click", function () {
-      shiftYearFilter(-1);
+  if (dom.yearFilterAll) {
+    dom.yearFilterAll.addEventListener("click", function () {
+      setYearFilterAll();
     });
   }
-  if (dom.yearFilterNext) {
-    dom.yearFilterNext.addEventListener("click", function () {
-      shiftYearFilter(1);
+  if (dom.yearFilterSlider) {
+    dom.yearFilterSlider.addEventListener("pointerdown", function () {
+      if (state.selectedYear === null) {
+        setYearFromSlider(parseInt(dom.yearFilterSlider.value, 10));
+      }
+    });
+    dom.yearFilterSlider.addEventListener("input", function () {
+      setYearFromSlider(parseInt(dom.yearFilterSlider.value, 10));
     });
   }
-  if (dom.yearFilterTrack) {
-    dom.yearFilterTrack.addEventListener("scroll", function () {
-      updateYearFilterThumb(state.selectedYearDecade, true);
-    });
-  }
-  window.addEventListener("resize", function () {
-    updateYearFilterThumb(state.selectedYearDecade, true);
-  });
 }
 
 function pinMatchesQuery(pin, query) {
@@ -315,7 +264,7 @@ function hasActiveFilters() {
   return Boolean(query)
     || state.selectedCategories.size > 0
     || state.selectedActivities.size > 0
-    || state.selectedYearDecade !== null;
+    || state.selectedYear !== null;
 }
 
 function updateSearchCount(filteredCount) {
@@ -441,7 +390,7 @@ export function loadPinData(pins, options) {
   if (opts.resetSearch) {
     state.selectedCategories.clear();
     state.selectedActivities.clear();
-    state.selectedYearDecade = null;
+    state.selectedYear = null;
     if (dom.searchInput) dom.searchInput.value = "";
     renderAllFilterTags();
   }

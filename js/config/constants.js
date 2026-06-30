@@ -1,5 +1,5 @@
 /** デプロイ時に increment して ES モジュールのブラウザキャッシュを無効化 */
-export const APP_MODULE_VERSION = "60";
+export const APP_MODULE_VERSION = "62";
 
 export const PIN_CIRCLE_SIZE = 60;
 export const INITIAL_PIN_VIEW_RANGE = 3500;
@@ -10,7 +10,6 @@ export const HISTORICAL_MAP_BOUNDS = {
   east: 139.718,
   north: 35.725
 };
-export const HISTORICAL_MAP_MIN_ZOOM_LEVEL = 14;
 export const HISTORICAL_MAP_MAX_ZOOM_LEVEL = 15;
 export const HISTORICAL_MAP_MAX_CAMERA_DISTANCE = 3500;
 export const PIN_POLE_HEIGHT_METERS = 60;

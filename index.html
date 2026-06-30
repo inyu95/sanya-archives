@@ -9,7 +9,7 @@
     <meta http-equiv="Expires" content="0">
 
     <link rel="stylesheet" href="node_modules/cesium/Build/Cesium/Widgets/widgets.css">
-    <link rel="stylesheet" href="stylesheet.css?v=9">
+    <link rel="stylesheet" href="stylesheet.css?v=10">
   </head>
 
   <body>
@@ -117,9 +117,11 @@
     </div>
 
     <div id="year-filter-bar" class="hidden">
-      <button id="year-filter-prev" type="button" aria-label="前の年代">‹</button>
-      <div id="year-filter-track" role="tablist" aria-label="年代フィルター"></div>
-      <button id="year-filter-next" type="button" aria-label="次の年代">›</button>
+      <button id="year-filter-all" type="button" class="year-filter-all active">すべて</button>
+      <div id="year-filter-slider-wrap">
+        <div id="year-filter-ticks" aria-hidden="true"></div>
+        <input type="range" id="year-filter-slider" min="1930" max="2026" value="1985" step="1" aria-label="年代">
+      </div>
       <span id="year-filter-label"></span>
     </div>
 
@@ -172,6 +174,6 @@
       window.CESIUM_BASE_URL = "node_modules/cesium/Build/Cesium/";
     </script>
     <script src="node_modules/cesium/Build/Cesium/Cesium.js"></script>
-    <script type="module" src="js/main.js?v=60"></script>
+    <script type="module" src="js/main.js?v=62"></script>
   </body>
 </html>
