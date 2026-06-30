@@ -533,7 +533,7 @@ export function loadPinData(pins, options) {
   if (opts.resetSearch) {
     state.selectedCategories.clear();
     state.selectedActivities.clear();
-    state.selectedYear = getDefaultMapYear();
+    state.selectedYear = getCurrentMapYear();
     yearSliderPreviewYear = null;
     if (dom.searchInput) dom.searchInput.value = "";
     renderAllFilterTags();
