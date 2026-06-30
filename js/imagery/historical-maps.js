@@ -231,9 +231,7 @@ function showModernGeometry() {
 function mountHistoricalImageryLayer(viewer, config) {
   removeHistoricalLayers();
   showDefaultImageryLayer();
-  const rectangle = getHistoricalMapRectangle();
   state.historicalImageryLayer = viewer.imageryLayers.addImageryProvider(createGsiProvider(config));
-  state.historicalImageryLayer.rectangle = rectangle;
   state.historicalImageryLayer.alpha = 1.0;
   state.historicalImageryLayer.brightness = HISTORICAL_MAP_BRIGHTNESS;
   state.historicalImageryLayer.gamma = HISTORICAL_MAP_GAMMA;
