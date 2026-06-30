@@ -1,5 +1,5 @@
 /** デプロイ時に increment して ES モジュールのブラウザキャッシュを無効化 */
-export const APP_MODULE_VERSION = "64";
+export const APP_MODULE_VERSION = "65";
 
 export const PIN_CIRCLE_SIZE = 60;
 export const INITIAL_PIN_VIEW_RANGE = 3500;
@@ -35,7 +35,7 @@ export const POINT_CLOUD_PAN_DRAG_FACTOR = 0.005;
 
 export const CESIUM_ION_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI0YWEzZjAzZi1lYWNjLTQ1MjEtODNiNS1hODhhNzNiZDZmZWYiLCJpZCI6NDE3MTQ4LCJzdWIiOiJpbnl1MTk5NSIsImlzcyI6Imh0dHBzOi8vYXBpLmNlc2l1bS5jb20iLCJhdWQiOiJVbnRpdGxlZCIsImlhdCI6MTc4MDY2NzA4OX0.1Uh_YIa1s77JZ4JBrDFaTMt4XT9P8YyQq22-lak_M7s";
 
-function appBasePath() {
+export function getAppBasePath() {
   let path = window.location.pathname;
   if (path.endsWith("/")) return path;
   const last = path.split("/").pop() || "";
@@ -43,4 +43,4 @@ function appBasePath() {
   return path + "/";
 }
 
-export const ASSETS_PHOTOS_BASE = appBasePath() + "assets/photos/";
+export const ASSETS_PHOTOS_BASE = getAppBasePath() + "assets/photos/";

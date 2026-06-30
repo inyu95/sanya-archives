@@ -6,10 +6,11 @@ import {
   SHEET_FETCH_TIMEOUT_MS,
   SHEET_FETCH_MAX_RETRIES,
   GOOGLE_SHEETS_API_KEY,
-  ASSETS_PHOTOS_BASE
+  ASSETS_PHOTOS_BASE,
+  getAppBasePath
 } from "../config/constants.js";
 import { parseCommaList } from "../utils/parse.js";
-import { loadPinData } from "../filters/filters.js?v=64";
+import { loadPinData } from "../filters/filters.js?v=65";
 import { setStatus } from "../ui/status.js";
 
 function cellValue(cell) {
@@ -96,8 +97,21 @@ function getColumnIndexes(rows) {
 
 function resolveImageUrl(path) {
   if (!path) return "";
-  if (/^https?:\/\//i.test(path)) return path;
-  return path.startsWith("/") ? path : "/" + path.replace(/^\.\//, "");
+  const text = String(path).trim();
+  if (/^https?:\/\//i.test(text)) return text;
+
+  const normalized = text.replace(/^\.\//, "").replace(/^\/+/, "");
+  const base = getAppBasePath();
+
+  if (normalized.toLowerCase().startsWith("assets/")) {
+    return base + normalized.split("/").filter(Boolean).map(encodeURIComponent).join("/");
+  }
+
+  if (isDirectImagePath(normalized) && normalized.indexOf("/") === -1) {
+    return ASSETS_PHOTOS_BASE + encodeURIComponent(normalized);
+  }
+
+  return base + normalized.split("/").filter(Boolean).map(encodeURIComponent).join("/");
 }
 
 function isDirectImagePath(value) {
