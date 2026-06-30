@@ -1,6 +1,6 @@
 import { dom } from "../config/dom.js";
 import { state } from "../state.js";
-import { parseCommaList, parsePinYear } from "../utils/parse.js?v=56";
+import { parseCommaList, parsePinYear } from "../utils/parse.js?v=57";
 import { renderPins, flyToPins } from "../pins/pins.js";
 import { setStatus, hideStatus } from "../ui/status.js";
 import { hidePinInfo } from "../info-panel.js";
@@ -10,7 +10,7 @@ import {
   EARLIEST_MAPPED_DECADE,
   YEAR_FILTER_BEFORE,
   getAvailableMapDecades
-} from "../imagery/historical-maps.js?v=56";
+} from "../imagery/historical-maps.js?v=57";
 
 function pinOverlapsDecade(range, decadeStart) {
   const decadeEnd = decadeStart + 9;
@@ -149,6 +149,7 @@ function scrollYearFilterSegmentIntoView(decadeStart) {
 }
 
 function setYearFilter(decadeStart) {
+  const wasHistorical = state.selectedYearDecade !== null;
   state.selectedYearDecade = decadeStart;
   if (dom.yearFilterTrack) {
     dom.yearFilterTrack.querySelectorAll(".year-filter-segment").forEach(function (button) {
@@ -164,6 +165,11 @@ function setYearFilter(decadeStart) {
   scrollYearFilterSegmentIntoView(decadeStart);
   applyHistoricalMapLayer(decadeStart);
   applyFilters();
+  if (decadeStart !== null && !wasHistorical) {
+    requestAnimationFrame(function () {
+      flyToPins();
+    });
+  }
 }
 
 function shiftYearFilter(direction) {

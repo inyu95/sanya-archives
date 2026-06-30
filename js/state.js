@@ -31,6 +31,8 @@ export const state = {
   basePaleLayer: null,
   historicalImageryLayer: null,
   historicalMapActive: false,
+  historicalCameraSaved: null,
+  historicalCameraClamp: null,
   selectedPinEntity: null,
   savedCameraView: null,
   isCameraZoomed: false

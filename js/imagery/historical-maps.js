@@ -1,4 +1,10 @@
 import { state } from "../state.js";
+import {
+  HISTORICAL_MAP_FALLBACK_BOUNDS,
+  HISTORICAL_MAP_MAX_CAMERA_DISTANCE,
+  HISTORICAL_MAP_MAX_ZOOM_LEVEL,
+  HISTORICAL_MAP_PADDING_DEGREES
+} from "../config/constants.js";
 
 const GSI_TILE_BASE = "https://cyberjapandata.gsi.go.jp/xyz/";
 
@@ -34,6 +40,34 @@ export function syncMapDisplayMode() {
   applyHistoricalMapLayer(state.selectedYearDecade);
 }
 
+function getHistoricalMapRectangle() {
+  const pins = state.allPins;
+  if (!pins || pins.length === 0) {
+    const b = HISTORICAL_MAP_FALLBACK_BOUNDS;
+    return Cesium.Rectangle.fromDegrees(b.west, b.south, b.east, b.north);
+  }
+
+  let west = Infinity;
+  let south = Infinity;
+  let east = -Infinity;
+  let north = -Infinity;
+
+  pins.forEach(function (pin) {
+    west = Math.min(west, pin.lon);
+    east = Math.max(east, pin.lon);
+    south = Math.min(south, pin.lat);
+    north = Math.max(north, pin.lat);
+  });
+
+  const pad = HISTORICAL_MAP_PADDING_DEGREES;
+  return Cesium.Rectangle.fromDegrees(
+    west - pad,
+    south - pad,
+    east + pad,
+    north + pad
+  );
+}
+
 function ensureDefaultImageryLayer() {
   if (!state.viewer || state.defaultImageryLayer) return;
   const layers = state.viewer.imageryLayers;
@@ -51,25 +85,14 @@ function resolveLayerForDecade(decadeStart) {
   return DECADE_MAP_LAYERS[DECADE_MAP_LAYERS.length - 1];
 }
 
-function createGsiProvider(config) {
+function createGsiProvider(config, rectangle) {
   return new Cesium.UrlTemplateImageryProvider({
     url: GSI_TILE_BASE + config.id + "/{z}/{x}/{y}." + config.ext,
     minimumLevel: config.min,
-    maximumLevel: config.max,
+    maximumLevel: Math.min(config.max, HISTORICAL_MAP_MAX_ZOOM_LEVEL),
+    rectangle: rectangle,
     credit: "国土地理院"
   });
-}
-
-function ensurePaleBaseLayer() {
-  const viewer = state.viewer;
-  if (!viewer || state.basePaleLayer) return;
-
-  state.basePaleLayer = viewer.imageryLayers.addImageryProvider(
-    new Cesium.UrlTemplateImageryProvider({
-      url: GSI_TILE_BASE + "pale/{z}/{x}/{y}.png",
-      credit: "国土地理院"
-    })
-  );
 }
 
 function removeHistoricalLayers() {
@@ -86,12 +109,65 @@ function removeHistoricalLayers() {
   }
 }
 
+function clampCameraToRectangle(viewer, rectangle) {
+  const carto = viewer.camera.positionCartographic;
+  if (!carto) return;
+
+  const lon = Cesium.Math.clamp(carto.longitude, rectangle.west, rectangle.east);
+  const lat = Cesium.Math.clamp(carto.latitude, rectangle.south, rectangle.north);
+  if (lon === carto.longitude && lat === carto.latitude) return;
+
+  viewer.camera.setView({
+    destination: Cesium.Cartesian3.fromRadians(lon, lat, carto.height)
+  });
+}
+
+function applyHistoricalCameraConstraints(viewer) {
+  const controller = viewer.scene.screenSpaceCameraController;
+  const rectangle = getHistoricalMapRectangle();
+
+  if (!state.historicalCameraSaved) {
+    state.historicalCameraSaved = {
+      maximumZoomDistance: controller.maximumZoomDistance,
+      minimumZoomDistance: controller.minimumZoomDistance
+    };
+  }
+
+  controller.maximumZoomDistance = HISTORICAL_MAP_MAX_CAMERA_DISTANCE;
+  controller.minimumZoomDistance = 50;
+
+  if (state.historicalCameraClamp) {
+    viewer.camera.moveEnd.removeEventListener(state.historicalCameraClamp);
+  }
+
+  state.historicalCameraClamp = function () {
+    clampCameraToRectangle(viewer, rectangle);
+  };
+  viewer.camera.moveEnd.addEventListener(state.historicalCameraClamp);
+}
+
+function restoreCameraConstraints(viewer) {
+  const controller = viewer.scene.screenSpaceCameraController;
+
+  if (state.historicalCameraClamp) {
+    viewer.camera.moveEnd.removeEventListener(state.historicalCameraClamp);
+    state.historicalCameraClamp = null;
+  }
+
+  if (state.historicalCameraSaved) {
+    controller.maximumZoomDistance = state.historicalCameraSaved.maximumZoomDistance;
+    controller.minimumZoomDistance = state.historicalCameraSaved.minimumZoomDistance;
+    state.historicalCameraSaved = null;
+  }
+}
+
 function setModernView() {
   const viewer = state.viewer;
   if (!viewer) return;
 
   ensureDefaultImageryLayer();
   removeHistoricalLayers();
+  restoreCameraConstraints(viewer);
 
   if (state.defaultImageryLayer) {
     state.defaultImageryLayer.show = true;
@@ -134,6 +210,8 @@ function setHistoricalView(decadeStart) {
   const config = resolveLayerForDecade(decadeStart);
   if (!viewer || !config) return;
 
+  const rectangle = getHistoricalMapRectangle();
+
   ensureDefaultImageryLayer();
 
   if (state.defaultImageryLayer) {
@@ -143,16 +221,16 @@ function setHistoricalView(decadeStart) {
   hideModernGeometry();
 
   viewer.scene.globe.show = true;
-  viewer.scene.globe.depthTestAgainstTerrain = true;
-  viewer.scene.globe.baseColor = Cesium.Color.BLACK;
+  viewer.scene.globe.depthTestAgainstTerrain = false;
+  viewer.scene.globe.baseColor = Cesium.Color.fromCssColorString("#1a1a1a");
 
-  ensurePaleBaseLayer();
+  applyHistoricalCameraConstraints(viewer);
 
   if (state.historicalImageryLayer) {
     viewer.imageryLayers.remove(state.historicalImageryLayer, false);
   }
   state.historicalImageryLayer = viewer.imageryLayers.addImageryProvider(
-    createGsiProvider(config)
+    createGsiProvider(config, rectangle)
   );
   state.historicalImageryLayer.alpha = 1.0;
   state.historicalMapActive = true;
