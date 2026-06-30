@@ -24,6 +24,16 @@ export function decadeHasHistoricalMap(decadeStart) {
   return decadeStart >= EARLIEST_MAPPED_DECADE;
 }
 
+export function getAvailableMapDecades() {
+  return DECADE_MAP_LAYERS
+    .map(function (layer) { return layer.from; })
+    .sort(function (a, b) { return a - b; });
+}
+
+export function syncMapDisplayMode() {
+  applyHistoricalMapLayer(state.selectedYearDecade);
+}
+
 function ensureDefaultImageryLayer() {
   if (!state.viewer || state.defaultImageryLayer) return;
   const layers = state.viewer.imageryLayers;
@@ -90,16 +100,33 @@ function setModernView() {
   if (state.usesGoogle3DTiles) {
     viewer.scene.globe.show = false;
     viewer.scene.globe.depthTestAgainstTerrain = false;
-    if (state.google3dTileset) {
-      state.google3dTileset.show = true;
-    }
+    showModernGeometry();
   } else {
     viewer.scene.globe.show = true;
     viewer.scene.globe.depthTestAgainstTerrain = true;
+    showModernGeometry();
   }
 
   state.historicalMapActive = false;
   viewer.scene.requestRender();
+}
+
+function hideModernGeometry() {
+  if (state.google3dTileset) {
+    state.google3dTileset.show = false;
+  }
+  if (state.fallbackBuildings) {
+    state.fallbackBuildings.show = false;
+  }
+}
+
+function showModernGeometry() {
+  if (state.google3dTileset) {
+    state.google3dTileset.show = true;
+  }
+  if (state.fallbackBuildings) {
+    state.fallbackBuildings.show = true;
+  }
 }
 
 function setHistoricalView(decadeStart) {
@@ -113,12 +140,11 @@ function setHistoricalView(decadeStart) {
     state.defaultImageryLayer.show = false;
   }
 
+  hideModernGeometry();
+
   viewer.scene.globe.show = true;
   viewer.scene.globe.depthTestAgainstTerrain = true;
-
-  if (state.google3dTileset) {
-    state.google3dTileset.show = false;
-  }
+  viewer.scene.globe.baseColor = Cesium.Color.BLACK;
 
   ensurePaleBaseLayer();
 

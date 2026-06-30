@@ -9,12 +9,19 @@ import {
   applyHistoricalMapLayer,
   EARLIEST_MAPPED_DECADE,
   YEAR_FILTER_BEFORE,
-  decadeHasHistoricalMap
+  getAvailableMapDecades
 } from "../imagery/historical-maps.js";
+
+function pinOverlapsDecade(range, decadeStart) {
+  const decadeEnd = decadeStart + 9;
+  const endYear = Number.isFinite(range.end) ? range.end : new Date().getFullYear();
+  return range.start <= decadeEnd && endYear >= decadeStart;
+}
 
 function getDecadesFromPins(pins) {
   const decades = new Set();
   let hasBeforeMapped = false;
+  const availableDecades = getAvailableMapDecades();
 
   pins.forEach(function (pin) {
     const range = getPinActiveYearRange(pin);
@@ -24,24 +31,21 @@ function getDecadesFromPins(pins) {
       hasBeforeMapped = true;
     }
 
-    const rawStartDecade = Math.floor(range.start / 10) * 10;
-    const startDecade = Math.max(rawStartDecade, EARLIEST_MAPPED_DECADE);
-    const endYear = Number.isFinite(range.end) ? range.end : new Date().getFullYear();
-    const endDecade = Math.floor(endYear / 10) * 10;
-
-    for (let decade = startDecade; decade <= endDecade; decade += 10) {
-      if (decadeHasHistoricalMap(decade)) {
-        decades.add(decade);
+    availableDecades.forEach(function (decadeStart) {
+      if (pinOverlapsDecade(range, decadeStart)) {
+        decades.add(decadeStart);
       }
-    }
+    });
   });
 
   const options = [];
   if (hasBeforeMapped) {
     options.push(YEAR_FILTER_BEFORE);
   }
-  Array.from(decades).sort(function (a, b) { return a - b; }).forEach(function (decade) {
-    options.push(decade);
+  availableDecades.forEach(function (decade) {
+    if (decades.has(decade)) {
+      options.push(decade);
+    }
   });
   return options;
 }

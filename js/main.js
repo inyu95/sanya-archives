@@ -13,7 +13,7 @@ import { setupArchiveList } from "./ui/archive-list.js";
 import { setupAboutSheet } from "./ui/about.js";
 import { setupPointCloudModal, clearPointCloudModal } from "./pointcloud/viewer.js";
 import { mountCustomToolbarButtons } from "./ui/toolbar.js";
-import { initHistoricalMaps } from "./imagery/historical-maps.js";
+import { initHistoricalMaps, syncMapDisplayMode } from "./imagery/historical-maps.js";
 
 function configureGlobeForGoogle3DTiles(viewer) {
   viewer.scene.globe.show = false;
@@ -32,7 +32,7 @@ function loadGoogleEarth3D() {
   }).then(function (tileset) {
     state.google3dTileset = tileset;
     state.viewer.scene.primitives.add(tileset);
-    configureGlobeForGoogle3DTiles(state.viewer);
+    syncMapDisplayMode();
     state.viewer.scene.requestRender();
   });
 }
@@ -40,7 +40,9 @@ function loadGoogleEarth3D() {
 function loadFallbackBuildings() {
   configureGlobeForFallback(state.viewer);
   return Cesium.createOsmBuildingsAsync().then(function (buildings) {
+    state.fallbackBuildings = buildings;
     state.viewer.scene.primitives.add(buildings);
+    syncMapDisplayMode();
     state.viewer.scene.requestRender();
   });
 }

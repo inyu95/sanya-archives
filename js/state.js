@@ -1,6 +1,7 @@
 export const state = {
   viewer: null,
   google3dTileset: null,
+  fallbackBuildings: null,
   pointCloudViewer: null,
   pointCloudTileset: null,
   pointCloudPreviewViewer: null,
