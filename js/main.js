@@ -6,14 +6,14 @@ import {
   setupSearchBox,
   setupFilterPanel,
   setupYearFilterBar
-} from "./filters/filters.js?v=65";
+} from "./filters/filters.js?v=66";
 import { setupInfoPanel, showPinInfo, hidePinInfo, resetCameraZoomState } from "./info-panel.js";
 import { setupHomeButton } from "./ui/home.js";
 import { setupArchiveList } from "./ui/archive-list.js";
 import { setupAboutSheet } from "./ui/about.js";
 import { setupPointCloudModal, clearPointCloudModal } from "./pointcloud/viewer.js";
 import { mountCustomToolbarButtons } from "./ui/toolbar.js";
-import { initHistoricalMaps, syncMapDisplayMode } from "./imagery/historical-maps.js?v=65";
+import { initHistoricalMaps, syncMapDisplayMode } from "./imagery/historical-maps.js?v=66";
 
 const GOOGLE_3D_TILES_TIMEOUT_MS = 45000;
 

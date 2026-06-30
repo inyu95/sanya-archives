@@ -71,6 +71,7 @@ function createGsiProvider(config) {
     minimumLevel: config.min,
     maximumLevel: Math.min(config.max, HISTORICAL_MAP_MAX_ZOOM_LEVEL),
     tilingScheme: new Cesium.WebMercatorTilingScheme(),
+    rectangle: getHistoricalMapRectangle(),
     credit: "国土地理院"
   });
 }
@@ -80,7 +81,7 @@ function removeHistoricalLayers() {
   if (!viewer) return;
 
   if (state.historicalImageryLayer) {
-    viewer.imageryLayers.remove(state.historicalImageryLayer, false);
+    viewer.imageryLayers.remove(state.historicalImageryLayer, true);
     state.historicalImageryLayer = null;
   }
 }
