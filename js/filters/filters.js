@@ -13,6 +13,8 @@ import {
 
 /** 地図レイヤー切替の重複呼び出しを防ぐ */
 let activeHistoricalLayerId = null;
+/** スライダー操作中のプレビュー年（マウスを離すまで地図は切り替えない） */
+let yearSliderPreviewYear = null;
 
 function getYearSliderBounds(pins) {
   let minYear = EARLIEST_MAPPED_DECADE;
@@ -123,11 +125,20 @@ function getDisplayYear(year) {
   return parseInt(dom.yearFilterSlider.value, 10);
 }
 
+function clampSliderYear(year) {
+  return Math.max(state.yearSliderMin, Math.min(state.yearSliderMax, year));
+}
+
+function getSliderVisualYear(committedYear) {
+  if (yearSliderPreviewYear !== null) return yearSliderPreviewYear;
+  return getDisplayYear(committedYear);
+}
+
 function updateYearFilterSliderFill(year) {
   if (!dom.yearFilterSlider) return;
   const min = state.yearSliderMin;
   const max = state.yearSliderMax;
-  const displayYear = getDisplayYear(year);
+  const displayYear = getSliderVisualYear(year);
   const fillPercent = yearToSliderPercent(displayYear, min, max);
   dom.yearFilterSlider.style.setProperty("--year-fill", fillPercent + "%");
   updateYearFilterThumbLabel(year);
@@ -135,14 +146,15 @@ function updateYearFilterSliderFill(year) {
 
 function updateYearFilterThumbLabel(year) {
   if (!dom.yearFilterThumbLabel) return;
-  const isAll = year === null;
-  dom.yearFilterThumbLabel.hidden = isAll;
+  const isPreviewing = yearSliderPreviewYear !== null;
+  const showLabel = year !== null || isPreviewing;
+  dom.yearFilterThumbLabel.hidden = !showLabel;
   if (dom.yearFilterSliderWrap) {
-    dom.yearFilterSliderWrap.classList.toggle("year-filter-slider-wrap--has-year", !isAll);
+    dom.yearFilterSliderWrap.classList.toggle("year-filter-slider-wrap--has-year", showLabel);
   }
-  if (isAll) return;
+  if (!showLabel) return;
 
-  const displayYear = getDisplayYear(year);
+  const displayYear = getSliderVisualYear(year);
   dom.yearFilterThumbLabel.textContent = displayYear + "年";
   const percent = yearToThumbPercent(displayYear, state.yearSliderMin, state.yearSliderMax);
   dom.yearFilterThumbLabel.style.left = percent + "%";
@@ -151,9 +163,10 @@ function updateYearFilterThumbLabel(year) {
 function updateYearFilterAllButton() {
   if (!dom.yearFilterAll) return;
   const isAll = state.selectedYear === null;
-  dom.yearFilterAll.classList.toggle("active", isAll);
+  const isPreviewing = yearSliderPreviewYear !== null;
+  dom.yearFilterAll.classList.toggle("active", isAll && !isPreviewing);
   if (dom.yearFilterSliderWrap) {
-    dom.yearFilterSliderWrap.classList.toggle("year-filter-slider-wrap--inactive", isAll);
+    dom.yearFilterSliderWrap.classList.toggle("year-filter-slider-wrap--inactive", isAll && !isPreviewing);
   }
 }
 
@@ -185,8 +198,16 @@ function syncHistoricalMapForYear(year, force) {
   }
 }
 
+function previewYearSlider(year) {
+  yearSliderPreviewYear = clampSliderYear(year);
+  updateYearFilterAllButton();
+  updateYearFilterSliderFill(state.selectedYear);
+  updateYearFilterLabel(yearSliderPreviewYear);
+}
+
 function setYearFromSlider(year) {
-  const clamped = Math.max(state.yearSliderMin, Math.min(state.yearSliderMax, year));
+  yearSliderPreviewYear = null;
+  const clamped = clampSliderYear(year);
   const enteringFromAll = state.selectedYear === null;
   state.selectedYear = clamped;
   if (dom.yearFilterSlider) {
@@ -200,6 +221,7 @@ function setYearFromSlider(year) {
 }
 
 function setYearFilterAll() {
+  yearSliderPreviewYear = null;
   state.selectedYear = null;
   updateYearFilterAllButton();
   updateYearFilterLabel(null);
@@ -253,6 +275,7 @@ function renderYearFilterBar() {
   const bounds = getYearSliderBounds(state.allPins);
   if (!bounds) {
     dom.yearFilterBar.classList.add("hidden");
+    yearSliderPreviewYear = null;
     state.selectedYear = null;
     activeHistoricalLayerId = null;
     applyHistoricalMapLayer(null);
@@ -316,11 +339,12 @@ export function setupYearFilterBar() {
   }
   if (dom.yearFilterSlider) {
     dom.yearFilterSlider.addEventListener("pointerdown", function () {
-      if (state.selectedYear === null) {
-        setYearFromSlider(parseInt(dom.yearFilterSlider.value, 10));
-      }
+      previewYearSlider(parseInt(dom.yearFilterSlider.value, 10));
     });
     dom.yearFilterSlider.addEventListener("input", function () {
+      previewYearSlider(parseInt(dom.yearFilterSlider.value, 10));
+    });
+    dom.yearFilterSlider.addEventListener("change", function () {
       setYearFromSlider(parseInt(dom.yearFilterSlider.value, 10));
     });
   }
