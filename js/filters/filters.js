@@ -5,22 +5,45 @@ import { renderPins, flyToPins } from "../pins/pins.js";
 import { setStatus, hideStatus } from "../ui/status.js";
 import { hidePinInfo } from "../info-panel.js";
 import { renderArchiveList } from "../ui/archive-list.js";
-import { applyHistoricalMapLayer } from "../imagery/historical-maps.js";
+import {
+  applyHistoricalMapLayer,
+  EARLIEST_MAPPED_DECADE,
+  YEAR_FILTER_BEFORE,
+  decadeHasHistoricalMap
+} from "../imagery/historical-maps.js";
 
 function getDecadesFromPins(pins) {
   const decades = new Set();
+  let hasBeforeMapped = false;
+
   pins.forEach(function (pin) {
     const range = getPinActiveYearRange(pin);
     if (!range) return;
 
-    const startDecade = Math.floor(range.start / 10) * 10;
+    if (range.start < EARLIEST_MAPPED_DECADE) {
+      hasBeforeMapped = true;
+    }
+
+    const rawStartDecade = Math.floor(range.start / 10) * 10;
+    const startDecade = Math.max(rawStartDecade, EARLIEST_MAPPED_DECADE);
     const endYear = Number.isFinite(range.end) ? range.end : new Date().getFullYear();
     const endDecade = Math.floor(endYear / 10) * 10;
+
     for (let decade = startDecade; decade <= endDecade; decade += 10) {
-      decades.add(decade);
+      if (decadeHasHistoricalMap(decade)) {
+        decades.add(decade);
+      }
     }
   });
-  return Array.from(decades).sort(function (a, b) { return a - b; });
+
+  const options = [];
+  if (hasBeforeMapped) {
+    options.push(YEAR_FILTER_BEFORE);
+  }
+  Array.from(decades).sort(function (a, b) { return a - b; }).forEach(function (decade) {
+    options.push(decade);
+  });
+  return options;
 }
 
 function getPinActiveYearRange(pin) {
@@ -44,6 +67,9 @@ function pinMatchesYearFilter(pin) {
   if (state.selectedYearDecade === null) return true;
   const range = getPinActiveYearRange(pin);
   if (!range) return false;
+  if (state.selectedYearDecade === YEAR_FILTER_BEFORE) {
+    return range.start < EARLIEST_MAPPED_DECADE;
+  }
   const decadeStart = state.selectedYearDecade;
   const decadeEnd = decadeStart + 9;
   return range.start <= decadeEnd && range.end >= decadeStart;
@@ -51,7 +77,20 @@ function pinMatchesYearFilter(pin) {
 
 function formatYearDecadeLabel(decadeStart) {
   if (decadeStart === null) return "すべて";
+  if (decadeStart === YEAR_FILTER_BEFORE) return "それ以前";
   return decadeStart + "–" + (decadeStart + 9);
+}
+
+function isYearFilterValueActive(buttonValue, decadeStart) {
+  if (buttonValue === "all") return decadeStart === null;
+  if (buttonValue === "before") return decadeStart === YEAR_FILTER_BEFORE;
+  return parseInt(buttonValue, 10) === decadeStart;
+}
+
+function getYearFilterSegmentSelector(decadeStart) {
+  if (decadeStart === null) return ".year-filter-segment[data-decade='all']";
+  if (decadeStart === YEAR_FILTER_BEFORE) return ".year-filter-segment[data-decade='before']";
+  return ".year-filter-segment[data-decade='" + decadeStart + "']";
 }
 
 function updateYearFilterNavButtons() {
@@ -66,10 +105,7 @@ function updateYearFilterNavButtons() {
 function getActiveYearFilterSegment(decadeStart) {
   const root = dom.yearFilterTrackInner || dom.yearFilterTrack;
   if (!root) return null;
-  const selector = decadeStart === null
-    ? ".year-filter-segment[data-decade='all']"
-    : ".year-filter-segment[data-decade='" + decadeStart + "']";
-  return root.querySelector(selector);
+  return root.querySelector(getYearFilterSegmentSelector(decadeStart));
 }
 
 function updateYearFilterThumb(decadeStart, instant) {
@@ -113,10 +149,7 @@ function setYearFilter(decadeStart) {
   if (dom.yearFilterTrack) {
     dom.yearFilterTrack.querySelectorAll(".year-filter-segment").forEach(function (button) {
       const value = button.getAttribute("data-decade");
-      const isActive = value === "all"
-        ? decadeStart === null
-        : parseInt(value, 10) === decadeStart;
-      button.classList.toggle("active", isActive);
+      button.classList.toggle("active", isYearFilterValueActive(value, decadeStart));
     });
   }
   if (dom.yearFilterLabel) {
@@ -187,9 +220,14 @@ function renderYearFilterBar() {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "year-filter-segment" + (state.selectedYearDecade === decadeStart ? " active" : "");
-    button.setAttribute("data-decade", String(decadeStart));
+    if (decadeStart === YEAR_FILTER_BEFORE) {
+      button.setAttribute("data-decade", "before");
+      button.textContent = "それ以前";
+    } else {
+      button.setAttribute("data-decade", String(decadeStart));
+      button.textContent = decadeStart + "年代";
+    }
     button.setAttribute("role", "tab");
-    button.textContent = decadeStart + "年代";
     button.addEventListener("click", function () {
       setYearFilter(decadeStart);
     });

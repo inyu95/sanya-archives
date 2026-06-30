@@ -14,6 +14,16 @@ const DECADE_MAP_LAYERS = [
   { from: 1930, id: "ort_riku10", min: 13, max: 18, ext: "png", label: "1936–1942年頃" }
 ];
 
+/** 地理院タイルで利用できる最古の年代（これ未満は個別バーなし） */
+export const EARLIEST_MAPPED_DECADE = DECADE_MAP_LAYERS[DECADE_MAP_LAYERS.length - 1].from;
+
+/** 年代バー「それ以前」の内部値 */
+export const YEAR_FILTER_BEFORE = -1;
+
+export function decadeHasHistoricalMap(decadeStart) {
+  return decadeStart >= EARLIEST_MAPPED_DECADE;
+}
+
 function ensureDefaultImageryLayer() {
   if (!state.viewer || state.defaultImageryLayer) return;
   const layers = state.viewer.imageryLayers;
@@ -127,6 +137,8 @@ function setHistoricalView(decadeStart) {
 export function applyHistoricalMapLayer(decadeStart) {
   if (decadeStart === null) {
     setModernView();
+  } else if (decadeStart === YEAR_FILTER_BEFORE) {
+    setHistoricalView(EARLIEST_MAPPED_DECADE);
   } else {
     setHistoricalView(decadeStart);
   }
