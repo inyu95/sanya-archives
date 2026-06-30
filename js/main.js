@@ -6,14 +6,14 @@ import {
   setupSearchBox,
   setupFilterPanel,
   setupYearFilterBar
-} from "./filters/filters.js?v=63";
+} from "./filters/filters.js?v=64";
 import { setupInfoPanel, showPinInfo, hidePinInfo, resetCameraZoomState } from "./info-panel.js";
 import { setupHomeButton } from "./ui/home.js";
 import { setupArchiveList } from "./ui/archive-list.js";
 import { setupAboutSheet } from "./ui/about.js";
 import { setupPointCloudModal, clearPointCloudModal } from "./pointcloud/viewer.js";
 import { mountCustomToolbarButtons } from "./ui/toolbar.js";
-import { initHistoricalMaps, syncMapDisplayMode } from "./imagery/historical-maps.js?v=63";
+import { initHistoricalMaps, syncMapDisplayMode } from "./imagery/historical-maps.js?v=64";
 
 const GOOGLE_3D_TILES_TIMEOUT_MS = 45000;
 
@@ -54,6 +54,7 @@ function loadGoogleEarth3D() {
   ).then(function (tileset) {
     state.google3dTileset = tileset;
     state.viewer.scene.primitives.add(tileset);
+    state.mapGeometryReady = true;
     configureGlobeForGoogle3DTiles(state.viewer);
     syncMapDisplayMode();
     state.viewer.scene.requestRender();
@@ -65,6 +66,7 @@ function loadFallbackBuildings() {
   return Cesium.createOsmBuildingsAsync().then(function (buildings) {
     state.fallbackBuildings = buildings;
     state.viewer.scene.primitives.add(buildings);
+    state.mapGeometryReady = true;
     syncMapDisplayMode();
     state.viewer.scene.requestRender();
   });

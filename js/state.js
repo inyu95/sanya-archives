@@ -30,6 +30,7 @@ export const state = {
   usesGoogle3DTiles: true,
   defaultImageryLayer: null,
   basePaleLayer: null,
+  mapGeometryReady: false,
   historicalImageryLayer: null,
   historicalMapActive: false,
   historicalCameraSaved: null,

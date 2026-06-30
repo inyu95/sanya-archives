@@ -58,6 +58,13 @@ function ensureDefaultImageryLayer() {
   }
 }
 
+function showDefaultImageryLayer() {
+  ensureDefaultImageryLayer();
+  if (!state.defaultImageryLayer || !state.viewer) return;
+  state.defaultImageryLayer.show = true;
+  state.viewer.imageryLayers.lowerToBottom(state.defaultImageryLayer);
+}
+
 function createGsiProvider(config) {
   return new Cesium.UrlTemplateImageryProvider({
     url: GSI_TILE_BASE + config.id + "/{z}/{x}/{y}." + config.ext,
@@ -75,10 +82,6 @@ function removeHistoricalLayers() {
   if (state.historicalImageryLayer) {
     viewer.imageryLayers.remove(state.historicalImageryLayer, false);
     state.historicalImageryLayer = null;
-  }
-  if (state.basePaleLayer) {
-    viewer.imageryLayers.remove(state.basePaleLayer, false);
-    state.basePaleLayer = null;
   }
 }
 
@@ -141,19 +144,19 @@ function setModernView() {
   ensureDefaultImageryLayer();
   removeHistoricalLayers();
   restoreCameraConstraints(viewer);
+  showDefaultImageryLayer();
 
-  if (state.defaultImageryLayer) {
-    state.defaultImageryLayer.show = true;
-  }
-
-  if (state.usesGoogle3DTiles) {
+  if (state.usesGoogle3DTiles && state.google3dTileset) {
     viewer.scene.globe.show = false;
     viewer.scene.globe.depthTestAgainstTerrain = false;
     showModernGeometry();
-  } else {
+  } else if (state.fallbackBuildings) {
     viewer.scene.globe.show = true;
     viewer.scene.globe.depthTestAgainstTerrain = true;
     showModernGeometry();
+  } else {
+    viewer.scene.globe.show = true;
+    viewer.scene.globe.depthTestAgainstTerrain = false;
   }
 
   state.historicalMapActive = false;
@@ -180,6 +183,7 @@ function showModernGeometry() {
 
 function mountHistoricalImageryLayer(viewer, config) {
   removeHistoricalLayers();
+  showDefaultImageryLayer();
   state.historicalImageryLayer = viewer.imageryLayers.addImageryProvider(createGsiProvider(config));
   state.historicalImageryLayer.alpha = 1.0;
   state.historicalMapActive = true;
@@ -204,14 +208,6 @@ function setHistoricalView(year) {
 
   const rectangle = getHistoricalMapRectangle();
   const wasActive = state.historicalMapActive;
-
-  ensureDefaultImageryLayer();
-
-  // 地理院タイルをベースにすると端ピクセルが地球全体に伸びるため、
-  // 標準地図は非表示のまま残し、上に地理院レイヤーを重ねる。
-  if (state.defaultImageryLayer) {
-    state.defaultImageryLayer.show = false;
-  }
 
   hideModernGeometry();
 
