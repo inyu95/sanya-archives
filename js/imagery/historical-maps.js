@@ -22,9 +22,6 @@ const DECADE_MAP_LAYERS = [
 /** 地理院タイルで利用できる最古の年代（これ未満は個別バーなし） */
 export const EARLIEST_MAPPED_DECADE = DECADE_MAP_LAYERS[DECADE_MAP_LAYERS.length - 1].from;
 
-/** 年代バー「それ以前」の内部値 */
-export const YEAR_FILTER_BEFORE = -1;
-
 export function decadeHasHistoricalMap(decadeStart) {
   return decadeStart >= EARLIEST_MAPPED_DECADE;
 }
@@ -40,7 +37,12 @@ export function syncMapDisplayMode() {
 }
 
 export function resolveLayerForYear(year) {
-  return resolveLayerForDecade(year);
+  for (let i = 0; i < DECADE_MAP_LAYERS.length; i++) {
+    if (year >= DECADE_MAP_LAYERS[i].from) {
+      return DECADE_MAP_LAYERS[i];
+    }
+  }
+  return DECADE_MAP_LAYERS[DECADE_MAP_LAYERS.length - 1];
 }
 
 function getHistoricalMapRectangle() {
@@ -49,21 +51,11 @@ function getHistoricalMapRectangle() {
 }
 
 function ensureDefaultImageryLayer() {
-  if (!state.viewer || state.defaultImageryProvider) return;
+  if (!state.viewer || state.defaultImageryLayer) return;
   const layers = state.viewer.imageryLayers;
   if (layers.length > 0) {
     state.defaultImageryLayer = layers.get(0);
-    state.defaultImageryProvider = state.defaultImageryLayer.imageryProvider;
   }
-}
-
-function resolveLayerForDecade(decadeStart) {
-  for (let i = 0; i < DECADE_MAP_LAYERS.length; i++) {
-    if (decadeStart >= DECADE_MAP_LAYERS[i].from) {
-      return DECADE_MAP_LAYERS[i];
-    }
-  }
-  return DECADE_MAP_LAYERS[DECADE_MAP_LAYERS.length - 1];
 }
 
 function createGsiProvider(config) {
@@ -74,12 +66,6 @@ function createGsiProvider(config) {
     tilingScheme: new Cesium.WebMercatorTilingScheme(),
     credit: "国土地理院"
   });
-}
-
-function clearImageryLayers(viewer) {
-  while (viewer.imageryLayers.length > 0) {
-    viewer.imageryLayers.remove(viewer.imageryLayers.get(0));
-  }
 }
 
 function removeHistoricalLayers() {
@@ -148,24 +134,6 @@ function restoreCameraConstraints(viewer) {
   }
 }
 
-function restoreDefaultImageryLayer(viewer) {
-  clearImageryLayers(viewer);
-  state.historicalImageryLayer = null;
-  state.basePaleLayer = null;
-
-  if (state.defaultImageryProvider) {
-    state.defaultImageryLayer = viewer.imageryLayers.addImageryProvider(state.defaultImageryProvider);
-    state.defaultImageryLayer.show = true;
-    return;
-  }
-
-  return Cesium.createWorldImageryAsync().then(function (provider) {
-    state.defaultImageryProvider = provider;
-    state.defaultImageryLayer = viewer.imageryLayers.addImageryProvider(provider);
-    state.defaultImageryLayer.show = true;
-  });
-}
-
 function setModernView() {
   const viewer = state.viewer;
   if (!viewer) return;
@@ -174,31 +142,22 @@ function setModernView() {
   removeHistoricalLayers();
   restoreCameraConstraints(viewer);
 
-  const restored = restoreDefaultImageryLayer(viewer);
-  const finalize = function () {
-    if (state.usesGoogle3DTiles) {
-      viewer.scene.globe.show = false;
-      viewer.scene.globe.depthTestAgainstTerrain = false;
-      showModernGeometry();
-    } else {
-      viewer.scene.globe.show = true;
-      viewer.scene.globe.depthTestAgainstTerrain = true;
-      showModernGeometry();
-    }
-
-    state.historicalMapActive = false;
-    viewer.scene.requestRender();
-  };
-
-  if (restored && typeof restored.then === "function") {
-    restored.then(finalize).catch(function (err) {
-      console.warn("デフォルト地図の復元に失敗:", err);
-      finalize();
-    });
-    return;
+  if (state.defaultImageryLayer) {
+    state.defaultImageryLayer.show = true;
   }
 
-  finalize();
+  if (state.usesGoogle3DTiles) {
+    viewer.scene.globe.show = false;
+    viewer.scene.globe.depthTestAgainstTerrain = false;
+    showModernGeometry();
+  } else {
+    viewer.scene.globe.show = true;
+    viewer.scene.globe.depthTestAgainstTerrain = true;
+    showModernGeometry();
+  }
+
+  state.historicalMapActive = false;
+  viewer.scene.requestRender();
 }
 
 function hideModernGeometry() {
@@ -219,14 +178,8 @@ function showModernGeometry() {
   }
 }
 
-function mountHistoricalImageryLayer(viewer, config, replaceStack) {
-  if (replaceStack) {
-    clearImageryLayers(viewer);
-    state.defaultImageryLayer = null;
-  } else if (state.historicalImageryLayer) {
-    viewer.imageryLayers.remove(state.historicalImageryLayer, false);
-  }
-
+function mountHistoricalImageryLayer(viewer, config) {
+  removeHistoricalLayers();
   state.historicalImageryLayer = viewer.imageryLayers.addImageryProvider(createGsiProvider(config));
   state.historicalImageryLayer.alpha = 1.0;
   state.historicalMapActive = true;
@@ -244,15 +197,22 @@ function flyToHistoricalArea(viewer, rectangle, onComplete) {
   });
 }
 
-function setHistoricalView(decadeStart) {
+function setHistoricalView(year) {
   const viewer = state.viewer;
-  const config = resolveLayerForDecade(decadeStart);
+  const config = resolveLayerForYear(year);
   if (!viewer || !config) return;
 
   const rectangle = getHistoricalMapRectangle();
   const wasActive = state.historicalMapActive;
 
   ensureDefaultImageryLayer();
+
+  // 地理院タイルをベースにすると端ピクセルが地球全体に伸びるため、
+  // 標準地図は非表示のまま残し、上に地理院レイヤーを重ねる。
+  if (state.defaultImageryLayer) {
+    state.defaultImageryLayer.show = false;
+  }
+
   hideModernGeometry();
 
   viewer.scene.globe.show = true;
@@ -262,22 +222,20 @@ function setHistoricalView(decadeStart) {
   applyHistoricalCameraConstraints(viewer);
 
   if (wasActive) {
-    mountHistoricalImageryLayer(viewer, config, false);
+    mountHistoricalImageryLayer(viewer, config);
     return;
   }
 
   flyToHistoricalArea(viewer, rectangle, function () {
-    mountHistoricalImageryLayer(viewer, config, true);
+    mountHistoricalImageryLayer(viewer, config);
   });
 }
 
-export function applyHistoricalMapLayer(decadeStart) {
-  if (decadeStart === null) {
+export function applyHistoricalMapLayer(year) {
+  if (year === null) {
     setModernView();
-  } else if (decadeStart === YEAR_FILTER_BEFORE) {
-    setHistoricalView(EARLIEST_MAPPED_DECADE);
   } else {
-    setHistoricalView(decadeStart);
+    setHistoricalView(year);
   }
 }
 

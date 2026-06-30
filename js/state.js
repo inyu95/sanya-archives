@@ -29,7 +29,6 @@ export const state = {
   yearSliderMax: new Date().getFullYear(),
   usesGoogle3DTiles: true,
   defaultImageryLayer: null,
-  defaultImageryProvider: null,
   basePaleLayer: null,
   historicalImageryLayer: null,
   historicalMapActive: false,

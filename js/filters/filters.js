@@ -1,6 +1,6 @@
 import { dom } from "../config/dom.js";
 import { state } from "../state.js";
-import { parseCommaList, parsePinYear } from "../utils/parse.js?v=62";
+import { parseCommaList, parsePinYear } from "../utils/parse.js?v=63";
 import { renderPins, flyToPins } from "../pins/pins.js";
 import { setStatus, hideStatus } from "../ui/status.js";
 import { hidePinInfo } from "../info-panel.js";
@@ -9,7 +9,7 @@ import {
   applyHistoricalMapLayer,
   EARLIEST_MAPPED_DECADE,
   resolveLayerForYear
-} from "../imagery/historical-maps.js?v=62";
+} from "../imagery/historical-maps.js?v=63";
 
 /** 地図レイヤー切替の重複呼び出しを防ぐ */
 let activeHistoricalLayerId = null;
