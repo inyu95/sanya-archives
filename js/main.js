@@ -13,6 +13,7 @@ import { setupArchiveList } from "./ui/archive-list.js";
 import { setupAboutSheet } from "./ui/about.js";
 import { setupPointCloudModal, clearPointCloudModal } from "./pointcloud/viewer.js";
 import { mountCustomToolbarButtons } from "./ui/toolbar.js";
+import { initHistoricalMaps } from "./imagery/historical-maps.js";
 
 function configureGlobeForGoogle3DTiles(viewer) {
   viewer.scene.globe.show = false;
@@ -87,6 +88,8 @@ function init() {
     navigationHelpButton: true
   });
 
+  initHistoricalMaps(state.viewer);
+
   // Google 3D Tiles 読み込み前はデフォルトの楕円体地形のみ。World Terrain は 3D Tiles と重なってチカチカする。
   configureGlobeForGoogle3DTiles(state.viewer);
   state.viewer.scene.screenSpaceCameraController.enableCollisionDetection = true;
@@ -109,6 +112,7 @@ function init() {
     })
     .catch(function (err) {
       console.warn("Google Photorealistic 3D Tiles の読み込みに失敗:", err);
+      state.usesGoogle3DTiles = false;
       setStatus("Google 3D地図は利用できません。OSM建物データで代替表示します...");
       return loadFallbackBuildings();
     })

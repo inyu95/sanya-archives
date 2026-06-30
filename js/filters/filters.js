@@ -5,6 +5,7 @@ import { renderPins, flyToPins } from "../pins/pins.js";
 import { setStatus, hideStatus } from "../ui/status.js";
 import { hidePinInfo } from "../info-panel.js";
 import { renderArchiveList } from "../ui/archive-list.js";
+import { applyHistoricalMapLayer } from "../imagery/historical-maps.js";
 
 function getDecadesFromPins(pins) {
   const decades = new Set();
@@ -124,6 +125,7 @@ function setYearFilter(decadeStart) {
   updateYearFilterNavButtons();
   updateYearFilterThumb(decadeStart);
   scrollYearFilterSegmentIntoView(decadeStart);
+  applyHistoricalMapLayer(decadeStart);
   applyFilters();
 }
 
@@ -148,6 +150,7 @@ function renderYearFilterBar() {
   if (state.yearDecadeOptions.length === 0) {
     dom.yearFilterBar.classList.add("hidden");
     state.selectedYearDecade = null;
+    applyHistoricalMapLayer(null);
     return;
   }
 
@@ -200,6 +203,7 @@ function renderYearFilterBar() {
   requestAnimationFrame(function () {
     updateYearFilterThumb(state.selectedYearDecade, true);
   });
+  applyHistoricalMapLayer(state.selectedYearDecade);
 }
 
 export function setupYearFilterBar() {

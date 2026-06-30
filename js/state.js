@@ -25,6 +25,11 @@ export const state = {
   selectedActivities: new Set(),
   yearDecadeOptions: [],
   selectedYearDecade: null,
+  usesGoogle3DTiles: true,
+  defaultImageryLayer: null,
+  basePaleLayer: null,
+  historicalImageryLayer: null,
+  historicalMapActive: false,
   selectedPinEntity: null,
   savedCameraView: null,
   isCameraZoomed: false
