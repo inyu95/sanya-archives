@@ -3,7 +3,6 @@ import {
   HISTORICAL_MAP_BRIGHTNESS,
   HISTORICAL_MAP_FALLBACK_BOUNDS,
   HISTORICAL_MAP_GAMMA,
-  HISTORICAL_MAP_GLOBE_BASE_COLOR,
   HISTORICAL_MAP_MAX_CAMERA_DISTANCE,
   HISTORICAL_MAP_MAX_ZOOM_LEVEL,
   HISTORICAL_MAP_PADDING_DEGREES,
@@ -120,66 +119,12 @@ function removeHistoricalLayers() {
   }
 }
 
-function clampCameraToRectangle(viewer, rectangle) {
-  const carto = viewer.camera.positionCartographic;
-  if (!carto) return;
-
-  const lon = Cesium.Math.clamp(carto.longitude, rectangle.west, rectangle.east);
-  const lat = Cesium.Math.clamp(carto.latitude, rectangle.south, rectangle.north);
-  const height = Math.min(carto.height, HISTORICAL_MAP_MAX_CAMERA_DISTANCE);
-  if (lon === carto.longitude && lat === carto.latitude && height === carto.height) return;
-
-  viewer.camera.setView({
-    destination: Cesium.Cartesian3.fromRadians(lon, lat, height)
-  });
-}
-
-function applyHistoricalCameraConstraints(viewer) {
-  const controller = viewer.scene.screenSpaceCameraController;
-  const rectangle = getHistoricalMapRectangle();
-
-  if (!state.historicalCameraSaved) {
-    state.historicalCameraSaved = {
-      maximumZoomDistance: controller.maximumZoomDistance,
-      minimumZoomDistance: controller.minimumZoomDistance
-    };
-  }
-
-  controller.maximumZoomDistance = HISTORICAL_MAP_MAX_CAMERA_DISTANCE;
-  controller.minimumZoomDistance = 50;
-
-  if (state.historicalCameraClamp) {
-    viewer.camera.moveEnd.removeEventListener(state.historicalCameraClamp);
-  }
-
-  state.historicalCameraClamp = function () {
-    clampCameraToRectangle(viewer, rectangle);
-  };
-  viewer.camera.moveEnd.addEventListener(state.historicalCameraClamp);
-}
-
-function restoreCameraConstraints(viewer) {
-  const controller = viewer.scene.screenSpaceCameraController;
-
-  if (state.historicalCameraClamp) {
-    viewer.camera.moveEnd.removeEventListener(state.historicalCameraClamp);
-    state.historicalCameraClamp = null;
-  }
-
-  if (state.historicalCameraSaved) {
-    controller.maximumZoomDistance = state.historicalCameraSaved.maximumZoomDistance;
-    controller.minimumZoomDistance = state.historicalCameraSaved.minimumZoomDistance;
-    state.historicalCameraSaved = null;
-  }
-}
-
 function setModernView() {
   const viewer = state.viewer;
   if (!viewer) return;
 
   ensureDefaultImageryLayer();
   removeHistoricalLayers();
-  restoreCameraConstraints(viewer);
   viewer.scene.globe.baseColor = Cesium.Color.BLACK;
   showDefaultImageryLayer();
 
@@ -220,13 +165,14 @@ function showModernGeometry() {
 
 function mountHistoricalImageryLayer(viewer, config) {
   removeHistoricalLayers();
-  hideDefaultImageryLayer();
+  showDefaultImageryLayer();
+  const rectangle = getHistoricalMapRectangle();
   state.historicalImageryLayer = viewer.imageryLayers.addImageryProvider(createGsiProvider(config));
+  state.historicalImageryLayer.rectangle = rectangle;
   state.historicalImageryLayer.alpha = 1.0;
   state.historicalImageryLayer.brightness = HISTORICAL_MAP_BRIGHTNESS;
   state.historicalImageryLayer.gamma = HISTORICAL_MAP_GAMMA;
   state.historicalMapActive = true;
-  clampCameraToRectangle(viewer, getHistoricalMapRectangle());
   viewer.scene.requestRender();
 }
 
@@ -269,9 +215,8 @@ function setHistoricalView(year) {
 
   viewer.scene.globe.show = true;
   viewer.scene.globe.depthTestAgainstTerrain = false;
-  viewer.scene.globe.baseColor = Cesium.Color.fromCssColorString(HISTORICAL_MAP_GLOBE_BASE_COLOR);
-
-  applyHistoricalCameraConstraints(viewer);
+  viewer.scene.globe.baseColor = Cesium.Color.BLACK;
+  showDefaultImageryLayer();
 
   if (!wasActive && !isCameraInHistoricalArea(viewer, rectangle)) {
     flyToHistoricalArea(viewer, rectangle, function () {
