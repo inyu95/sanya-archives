@@ -6,14 +6,14 @@ import {
   setupSearchBox,
   setupFilterPanel,
   setupYearFilterBar
-} from "./filters/filters.js";
+} from "./filters/filters.js?v=56";
 import { setupInfoPanel, showPinInfo, hidePinInfo, resetCameraZoomState } from "./info-panel.js";
 import { setupHomeButton } from "./ui/home.js";
 import { setupArchiveList } from "./ui/archive-list.js";
 import { setupAboutSheet } from "./ui/about.js";
 import { setupPointCloudModal, clearPointCloudModal } from "./pointcloud/viewer.js";
 import { mountCustomToolbarButtons } from "./ui/toolbar.js";
-import { initHistoricalMaps, syncMapDisplayMode } from "./imagery/historical-maps.js";
+import { initHistoricalMaps, syncMapDisplayMode } from "./imagery/historical-maps.js?v=56";
 
 function configureGlobeForGoogle3DTiles(viewer) {
   viewer.scene.globe.show = false;

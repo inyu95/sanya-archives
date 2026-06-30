@@ -1,3 +1,6 @@
+/** デプロイ時に increment して ES モジュールのブラウザキャッシュを無効化 */
+export const APP_MODULE_VERSION = "56";
+
 export const PIN_CIRCLE_SIZE = 60;
 export const INITIAL_PIN_VIEW_RANGE = 3500;
 export const PIN_POLE_HEIGHT_METERS = 60;
