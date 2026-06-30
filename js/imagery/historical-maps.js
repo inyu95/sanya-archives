@@ -1,7 +1,6 @@
 import { state } from "../state.js";
 import {
   HISTORICAL_MAP_BOUNDS,
-  HISTORICAL_MAP_MAX_CAMERA_DISTANCE,
   HISTORICAL_MAP_MAX_ZOOM_LEVEL,
   HISTORICAL_MAP_MIN_ZOOM_LEVEL
 } from "../config/constants.js";
@@ -86,65 +85,12 @@ function removeHistoricalLayers() {
   }
 }
 
-function clampCameraToRectangle(viewer, rectangle) {
-  const carto = viewer.camera.positionCartographic;
-  if (!carto) return;
-
-  const lon = Cesium.Math.clamp(carto.longitude, rectangle.west, rectangle.east);
-  const lat = Cesium.Math.clamp(carto.latitude, rectangle.south, rectangle.north);
-  if (lon === carto.longitude && lat === carto.latitude) return;
-
-  viewer.camera.setView({
-    destination: Cesium.Cartesian3.fromRadians(lon, lat, carto.height)
-  });
-}
-
-function applyHistoricalCameraConstraints(viewer) {
-  const controller = viewer.scene.screenSpaceCameraController;
-  const rectangle = getHistoricalMapRectangle();
-
-  if (!state.historicalCameraSaved) {
-    state.historicalCameraSaved = {
-      maximumZoomDistance: controller.maximumZoomDistance,
-      minimumZoomDistance: controller.minimumZoomDistance
-    };
-  }
-
-  controller.maximumZoomDistance = HISTORICAL_MAP_MAX_CAMERA_DISTANCE;
-  controller.minimumZoomDistance = 50;
-
-  if (state.historicalCameraClamp) {
-    viewer.camera.moveEnd.removeEventListener(state.historicalCameraClamp);
-  }
-
-  state.historicalCameraClamp = function () {
-    clampCameraToRectangle(viewer, rectangle);
-  };
-  viewer.camera.moveEnd.addEventListener(state.historicalCameraClamp);
-}
-
-function restoreCameraConstraints(viewer) {
-  const controller = viewer.scene.screenSpaceCameraController;
-
-  if (state.historicalCameraClamp) {
-    viewer.camera.moveEnd.removeEventListener(state.historicalCameraClamp);
-    state.historicalCameraClamp = null;
-  }
-
-  if (state.historicalCameraSaved) {
-    controller.maximumZoomDistance = state.historicalCameraSaved.maximumZoomDistance;
-    controller.minimumZoomDistance = state.historicalCameraSaved.minimumZoomDistance;
-    state.historicalCameraSaved = null;
-  }
-}
-
 function setModernView() {
   const viewer = state.viewer;
   if (!viewer) return;
 
   ensureDefaultImageryLayer();
   removeHistoricalLayers();
-  restoreCameraConstraints(viewer);
 
   if (state.defaultImageryLayer) {
     state.defaultImageryLayer.show = true;
@@ -191,7 +137,6 @@ function mountHistoricalImageryLayer(viewer, config, rectangle) {
   );
   state.historicalImageryLayer.alpha = 1.0;
   state.historicalMapActive = true;
-  clampCameraToRectangle(viewer, rectangle);
   viewer.scene.requestRender();
 }
 
@@ -216,16 +161,13 @@ function setHistoricalView(decadeStart) {
   ensureDefaultImageryLayer();
 
   if (state.defaultImageryLayer) {
-    state.defaultImageryLayer.show = false;
+    state.defaultImageryLayer.show = true;
   }
 
   hideModernGeometry();
 
   viewer.scene.globe.show = true;
   viewer.scene.globe.depthTestAgainstTerrain = false;
-  viewer.scene.globe.baseColor = Cesium.Color.fromCssColorString("#1a1a1a");
-
-  applyHistoricalCameraConstraints(viewer);
 
   if (wasActive) {
     mountHistoricalImageryLayer(viewer, config, rectangle);
