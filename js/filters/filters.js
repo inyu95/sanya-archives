@@ -1,4 +1,5 @@
 import { dom } from "../config/dom.js";
+import { ASSETS_ICONS_BASE } from "../config/constants.js";
 import { state } from "../state.js";
 import { parseCommaList, parsePinYear } from "../utils/parse.js?v=72";
 import { renderPins, flyToPins } from "../pins/pins.js";
@@ -470,7 +471,21 @@ function renderFilterTags(container, options, selectedSet, type) {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "filter-tag filter-tag--" + type + (selectedSet.has(label) ? " active" : "");
-    button.textContent = label;
+    if (type === "role") {
+      const icon = document.createElement("img");
+      icon.className = "filter-tag-icon";
+      icon.src = ASSETS_ICONS_BASE + encodeURIComponent(label) + ".png";
+      icon.alt = "";
+      icon.setAttribute("aria-hidden", "true");
+      icon.addEventListener("error", function () {
+        icon.remove();
+      });
+      button.appendChild(icon);
+    }
+    const text = document.createElement("span");
+    text.className = "filter-tag-label";
+    text.textContent = label;
+    button.appendChild(text);
     if (type === "role") {
       applyRoleTagColor(button, label, selectedSet.has(label));
     }
