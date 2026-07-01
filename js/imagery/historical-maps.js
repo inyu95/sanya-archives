@@ -142,6 +142,14 @@ function getViewCenterCartographic(viewer) {
   const scene = viewer.scene;
   const canvas = scene.canvas;
   const center = new Cesium.Cartesian2(canvas.clientWidth / 2, canvas.clientHeight / 2);
+
+  if (scene.mode === Cesium.SceneMode.SCENE3D) {
+    const picked = scene.pickPosition(center);
+    if (Cesium.defined(picked)) {
+      return Cesium.Cartographic.fromCartesian(picked);
+    }
+  }
+
   const ray = viewer.camera.getPickRay(center);
   if (!ray) return null;
 
@@ -180,12 +188,14 @@ function applyHistoricalCameraConstraints(viewer) {
   if (!state.historicalCameraSaved) {
     state.historicalCameraSaved = {
       maximumZoomDistance: controller.maximumZoomDistance,
-      minimumZoomDistance: controller.minimumZoomDistance
+      minimumZoomDistance: controller.minimumZoomDistance,
+      enableCollisionDetection: controller.enableCollisionDetection
     };
   }
 
   controller.maximumZoomDistance = HISTORICAL_MAP_MAX_CAMERA_DISTANCE;
   controller.minimumZoomDistance = 50;
+  controller.enableCollisionDetection = false;
 
   if (state.historicalCameraClamp) {
     viewer.camera.moveEnd.removeEventListener(state.historicalCameraClamp);
@@ -208,6 +218,7 @@ function restoreCameraConstraints(viewer) {
   if (state.historicalCameraSaved) {
     controller.maximumZoomDistance = state.historicalCameraSaved.maximumZoomDistance;
     controller.minimumZoomDistance = state.historicalCameraSaved.minimumZoomDistance;
+    controller.enableCollisionDetection = state.historicalCameraSaved.enableCollisionDetection;
     state.historicalCameraSaved = null;
   }
 }
@@ -317,6 +328,7 @@ function setHistoricalView(year) {
 
   const rectangle = getHistoricalMapRectangle();
   const wasActive = state.historicalMapActive;
+  const preserveCamera = wasActive || isCameraViewingHistoricalArea(viewer, rectangle);
 
   hideModernGeometry();
 
@@ -326,14 +338,14 @@ function setHistoricalView(year) {
   showDefaultImageryLayer();
   applyHistoricalCameraConstraints(viewer);
 
-  if (!wasActive && !isCameraViewingHistoricalArea(viewer, rectangle)) {
+  if (!preserveCamera) {
     flyToHistoricalArea(viewer, rectangle, function () {
       mountHistoricalImageryLayer(viewer, config);
     });
     return;
   }
 
-  mountHistoricalImageryLayer(viewer, config, { skipCameraClamp: wasActive });
+  mountHistoricalImageryLayer(viewer, config, { skipCameraClamp: true });
 }
 
 export function applyHistoricalMapLayer(year) {
