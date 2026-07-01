@@ -4,8 +4,8 @@ export const APP_MODULE_VERSION = "73";
 export const PIN_CIRCLE_SIZE = 48;
 /** ピン画像の描画倍率（表示サイズは PIN_CIRCLE_SIZE のまま） */
 export const PIN_RENDER_SCALE = 3;
-/** 複数役割時の円の縦方向オフセット（px） */
-export const PIN_STACK_OFFSET = 15;
+/** 複数役割時の団子間隔（円の直径＝重ならない） */
+export const PIN_DANGO_SPACING = PIN_CIRCLE_SIZE;
 export const INITIAL_PIN_VIEW_RANGE = 3500;
 export const HISTORICAL_MAP_PADDING_DEGREES = 0.012;
 /** ピン未取得時の山谷エリア周辺（西・南・東・北） */

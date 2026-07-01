@@ -1,19 +1,31 @@
 import {
   PIN_CIRCLE_SIZE,
   PIN_RENDER_SCALE,
-  PIN_STACK_OFFSET,
+  PIN_DANGO_SPACING,
   PIN_STEM_PIXEL_HEIGHT,
   PIN_STEM_COLOR,
   PIN_STEM_ALPHA
 } from "../config/constants.js";
 
 const DEFAULT_PIN_BORDER_COLOR = "rgba(255,255,255,0.95)";
-const PIN_WHITE_BORDER_WIDTH = 3;
+const PIN_WHITE_BORDER_WIDTH = 2;
 const PIN_NO_COLOR_FILL = "#9a9a9a";
 
-function getStackedHeight(layerCount) {
+function getDangoHeight(layerCount) {
   if (layerCount <= 1) return PIN_CIRCLE_SIZE;
-  return PIN_CIRCLE_SIZE + (layerCount - 1) * PIN_STACK_OFFSET;
+  return PIN_CIRCLE_SIZE + (layerCount - 1) * PIN_DANGO_SPACING;
+}
+
+function getDangoPositions(layerCount, clusterHeight) {
+  const positions = [];
+  const cx = PIN_CIRCLE_SIZE / 2;
+  for (let i = 0; i < layerCount; i++) {
+    positions.push({
+      x: cx,
+      y: clusterHeight - PIN_CIRCLE_SIZE / 2 - i * PIN_DANGO_SPACING
+    });
+  }
+  return positions;
 }
 
 function drawPinCircleAt(ctx, cx, cy, size, drawCircleContent, fillColor) {
@@ -100,16 +112,15 @@ function loadLayerImages(layers, callback) {
   });
 }
 
-function drawStackedLayers(ctx, canvasW, stackHeight, name, normalized, images) {
-  const cx = canvasW / 2;
-  const count = normalized.length;
+function drawDangoLayers(ctx, clusterHeight, name, normalized, images) {
+  const positions = getDangoPositions(normalized.length, clusterHeight);
 
-  for (let i = 0; i < count; i++) {
+  for (let i = 0; i < normalized.length; i++) {
     const layer = normalized[i];
-    const cy = stackHeight - PIN_CIRCLE_SIZE / 2 - i * PIN_STACK_OFFSET;
+    const pos = positions[i];
     const fallbackLabel = layer.label || name;
 
-    drawPinCircleAt(ctx, cx, cy, PIN_CIRCLE_SIZE, function (c, drawCx, drawCy, innerR) {
+    drawPinCircleAt(ctx, pos.x, pos.y, PIN_CIRCLE_SIZE, function (c, drawCx, drawCy, innerR) {
       const img = images[i];
       if (img) {
         drawImageContent(c, drawCx, drawCy, innerR, img);
@@ -134,20 +145,20 @@ function createHiDpiCanvas(logicalW, logicalH) {
 
 export function createPinCircleImageDataUrl(name, layers, callback) {
   loadLayerImages(layers, function (normalized, images) {
-    const stackHeight = getStackedHeight(normalized.length);
-    const surface = createHiDpiCanvas(PIN_CIRCLE_SIZE, stackHeight);
+    const clusterHeight = getDangoHeight(normalized.length);
+    const surface = createHiDpiCanvas(PIN_CIRCLE_SIZE, clusterHeight);
 
-    drawStackedLayers(surface.ctx, PIN_CIRCLE_SIZE, stackHeight, name, normalized, images);
-    callback(surface.canvas.toDataURL("image/png"), stackHeight);
+    drawDangoLayers(surface.ctx, clusterHeight, name, normalized, images);
+    callback(surface.canvas.toDataURL("image/png"), clusterHeight);
   });
 }
 
-/** 2D モード用: 円アイコン（積み上げ可）+ 下方向の棒を 1 枚の画像にまとめる */
+/** 2D モード用: 団子アイコン + 下方向の棒を 1 枚の画像にまとめる */
 export function createPinWithStemImageDataUrl(name, layers, callback) {
   loadLayerImages(layers, function (normalized, images) {
-    const stackHeight = getStackedHeight(normalized.length);
+    const clusterHeight = getDangoHeight(normalized.length);
     const stemH = PIN_STEM_PIXEL_HEIGHT;
-    const totalH = stackHeight + stemH;
+    const totalH = clusterHeight + stemH;
     const surface = createHiDpiCanvas(PIN_CIRCLE_SIZE, totalH);
     const ctx = surface.ctx;
     const cx = PIN_CIRCLE_SIZE / 2;
@@ -156,12 +167,12 @@ export function createPinWithStemImageDataUrl(name, layers, callback) {
     ctx.globalAlpha = PIN_STEM_ALPHA;
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.moveTo(cx, stackHeight);
+    ctx.moveTo(cx, clusterHeight);
     ctx.lineTo(cx, totalH);
     ctx.stroke();
     ctx.globalAlpha = 1;
 
-    drawStackedLayers(ctx, PIN_CIRCLE_SIZE, stackHeight, name, normalized, images);
+    drawDangoLayers(ctx, clusterHeight, name, normalized, images);
     callback(surface.canvas.toDataURL("image/png"), totalH);
   });
 }
