@@ -1,5 +1,5 @@
 /** デプロイ時に increment して ES モジュールのブラウザキャッシュを無効化 */
-export const APP_MODULE_VERSION = "72";
+export const APP_MODULE_VERSION = "73";
 
 export const PIN_CIRCLE_SIZE = 60;
 export const INITIAL_PIN_VIEW_RANGE = 3500;
@@ -51,3 +51,4 @@ export function getAppBasePath() {
 }
 
 export const ASSETS_PHOTOS_BASE = getAppBasePath() + "assets/photos/";
+export const ASSETS_ICONS_BASE = getAppBasePath() + "assets/icons/";

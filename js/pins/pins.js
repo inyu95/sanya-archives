@@ -4,11 +4,13 @@ import {
   PIN_STEM_WIDTH,
   PIN_STEM_COLOR,
   PIN_STEM_ALPHA,
-  INITIAL_PIN_VIEW_RANGE
+  INITIAL_PIN_VIEW_RANGE,
+  ASSETS_ICONS_BASE
 } from "../config/constants.js";
 import { state } from "../state.js";
 import { createPinCircleImageDataUrl, createPinWithStemImageDataUrl } from "./pin-art.js";
 import { resolveHeights } from "./pin-heights.js";
+import { parseCommaList } from "../utils/parse.js";
 
 function isScene2D() {
   return state.viewer && state.viewer.scene.mode === Cesium.SceneMode.SCENE2D;
@@ -21,6 +23,12 @@ function getPinBorderColor(pin) {
     if (color) return color;
   }
   return "";
+}
+
+function getPinIconUrl(pin) {
+  const categories = parseCommaList(pin.category);
+  if (categories.length === 0) return "";
+  return ASSETS_ICONS_BASE + encodeURIComponent(categories[0]) + ".png";
 }
 
 function addPhotoPin(pin, groundH, onDone) {
@@ -42,7 +50,7 @@ function addPhotoPin(pin, groundH, onDone) {
   const groundPos = Cesium.Cartesian3.fromDegrees(pin.lon, pin.lat, groundH);
 
   if (isScene2D()) {
-    createPinWithStemImageDataUrl(pin.name, pin.image, getPinBorderColor(pin), function (dataUrl, totalHeight) {
+    createPinWithStemImageDataUrl(pin.name, getPinIconUrl(pin), getPinBorderColor(pin), function (dataUrl, totalHeight) {
       state.viewer.entities.add({
         name: pin.name,
         position: groundPos,
@@ -64,7 +72,7 @@ function addPhotoPin(pin, groundH, onDone) {
 
   const topPos = Cesium.Cartesian3.fromDegrees(pin.lon, pin.lat, groundH + PIN_POLE_HEIGHT_METERS);
 
-  createPinCircleImageDataUrl(pin.name, pin.image, getPinBorderColor(pin), function (dataUrl) {
+  createPinCircleImageDataUrl(pin.name, getPinIconUrl(pin), getPinBorderColor(pin), function (dataUrl) {
     state.viewer.entities.add({
       name: pin.name,
       position: topPos,
