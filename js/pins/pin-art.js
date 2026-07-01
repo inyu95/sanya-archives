@@ -14,14 +14,13 @@ function getStackedHeight(layerCount) {
   return PIN_CIRCLE_SIZE + (layerCount - 1) * PIN_STACK_OFFSET;
 }
 
-function drawPinCircleAt(ctx, cx, cy, size, drawCircleContent, borderColor) {
+function drawPinCircleAt(ctx, cx, cy, size, drawCircleContent) {
   const outerR = size / 2 - 1;
   const innerR = outerR - PIN_BORDER_WIDTH;
-  const ringColor = borderColor || DEFAULT_PIN_BORDER_COLOR;
 
   ctx.beginPath();
   ctx.arc(cx, cy, outerR, 0, Math.PI * 2);
-  ctx.fillStyle = ringColor;
+  ctx.fillStyle = DEFAULT_PIN_BORDER_COLOR;
   ctx.fill();
 
   ctx.save();
@@ -33,7 +32,7 @@ function drawPinCircleAt(ctx, cx, cy, size, drawCircleContent, borderColor) {
 
   ctx.beginPath();
   ctx.arc(cx, cy, outerR, 0, Math.PI * 2);
-  ctx.strokeStyle = ringColor;
+  ctx.strokeStyle = DEFAULT_PIN_BORDER_COLOR;
   ctx.lineWidth = PIN_BORDER_WIDTH;
   ctx.stroke();
 }
@@ -62,7 +61,7 @@ function drawImageContent(c, cx, cy, size, img) {
 
 function normalizeLayers(layers) {
   if (!layers || layers.length === 0) {
-    return [{ imageUrl: "", borderColor: "", label: "" }];
+    return [{ imageUrl: "", label: "" }];
   }
   return layers;
 }
@@ -113,7 +112,7 @@ function drawStackedLayers(ctx, canvasW, stackHeight, name, normalized, images) 
       } else {
         drawInitialContent(c, drawCx, drawCy, PIN_CIRCLE_SIZE, fallbackLabel);
       }
-    }, layer.borderColor);
+    });
   }
 }
 
