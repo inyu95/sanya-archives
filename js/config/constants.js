@@ -1,5 +1,5 @@
 /** デプロイ時に increment して ES モジュールのブラウザキャッシュを無効化 */
-export const APP_MODULE_VERSION = "71";
+export const APP_MODULE_VERSION = "72";
 
 export const PIN_CIRCLE_SIZE = 60;
 export const INITIAL_PIN_VIEW_RANGE = 3500;
@@ -19,6 +19,7 @@ export const HISTORICAL_MAP_GLOBE_BASE_COLOR = "#e0d8cc";
 export const HISTORICAL_MAP_BRIGHTNESS = 1.3;
 export const HISTORICAL_MAP_GAMMA = 0.9;
 export const PIN_POLE_HEIGHT_METERS = 60;
+export const PIN_STEM_PIXEL_HEIGHT = 28;
 export const PIN_STEM_WIDTH = 1;
 export const PIN_STEM_COLOR = "#ffffff";
 export const PIN_STEM_ALPHA = 0.8;

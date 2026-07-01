@@ -10,7 +10,7 @@ import {
   getAppBasePath
 } from "../config/constants.js";
 import { parseCommaList } from "../utils/parse.js";
-import { loadPinData } from "../filters/filters.js?v=71";
+import { loadPinData } from "../filters/filters.js?v=72";
 import { setStatus } from "../ui/status.js";
 
 function cellValue(cell) {

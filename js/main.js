@@ -6,14 +6,15 @@ import {
   setupSearchBox,
   setupFilterPanel,
   setupYearFilterBar
-} from "./filters/filters.js?v=71";
+} from "./filters/filters.js?v=72";
 import { setupInfoPanel, showPinInfo, hidePinInfo, resetCameraZoomState } from "./info-panel.js";
 import { setupHomeButton } from "./ui/home.js";
 import { setupArchiveList } from "./ui/archive-list.js";
 import { setupAboutSheet } from "./ui/about.js";
 import { setupPointCloudModal, clearPointCloudModal } from "./pointcloud/viewer.js";
 import { mountCustomToolbarButtons } from "./ui/toolbar.js";
-import { initHistoricalMaps, syncMapDisplayMode } from "./imagery/historical-maps.js?v=71";
+import { initHistoricalMaps, syncMapDisplayMode } from "./imagery/historical-maps.js?v=72";
+import { refreshPinsForMapMode } from "./pins/pins.js";
 
 const GOOGLE_3D_TILES_TIMEOUT_MS = 45000;
 
@@ -116,6 +117,10 @@ function init() {
   });
 
   initHistoricalMaps(state.viewer);
+
+  state.viewer.scene.morphComplete.addEventListener(function () {
+    refreshPinsForMapMode();
+  });
 
   // 3D Tiles 読み込み完了までは Cesium 標準地図を表示（白画面を防ぐ）
   state.viewer.scene.globe.show = true;

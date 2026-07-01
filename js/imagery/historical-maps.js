@@ -1,4 +1,5 @@
 import { state } from "../state.js";
+import { refreshPinsForMapMode } from "../pins/pins.js";
 import {
   HISTORICAL_MAP_BRIGHTNESS,
   HISTORICAL_MAP_FALLBACK_BOUNDS,
@@ -247,6 +248,7 @@ function setModernView() {
   }
 
   state.historicalMapActive = false;
+  refreshPinsForMapMode();
   viewer.scene.requestRender();
 }
 
@@ -279,6 +281,7 @@ function mountHistoricalImageryLayer(viewer, config, options) {
   if (!options || !options.skipCameraClamp) {
     clampCameraToRectangle(viewer);
   }
+  refreshPinsForMapMode();
   viewer.scene.requestRender();
 }
 

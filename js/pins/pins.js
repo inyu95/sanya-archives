@@ -7,8 +7,12 @@ import {
   INITIAL_PIN_VIEW_RANGE
 } from "../config/constants.js";
 import { state } from "../state.js";
-import { createPinCircleImageDataUrl } from "./pin-art.js";
+import { createPinCircleImageDataUrl, createPinWithStemImageDataUrl } from "./pin-art.js";
 import { resolveHeights } from "./pin-heights.js";
+
+function isScene2D() {
+  return state.viewer && state.viewer.scene.mode === Cesium.SceneMode.SCENE2D;
+}
 
 function getPinBorderColor(pin) {
   const activities = pin.activity || [];
@@ -36,6 +40,28 @@ function addPhotoPin(pin, groundH, onDone) {
   };
 
   const groundPos = Cesium.Cartesian3.fromDegrees(pin.lon, pin.lat, groundH);
+
+  if (isScene2D()) {
+    createPinWithStemImageDataUrl(pin.name, pin.image, getPinBorderColor(pin), function (dataUrl, totalHeight) {
+      state.viewer.entities.add({
+        name: pin.name,
+        position: groundPos,
+        billboard: {
+          image: dataUrl,
+          width: PIN_CIRCLE_SIZE,
+          height: totalHeight,
+          verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+          horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
+          sizeInMeters: false,
+          disableDepthTestDistance: Number.POSITIVE_INFINITY
+        },
+        properties: props
+      });
+      if (onDone) onDone();
+    });
+    return;
+  }
+
   const topPos = Cesium.Cartesian3.fromDegrees(pin.lon, pin.lat, groundH + PIN_POLE_HEIGHT_METERS);
 
   createPinCircleImageDataUrl(pin.name, pin.image, getPinBorderColor(pin), function (dataUrl) {
@@ -61,6 +87,11 @@ function addPhotoPin(pin, groundH, onDone) {
     });
     if (onDone) onDone();
   });
+}
+
+export function refreshPinsForMapMode() {
+  if (!state.viewer || state.filteredPins.length === 0) return;
+  renderPins(state.filteredPins);
 }
 
 export function renderPins(pinDataList, onComplete) {

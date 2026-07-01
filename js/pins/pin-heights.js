@@ -1,18 +1,25 @@
 import { state } from "../state.js";
 
+/** 2D/歴史地図では 3D タイルの屋根高ではなく地形（楕円体）基準にする */
+export function isFlatMapHeightMode() {
+  if (state.historicalMapActive) return true;
+  if (!state.viewer) return false;
+  return state.viewer.scene.mode === Cesium.SceneMode.SCENE2D;
+}
+
 function sampleTerrainHeight(lon, lat) {
   return new Promise(function (resolve) {
     const carto = Cesium.Cartographic.fromDegrees(lon, lat);
-    const timer = setTimeout(function () { resolve(40); }, 5000);
+    const timer = setTimeout(function () { resolve(0); }, 5000);
 
     Cesium.sampleTerrainMostDetailed(state.viewer.terrainProvider, [carto])
       .then(function (results) {
         clearTimeout(timer);
-        resolve(results[0].height || 40);
+        resolve(results[0].height || 0);
       })
       .catch(function () {
         clearTimeout(timer);
-        resolve(40);
+        resolve(0);
       });
   });
 }
@@ -27,21 +34,33 @@ function waitFor3DTiles() {
   });
 }
 
+function sampleTerrainHeights(pinDataList) {
+  const cartographics = pinDataList.map(function (pin) {
+    return Cesium.Cartographic.fromDegrees(pin.lon, pin.lat);
+  });
+
+  return Cesium.sampleTerrainMostDetailed(state.viewer.terrainProvider, cartographics)
+    .then(function (results) {
+      return results.map(function (carto) {
+        return carto.height || 0;
+      });
+    })
+    .catch(function () {
+      return cartographics.map(function () { return 0; });
+    });
+}
+
 function sampleGroundHeights(pinDataList) {
+  if (isFlatMapHeightMode()) {
+    return sampleTerrainHeights(pinDataList);
+  }
+
   const cartographics = pinDataList.map(function (pin) {
     return Cesium.Cartographic.fromDegrees(pin.lon, pin.lat);
   });
 
   function terrainFallback() {
-    return Cesium.sampleTerrainMostDetailed(state.viewer.terrainProvider, cartographics)
-      .then(function (results) {
-        return results.map(function (carto) {
-          return carto.height || 40;
-        });
-      })
-      .catch(function () {
-        return cartographics.map(function () { return 40; });
-      });
+    return sampleTerrainHeights(pinDataList);
   }
 
   if (!state.viewer.scene.sampleHeightSupported) {
@@ -64,7 +83,7 @@ function sampleGroundHeights(pinDataList) {
 }
 
 function pinCacheKey(pin) {
-  return pin.lon + "," + pin.lat;
+  return pin.lon + "," + pin.lat + ":" + (isFlatMapHeightMode() ? "flat" : "3d");
 }
 
 export function resolveHeights(pinDataList) {
