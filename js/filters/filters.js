@@ -434,24 +434,10 @@ export function applyFilters() {
   renderArchiveList(filtered);
 }
 
-function applyRoleTagColor(button, label, isActive) {
-  const color = state.roleColors[label];
-  if (!color) {
-    button.removeAttribute("data-color");
-    button.style.removeProperty("--tag-color");
-    return;
-  }
+function applyRoleTagColor(button, label) {
+  const color = state.roleColors[label] || "#9a9a9a";
   button.setAttribute("data-color", "");
   button.style.setProperty("--tag-color", color);
-  if (isActive) {
-    button.style.background = color;
-    button.style.borderColor = color;
-    button.style.color = "#fff";
-  } else {
-    button.style.background = "";
-    button.style.borderColor = "";
-    button.style.color = "";
-  }
 }
 
 function renderFilterTags(container, options, selectedSet, type) {
@@ -487,7 +473,7 @@ function renderFilterTags(container, options, selectedSet, type) {
     text.textContent = label;
     button.appendChild(text);
     if (type === "role") {
-      applyRoleTagColor(button, label, selectedSet.has(label));
+      applyRoleTagColor(button, label);
     }
     button.addEventListener("click", function () {
       if (selectedSet.has(label)) {
@@ -496,9 +482,6 @@ function renderFilterTags(container, options, selectedSet, type) {
         selectedSet.add(label);
       }
       button.classList.toggle("active");
-      if (type === "role") {
-        applyRoleTagColor(button, label, selectedSet.has(label));
-      }
       applyFilters();
     });
     container.appendChild(button);
