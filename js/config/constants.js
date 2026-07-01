@@ -2,6 +2,8 @@
 export const APP_MODULE_VERSION = "73";
 
 export const PIN_CIRCLE_SIZE = 48;
+/** ピン画像の描画倍率（表示サイズは PIN_CIRCLE_SIZE のまま） */
+export const PIN_RENDER_SCALE = 3;
 /** 複数役割時の円の縦方向オフセット（px） */
 export const PIN_STACK_OFFSET = 15;
 export const INITIAL_PIN_VIEW_RANGE = 3500;

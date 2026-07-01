@@ -1,5 +1,6 @@
 import {
   PIN_CIRCLE_SIZE,
+  PIN_RENDER_SCALE,
   PIN_STACK_OFFSET,
   PIN_STEM_PIXEL_HEIGHT,
   PIN_STEM_COLOR,
@@ -8,31 +9,28 @@ import {
 
 const DEFAULT_PIN_BORDER_COLOR = "rgba(255,255,255,0.95)";
 const PIN_WHITE_BORDER_WIDTH = 3;
-const PIN_COLOR_RING_WIDTH = 5;
-const PIN_NO_COLOR_RING = "#9a9a9a";
+const PIN_NO_COLOR_FILL = "#9a9a9a";
 
 function getStackedHeight(layerCount) {
   if (layerCount <= 1) return PIN_CIRCLE_SIZE;
   return PIN_CIRCLE_SIZE + (layerCount - 1) * PIN_STACK_OFFSET;
 }
 
-function drawPinCircleAt(ctx, cx, cy, size, drawCircleContent, ringColor) {
+function drawPinCircleAt(ctx, cx, cy, size, drawCircleContent, fillColor) {
   const outerR = size / 2 - 1;
-  const colorOuterR = outerR - PIN_WHITE_BORDER_WIDTH;
-  const contentR = colorOuterR - PIN_COLOR_RING_WIDTH;
-  const fillColor = ringColor || PIN_NO_COLOR_RING;
+  const innerR = outerR - PIN_WHITE_BORDER_WIDTH;
+  const color = fillColor || PIN_NO_COLOR_FILL;
 
   ctx.beginPath();
-  ctx.arc(cx, cy, colorOuterR, 0, Math.PI * 2);
-  ctx.arc(cx, cy, contentR, 0, Math.PI * 2, true);
-  ctx.fillStyle = fillColor;
-  ctx.fill("evenodd");
+  ctx.arc(cx, cy, innerR, 0, Math.PI * 2);
+  ctx.fillStyle = color;
+  ctx.fill();
 
   ctx.save();
   ctx.beginPath();
-  ctx.arc(cx, cy, contentR, 0, Math.PI * 2);
+  ctx.arc(cx, cy, innerR, 0, Math.PI * 2);
   ctx.clip();
-  drawCircleContent(ctx, cx, cy, contentR);
+  drawCircleContent(ctx, cx, cy, innerR);
   ctx.restore();
 
   ctx.beginPath();
@@ -55,7 +53,7 @@ function drawInitialContent(c, cx, cy, innerR, text) {
 }
 
 function drawImageContent(c, cx, cy, innerR, img) {
-  const contentSize = innerR * 2 - 2;
+  const contentSize = innerR * 2 - 4;
   const min = Math.min(img.width, img.height);
   const sx = (img.width - min) / 2;
   const sy = (img.height - min) / 2;
@@ -122,16 +120,25 @@ function drawStackedLayers(ctx, canvasW, stackHeight, name, normalized, images) 
   }
 }
 
+function createHiDpiCanvas(logicalW, logicalH) {
+  const scale = PIN_RENDER_SCALE;
+  const canvas = document.createElement("canvas");
+  canvas.width = logicalW * scale;
+  canvas.height = logicalH * scale;
+  const ctx = canvas.getContext("2d");
+  ctx.scale(scale, scale);
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+  return { canvas: canvas, ctx: ctx };
+}
+
 export function createPinCircleImageDataUrl(name, layers, callback) {
   loadLayerImages(layers, function (normalized, images) {
     const stackHeight = getStackedHeight(normalized.length);
-    const canvas = document.createElement("canvas");
-    canvas.width = PIN_CIRCLE_SIZE;
-    canvas.height = stackHeight;
-    const ctx = canvas.getContext("2d");
+    const surface = createHiDpiCanvas(PIN_CIRCLE_SIZE, stackHeight);
 
-    drawStackedLayers(ctx, PIN_CIRCLE_SIZE, stackHeight, name, normalized, images);
-    callback(canvas.toDataURL("image/png"), stackHeight);
+    drawStackedLayers(surface.ctx, PIN_CIRCLE_SIZE, stackHeight, name, normalized, images);
+    callback(surface.canvas.toDataURL("image/png"), stackHeight);
   });
 }
 
@@ -141,10 +148,8 @@ export function createPinWithStemImageDataUrl(name, layers, callback) {
     const stackHeight = getStackedHeight(normalized.length);
     const stemH = PIN_STEM_PIXEL_HEIGHT;
     const totalH = stackHeight + stemH;
-    const canvas = document.createElement("canvas");
-    canvas.width = PIN_CIRCLE_SIZE;
-    canvas.height = totalH;
-    const ctx = canvas.getContext("2d");
+    const surface = createHiDpiCanvas(PIN_CIRCLE_SIZE, totalH);
+    const ctx = surface.ctx;
     const cx = PIN_CIRCLE_SIZE / 2;
 
     ctx.strokeStyle = PIN_STEM_COLOR;
@@ -157,6 +162,6 @@ export function createPinWithStemImageDataUrl(name, layers, callback) {
     ctx.globalAlpha = 1;
 
     drawStackedLayers(ctx, PIN_CIRCLE_SIZE, stackHeight, name, normalized, images);
-    callback(canvas.toDataURL("image/png"), totalH);
+    callback(surface.canvas.toDataURL("image/png"), totalH);
   });
 }
