@@ -7,7 +7,9 @@ import {
 } from "../config/constants.js";
 
 const DEFAULT_PIN_BORDER_COLOR = "rgba(255,255,255,0.95)";
-const PIN_BORDER_WIDTH = 1;
+const PIN_WHITE_BORDER_WIDTH = 2;
+const PIN_COLOR_RING_WIDTH = 5;
+const PIN_NO_COLOR_RING = "#9a9a9a";
 
 function getStackedHeight(layerCount) {
   if (layerCount <= 1) return PIN_CIRCLE_SIZE;
@@ -16,32 +18,35 @@ function getStackedHeight(layerCount) {
 
 function drawPinCircleAt(ctx, cx, cy, size, drawCircleContent, ringColor) {
   const outerR = size / 2 - 1;
-  const innerR = outerR - PIN_BORDER_WIDTH;
-  const fillColor = ringColor || DEFAULT_PIN_BORDER_COLOR;
+  const colorOuterR = outerR - PIN_WHITE_BORDER_WIDTH;
+  const contentR = colorOuterR - PIN_COLOR_RING_WIDTH;
+  const fillColor = ringColor || PIN_NO_COLOR_RING;
 
   ctx.beginPath();
-  ctx.arc(cx, cy, outerR, 0, Math.PI * 2);
+  ctx.arc(cx, cy, colorOuterR, 0, Math.PI * 2);
+  ctx.arc(cx, cy, contentR, 0, Math.PI * 2, true);
   ctx.fillStyle = fillColor;
-  ctx.fill();
+  ctx.fill("evenodd");
 
   ctx.save();
   ctx.beginPath();
-  ctx.arc(cx, cy, innerR, 0, Math.PI * 2);
+  ctx.arc(cx, cy, contentR, 0, Math.PI * 2);
   ctx.clip();
-  drawCircleContent(ctx, cx, cy, innerR);
+  drawCircleContent(ctx, cx, cy, contentR);
   ctx.restore();
 
   ctx.beginPath();
   ctx.arc(cx, cy, outerR, 0, Math.PI * 2);
   ctx.strokeStyle = DEFAULT_PIN_BORDER_COLOR;
-  ctx.lineWidth = PIN_BORDER_WIDTH;
+  ctx.lineWidth = PIN_WHITE_BORDER_WIDTH;
   ctx.stroke();
 }
 
-function drawInitialContent(c, cx, cy, size, text) {
+function drawInitialContent(c, cx, cy, innerR, text) {
   const initial = (text || "?").trim().charAt(0).toUpperCase();
+  const size = innerR * 2;
   c.fillStyle = "#888888";
-  c.fillRect(cx - size / 2, cy - size / 2, size, size);
+  c.fillRect(cx - innerR, cy - innerR, size, size);
   c.fillStyle = "#ffffff";
   c.font = "bold " + Math.round(size * 0.42) + "px sans-serif";
   c.textAlign = "center";
@@ -49,8 +54,8 @@ function drawInitialContent(c, cx, cy, size, text) {
   c.fillText(initial, cx, cy + 2);
 }
 
-function drawImageContent(c, cx, cy, size, img) {
-  const contentSize = (size / 2 - 1 - PIN_BORDER_WIDTH) * 2;
+function drawImageContent(c, cx, cy, innerR, img) {
+  const contentSize = innerR * 2 - 2;
   const min = Math.min(img.width, img.height);
   const sx = (img.width - min) / 2;
   const sy = (img.height - min) / 2;
@@ -106,12 +111,12 @@ function drawStackedLayers(ctx, canvasW, stackHeight, name, normalized, images) 
     const cy = stackHeight - PIN_CIRCLE_SIZE / 2 - i * PIN_STACK_OFFSET;
     const fallbackLabel = layer.label || name;
 
-    drawPinCircleAt(ctx, cx, cy, PIN_CIRCLE_SIZE, function (c, drawCx, drawCy) {
+    drawPinCircleAt(ctx, cx, cy, PIN_CIRCLE_SIZE, function (c, drawCx, drawCy, innerR) {
       const img = images[i];
       if (img) {
-        drawImageContent(c, drawCx, drawCy, PIN_CIRCLE_SIZE, img);
+        drawImageContent(c, drawCx, drawCy, innerR, img);
       } else {
-        drawInitialContent(c, drawCx, drawCy, PIN_CIRCLE_SIZE, fallbackLabel);
+        drawInitialContent(c, drawCx, drawCy, innerR, fallbackLabel);
       }
     }, layer.borderColor);
   }

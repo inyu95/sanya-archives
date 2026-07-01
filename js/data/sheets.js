@@ -307,6 +307,22 @@ function sheetsApiColorToCss(color) {
   return "rgb(" + r + ", " + g + ", " + b + ")";
 }
 
+function getCellBackgroundCss(valueCell) {
+  if (!valueCell) return "";
+  const bg = (valueCell.effectiveFormat && valueCell.effectiveFormat.backgroundColor)
+    || (valueCell.userEnteredFormat && valueCell.userEnteredFormat.backgroundColor);
+  return sheetsApiColorToCss(bg);
+}
+
+function getRowRoleColorFromApi(values) {
+  if (!values || values.length < 2) return "";
+  for (let i = 1; i < values.length; i++) {
+    const color = getCellBackgroundCss(values[i]);
+    if (color) return color;
+  }
+  return "";
+}
+
 function parseRoleColorsFromSheetsApi(json) {
   const colors = {};
   const rowData = json && json.sheets && json.sheets[0]
@@ -321,9 +337,7 @@ function parseRoleColorsFromSheetsApi(json) {
     const name = String(values[0] && values[0].formattedValue || "").trim();
     if (!name || name.indexOf("一覧") !== -1) return;
 
-    const color = sheetsApiColorToCss(
-      values[1] && values[1].effectiveFormat && values[1].effectiveFormat.backgroundColor
-    );
+    const color = getRowRoleColorFromApi(values);
     if (color) colors[name] = color;
   });
 
@@ -335,7 +349,7 @@ function fetchRoleColorsFromSheetsApi() {
 
   const range = encodeURIComponent(SHEET_ROLES + "!A2:B100");
   const fields = encodeURIComponent(
-    "sheets(data(rowData(values(formattedValue,effectiveFormat(backgroundColor)))))"
+    "sheets(data(rowData(values(formattedValue,effectiveFormat(backgroundColor),userEnteredFormat(backgroundColor)))))"
   );
   const url = "https://sheets.googleapis.com/v4/spreadsheets/" + SHEET_ID
     + "?ranges=" + range + "&fields=" + fields + "&key=" + encodeURIComponent(GOOGLE_SHEETS_API_KEY);
