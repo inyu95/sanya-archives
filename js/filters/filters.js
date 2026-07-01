@@ -370,7 +370,7 @@ function pinMatchesQuery(pin, query) {
     pin.category,
     pin.openingYear,
     pin.closingYear,
-    (pin.activity || []).join(" ")
+    (pin.role || []).join(" ")
   ];
   return fields.some(function (field) {
     return String(field || "").toLowerCase().indexOf(q) !== -1;
@@ -385,10 +385,10 @@ function pinMatchesCategoryFilter(pin) {
   });
 }
 
-function pinMatchesActivityFilter(pin) {
-  if (state.selectedActivities.size === 0) return true;
-  return (pin.activity || []).some(function (activity) {
-    return state.selectedActivities.has(activity);
+function pinMatchesRoleFilter(pin) {
+  if (state.selectedRoles.size === 0) return true;
+  return (pin.role || []).some(function (role) {
+    return state.selectedRoles.has(role);
   });
 }
 
@@ -397,7 +397,7 @@ function getFilteredPins() {
   return state.allPins.filter(function (pin) {
     return pinMatchesQuery(pin, query)
       && pinMatchesCategoryFilter(pin)
-      && pinMatchesActivityFilter(pin)
+      && pinMatchesRoleFilter(pin)
       && pinMatchesYearFilter(pin);
   });
 }
@@ -406,7 +406,7 @@ function hasActiveFilters() {
   const query = dom.searchInput ? dom.searchInput.value.trim() : "";
   return Boolean(query)
     || state.selectedCategories.size > 0
-    || state.selectedActivities.size > 0
+    || state.selectedRoles.size > 0
     || state.selectedYear !== null;
 }
 
@@ -433,8 +433,8 @@ export function applyFilters() {
   renderArchiveList(filtered);
 }
 
-function applyActivityTagColor(button, label, isActive) {
-  const color = state.activityColors[label];
+function applyRoleTagColor(button, label, isActive) {
+  const color = state.roleColors[label];
   if (!color) {
     button.removeAttribute("data-color");
     button.style.removeProperty("--tag-color");
@@ -471,8 +471,8 @@ function renderFilterTags(container, options, selectedSet, type) {
     button.type = "button";
     button.className = "filter-tag filter-tag--" + type + (selectedSet.has(label) ? " active" : "");
     button.textContent = label;
-    if (type === "activity") {
-      applyActivityTagColor(button, label, selectedSet.has(label));
+    if (type === "role") {
+      applyRoleTagColor(button, label, selectedSet.has(label));
     }
     button.addEventListener("click", function () {
       if (selectedSet.has(label)) {
@@ -481,8 +481,8 @@ function renderFilterTags(container, options, selectedSet, type) {
         selectedSet.add(label);
       }
       button.classList.toggle("active");
-      if (type === "activity") {
-        applyActivityTagColor(button, label, selectedSet.has(label));
+      if (type === "role") {
+        applyRoleTagColor(button, label, selectedSet.has(label));
       }
       applyFilters();
     });
@@ -492,12 +492,12 @@ function renderFilterTags(container, options, selectedSet, type) {
 
 function renderAllFilterTags() {
   renderFilterTags(dom.categoryFilters, state.categoryOptions, state.selectedCategories, "category");
-  renderFilterTags(dom.activityFilters, state.activityOptions, state.selectedActivities, "activity");
+  renderFilterTags(dom.roleFilters, state.roleOptions, state.selectedRoles, "role");
 }
 
 function clearFilters() {
   state.selectedCategories.clear();
-  state.selectedActivities.clear();
+  state.selectedRoles.clear();
   if (dom.searchInput) dom.searchInput.value = "";
   renderAllFilterTags();
   applyFilters();
@@ -509,16 +509,16 @@ function deriveOptionsFromPins(pins, field) {
     if (field === "category") {
       parseCommaList(pin.category).forEach(function (value) { values.add(value); });
     } else {
-      (pin.activity || []).forEach(function (value) { values.add(value); });
+      (pin.role || []).forEach(function (value) { values.add(value); });
     }
   });
   return Array.from(values).sort();
 }
 
-function setFilterOptions(categories, activities, activityColors, pins) {
+function setFilterOptions(categories, roles, roleColors, pins) {
   state.categoryOptions = categories.length > 0 ? categories : deriveOptionsFromPins(pins, "category");
-  state.activityOptions = activities.length > 0 ? activities : deriveOptionsFromPins(pins, "activity");
-  state.activityColors = activityColors || {};
+  state.roleOptions = roles.length > 0 ? roles : deriveOptionsFromPins(pins, "role");
+  state.roleColors = roleColors || {};
   renderAllFilterTags();
 }
 
@@ -526,13 +526,13 @@ export function loadPinData(pins, options) {
   const opts = options || {};
   state.allPins = pins;
 
-  if (opts.categories || opts.activities || opts.activityColors) {
-    setFilterOptions(opts.categories || [], opts.activities || [], opts.activityColors, pins);
+  if (opts.categories || opts.roles || opts.roleColors) {
+    setFilterOptions(opts.categories || [], opts.roles || [], opts.roleColors, pins);
   }
 
   if (opts.resetSearch) {
     state.selectedCategories.clear();
-    state.selectedActivities.clear();
+    state.selectedRoles.clear();
     state.selectedYear = getCurrentMapYear();
     yearSliderPreviewYear = null;
     if (dom.searchInput) dom.searchInput.value = "";

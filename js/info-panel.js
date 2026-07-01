@@ -124,14 +124,14 @@ export function showPinInfo(entity) {
   const images = props.images ? props.images.getValue() : [];
   const imageUrl = props.image.getValue();
   const imageList = images && images.length ? images : (imageUrl ? [imageUrl] : []);
-  const activities = props.activity.getValue() || [];
+  const roles = props.role.getValue() || [];
 
   state.selectedPinEntity = entity;
   if (dom.infoName) dom.infoName.textContent = entity.name || "ピン";
   showGallery(imageList);
   setInfoField(dom.textView, props.text.getValue());
   setInfoField(dom.categoryView, props.category.getValue());
-  setInfoField(dom.activityView, activities.join(", "));
+  setInfoField(dom.roleView, roles.join(", "));
   setInfoField(
     dom.yearView,
     formatActiveYears(

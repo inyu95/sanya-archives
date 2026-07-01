@@ -2,6 +2,8 @@
 export const APP_MODULE_VERSION = "73";
 
 export const PIN_CIRCLE_SIZE = 48;
+/** 複数役割時の円の縦方向オフセット（px） */
+export const PIN_STACK_OFFSET = 15;
 export const INITIAL_PIN_VIEW_RANGE = 3500;
 export const HISTORICAL_MAP_PADDING_DEGREES = 0.012;
 /** ピン未取得時の山谷エリア周辺（西・南・東・北） */
@@ -27,7 +29,7 @@ export const PIN_STEM_ALPHA = 0.8;
 export const SHEET_ID = "1aHy03FK6Yq1Lu37zzjlgoGtM622Ztrpmammcut22uuo";
 export const SHEET_MAPPING = "マッピング";
 export const SHEET_CATEGORIES = "カテゴリリスト";
-export const SHEET_ACTIVITIES = "アクティビティリスト";
+export const SHEET_ROLES = "役割リスト";
 export const SHEET_FETCH_TIMEOUT_MS = 30000;
 export const SHEET_FETCH_MAX_RETRIES = 2;
 export const GOOGLE_SHEETS_API_KEY = "AIzaSyAj3HmCQbFFqq1G7L9OhLMW2yT8cTJckJc";

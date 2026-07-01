@@ -2,7 +2,7 @@ import {
   SHEET_ID,
   SHEET_MAPPING,
   SHEET_CATEGORIES,
-  SHEET_ACTIVITIES,
+  SHEET_ROLES,
   SHEET_FETCH_TIMEOUT_MS,
   SHEET_FETCH_MAX_RETRIES,
   GOOGLE_SHEETS_API_KEY,
@@ -65,7 +65,7 @@ function getColumnIndexes(rows) {
     openingYear: 7,
     closingYear: 8,
     category: 9,
-    activity: 10
+    role: 10
   };
   if (!rows || rows.length === 0) return defaults;
 
@@ -85,7 +85,7 @@ function getColumnIndexes(rows) {
     else if (header === "開業年") headerMap.openingYear = i;
     else if (header === "閉業年") headerMap.closingYear = i;
     else if (header === "category" || header === "カテゴリ") headerMap.category = i;
-    else if (header === "activity" || header === "アクティビティ") headerMap.activity = i;
+    else if (header === "role" || header === "役割" || header === "activity" || header === "アクティビティ") headerMap.role = i;
   }
 
   const indexes = {};
@@ -248,7 +248,7 @@ function parseRows(rows) {
       openingYear: String(cellValue(c[col.openingYear]) || "").trim(),
       closingYear: String(cellValue(c[col.closingYear]) || "").trim(),
       category: String(cellValue(c[col.category]) || ""),
-      activity: parseCommaList(cellValue(c[col.activity]))
+      role: parseCommaList(cellValue(c[col.role]))
     });
   }
   return list;
@@ -293,7 +293,7 @@ function isCssColorText(value) {
   return /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(text) || /^rgba?\(/i.test(text);
 }
 
-function resolveActivityColorFromText(cell) {
+function resolveRoleColorFromText(cell) {
   const text = String(cellValue(cell) || "").trim();
   return isCssColorText(text) ? text : "";
 }
@@ -307,7 +307,7 @@ function sheetsApiColorToCss(color) {
   return "rgb(" + r + ", " + g + ", " + b + ")";
 }
 
-function parseActivityColorsFromSheetsApi(json) {
+function parseRoleColorsFromSheetsApi(json) {
   const colors = {};
   const rowData = json && json.sheets && json.sheets[0]
     && json.sheets[0].data && json.sheets[0].data[0]
@@ -330,10 +330,10 @@ function parseActivityColorsFromSheetsApi(json) {
   return colors;
 }
 
-function fetchActivityColorsFromSheetsApi() {
+function fetchRoleColorsFromSheetsApi() {
   if (!GOOGLE_SHEETS_API_KEY) return Promise.resolve({});
 
-  const range = encodeURIComponent(SHEET_ACTIVITIES + "!A2:B100");
+  const range = encodeURIComponent(SHEET_ROLES + "!A2:B100");
   const fields = encodeURIComponent(
     "sheets(data(rowData(values(formattedValue,effectiveFormat(backgroundColor)))))"
   );
@@ -353,10 +353,10 @@ function fetchActivityColorsFromSheetsApi() {
       }
       return res.json();
     })
-    .then(parseActivityColorsFromSheetsApi)
+    .then(parseRoleColorsFromSheetsApi)
     .catch(function (err) {
       clearTimeout(timer);
-      console.warn("アクティビティ色の取得に失敗:", err);
+      console.warn("役割色の取得に失敗:", err);
       return {};
     });
 }
@@ -372,7 +372,7 @@ function parseListRows(rows) {
   return list;
 }
 
-function parseActivityListRows(rows) {
+function parseRoleListRows(rows) {
   const names = [];
   const colors = {};
   for (let index = 0; index < rows.length; index++) {
@@ -382,7 +382,7 @@ function parseActivityListRows(rows) {
     if (name.indexOf("一覧") !== -1) continue;
 
     names.push(name);
-    const color = resolveActivityColorFromText(c[1]);
+    const color = resolveRoleColorFromText(c[1]);
     if (color) colors[name] = color;
   }
   return { names: names, colors: colors };
@@ -401,13 +401,13 @@ function fetchCategoryList() {
   return fetchListSheet(SHEET_CATEGORIES, "カテゴリリスト");
 }
 
-function fetchActivityList() {
+function fetchRoleList() {
   return Promise.all([
-    fetchSheetData(SHEET_ACTIVITIES),
-    fetchActivityColorsFromSheetsApi()
+    fetchSheetData(SHEET_ROLES),
+    fetchRoleColorsFromSheetsApi()
   ])
     .then(function (results) {
-      const parsed = parseActivityListRows(results[0]);
+      const parsed = parseRoleListRows(results[0]);
       const apiColors = results[1];
       Object.keys(apiColors).forEach(function (name) {
         parsed.colors[name] = apiColors[name];
@@ -415,7 +415,7 @@ function fetchActivityList() {
       return parsed;
     })
     .catch(function (err) {
-      console.warn("アクティビティリストの読み込みに失敗:", err);
+      console.warn("役割リストの読み込みに失敗:", err);
       return { names: [], colors: {} };
     });
 }
@@ -445,13 +445,13 @@ export function tryLoadSheet() {
       return Promise.all([
         Promise.resolve(rows),
         fetchCategoryList(),
-        fetchActivityList()
+        fetchRoleList()
       ]);
     })
     .then(function (results) {
       const rows = results[0];
       const categories = results[1];
-      const activityData = results[2];
+      const roleData = results[2];
       const pins = parseRows(rows);
       if (pins.length === 0) throw new Error("データ0件");
       setStatus("写真を読み込み中...");
@@ -459,8 +459,8 @@ export function tryLoadSheet() {
         return {
           pins: pins,
           categories: categories,
-          activities: activityData.names,
-          activityColors: activityData.colors
+          roles: roleData.names,
+          roleColors: roleData.colors
         };
       });
     })
@@ -468,8 +468,8 @@ export function tryLoadSheet() {
       loadPinData(data.pins, {
         resetSearch: true,
         categories: data.categories,
-        activities: data.activities,
-        activityColors: data.activityColors,
+        roles: data.roles,
+        roleColors: data.roleColors,
         statusMessage: data.pins.length + " 件のピンを読み込みました",
         statusType: "ok"
       });
@@ -479,8 +479,8 @@ export function tryLoadSheet() {
       loadPinData([], {
         resetSearch: true,
         categories: [],
-        activities: [],
-        activityColors: {},
+        roles: [],
+        roleColors: {},
         flyTo: false,
         statusMessage: sheetErrorMessage(err),
         statusType: "error"

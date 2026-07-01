@@ -15,19 +15,18 @@ function isScene2D() {
   return state.viewer && state.viewer.scene.mode === Cesium.SceneMode.SCENE2D;
 }
 
-function getPinBorderColor(pin) {
+function buildPinLayers(pin) {
   const roles = pin.role || [];
-  for (let i = 0; i < roles.length; i++) {
-    const color = state.roleColors[roles[i]];
-    if (color) return color;
+  if (roles.length === 0) {
+    return [{ imageUrl: "", borderColor: "", label: pin.name || "" }];
   }
-  return "";
-}
-
-function getPinIconUrl(pin) {
-  const roles = pin.role || [];
-  if (roles.length === 0) return "";
-  return ASSETS_ICONS_BASE + encodeURIComponent(roles[0]) + ".png";
+  return roles.map(function (role) {
+    return {
+      imageUrl: ASSETS_ICONS_BASE + encodeURIComponent(role) + ".png",
+      borderColor: state.roleColors[role] || "",
+      label: role
+    };
+  });
 }
 
 function addPhotoPin(pin, groundH, onDone) {
@@ -48,8 +47,10 @@ function addPhotoPin(pin, groundH, onDone) {
 
   const groundPos = Cesium.Cartesian3.fromDegrees(pin.lon, pin.lat, groundH);
 
+  const layers = buildPinLayers(pin);
+
   if (isScene2D()) {
-    createPinWithStemImageDataUrl(pin.name, getPinIconUrl(pin), getPinBorderColor(pin), function (dataUrl, totalHeight) {
+    createPinWithStemImageDataUrl(pin.name, layers, function (dataUrl, totalHeight) {
       state.viewer.entities.add({
         name: pin.name,
         position: groundPos,
@@ -71,14 +72,14 @@ function addPhotoPin(pin, groundH, onDone) {
 
   const topPos = Cesium.Cartesian3.fromDegrees(pin.lon, pin.lat, groundH + PIN_POLE_HEIGHT_METERS);
 
-  createPinCircleImageDataUrl(pin.name, getPinIconUrl(pin), getPinBorderColor(pin), function (dataUrl) {
+  createPinCircleImageDataUrl(pin.name, layers, function (dataUrl, totalHeight) {
     state.viewer.entities.add({
       name: pin.name,
       position: topPos,
       billboard: {
         image: dataUrl,
         width: PIN_CIRCLE_SIZE,
-        height: PIN_CIRCLE_SIZE,
+        height: totalHeight,
         verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
         horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
         sizeInMeters: false,
