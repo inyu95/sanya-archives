@@ -14,13 +14,14 @@ function getStackedHeight(layerCount) {
   return PIN_CIRCLE_SIZE + (layerCount - 1) * PIN_STACK_OFFSET;
 }
 
-function drawPinCircleAt(ctx, cx, cy, size, drawCircleContent) {
+function drawPinCircleAt(ctx, cx, cy, size, drawCircleContent, ringColor) {
   const outerR = size / 2 - 1;
   const innerR = outerR - PIN_BORDER_WIDTH;
+  const fillColor = ringColor || DEFAULT_PIN_BORDER_COLOR;
 
   ctx.beginPath();
   ctx.arc(cx, cy, outerR, 0, Math.PI * 2);
-  ctx.fillStyle = DEFAULT_PIN_BORDER_COLOR;
+  ctx.fillStyle = fillColor;
   ctx.fill();
 
   ctx.save();
@@ -61,7 +62,7 @@ function drawImageContent(c, cx, cy, size, img) {
 
 function normalizeLayers(layers) {
   if (!layers || layers.length === 0) {
-    return [{ imageUrl: "", label: "" }];
+    return [{ imageUrl: "", borderColor: "", label: "" }];
   }
   return layers;
 }
@@ -112,7 +113,7 @@ function drawStackedLayers(ctx, canvasW, stackHeight, name, normalized, images) 
       } else {
         drawInitialContent(c, drawCx, drawCy, PIN_CIRCLE_SIZE, fallbackLabel);
       }
-    });
+    }, layer.borderColor);
   }
 }
 

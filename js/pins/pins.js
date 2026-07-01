@@ -18,11 +18,12 @@ function isScene2D() {
 function buildPinLayers(pin) {
   const roles = pin.role || [];
   if (roles.length === 0) {
-    return [{ imageUrl: "", label: pin.name || "" }];
+    return [{ imageUrl: "", borderColor: "", label: pin.name || "" }];
   }
   return roles.map(function (role) {
     return {
       imageUrl: ASSETS_ICONS_BASE + encodeURIComponent(role) + ".png",
+      borderColor: state.roleColors[role] || "",
       label: role
     };
   });
