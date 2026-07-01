@@ -9,6 +9,8 @@ import {
 
 const DEFAULT_PIN_BORDER_COLOR = "rgba(255,255,255,0.95)";
 const PIN_WHITE_BORDER_WIDTH = 2;
+/** 白縁の内側とアイコンとの余白（px） */
+const PIN_ICON_PADDING = 5;
 const PIN_NO_COLOR_FILL = "#9a9a9a";
 
 function getDangoHeight(layerCount) {
@@ -30,25 +32,28 @@ function getDangoPositions(layerCount, clusterHeight) {
 
 function drawPinCircleAt(ctx, cx, cy, size, drawCircleContent, fillColor) {
   const outerR = size / 2 - 1;
-  const innerR = outerR - PIN_WHITE_BORDER_WIDTH;
+  const borderW = PIN_WHITE_BORDER_WIDTH;
+  // stroke はパス中心に描かれるため、塗りは内縁（outerR - borderW/2）まで伸ばす
+  const fillR = outerR - borderW / 2;
+  const contentR = fillR - PIN_ICON_PADDING;
   const color = fillColor || PIN_NO_COLOR_FILL;
 
   ctx.beginPath();
-  ctx.arc(cx, cy, innerR, 0, Math.PI * 2);
+  ctx.arc(cx, cy, fillR, 0, Math.PI * 2);
   ctx.fillStyle = color;
   ctx.fill();
 
   ctx.save();
   ctx.beginPath();
-  ctx.arc(cx, cy, innerR, 0, Math.PI * 2);
+  ctx.arc(cx, cy, fillR, 0, Math.PI * 2);
   ctx.clip();
-  drawCircleContent(ctx, cx, cy, innerR);
+  drawCircleContent(ctx, cx, cy, contentR);
   ctx.restore();
 
   ctx.beginPath();
   ctx.arc(cx, cy, outerR, 0, Math.PI * 2);
   ctx.strokeStyle = DEFAULT_PIN_BORDER_COLOR;
-  ctx.lineWidth = PIN_WHITE_BORDER_WIDTH;
+  ctx.lineWidth = borderW;
   ctx.stroke();
 }
 
@@ -65,7 +70,7 @@ function drawInitialContent(c, cx, cy, innerR, text) {
 }
 
 function drawImageContent(c, cx, cy, innerR, img) {
-  const contentSize = innerR * 2 - 4;
+  const contentSize = innerR * 2;
   const min = Math.min(img.width, img.height);
   const sx = (img.width - min) / 2;
   const sy = (img.height - min) / 2;
