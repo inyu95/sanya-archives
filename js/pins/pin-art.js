@@ -10,7 +10,7 @@ import {
 const DEFAULT_PIN_BORDER_COLOR = "rgba(255,255,255,0.95)";
 const PIN_WHITE_BORDER_WIDTH = 2;
 /** 白縁の内側とアイコンとの余白（px） */
-const PIN_ICON_PADDING = 8;
+const PIN_ICON_PADDING = 10;
 const PIN_NO_COLOR_FILL = "#9a9a9a";
 
 function getDangoHeight(layerCount) {
