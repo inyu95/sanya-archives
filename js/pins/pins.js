@@ -10,25 +10,24 @@ import {
 import { state } from "../state.js";
 import { createPinCircleImageDataUrl, createPinWithStemImageDataUrl } from "./pin-art.js";
 import { resolveHeights } from "./pin-heights.js";
-import { parseCommaList } from "../utils/parse.js";
 
 function isScene2D() {
   return state.viewer && state.viewer.scene.mode === Cesium.SceneMode.SCENE2D;
 }
 
 function getPinBorderColor(pin) {
-  const activities = pin.activity || [];
-  for (let i = 0; i < activities.length; i++) {
-    const color = state.activityColors[activities[i]];
+  const roles = pin.role || [];
+  for (let i = 0; i < roles.length; i++) {
+    const color = state.roleColors[roles[i]];
     if (color) return color;
   }
   return "";
 }
 
 function getPinIconUrl(pin) {
-  const categories = parseCommaList(pin.category);
-  if (categories.length === 0) return "";
-  return ASSETS_ICONS_BASE + encodeURIComponent(categories[0]) + ".png";
+  const roles = pin.role || [];
+  if (roles.length === 0) return "";
+  return ASSETS_ICONS_BASE + encodeURIComponent(roles[0]) + ".png";
 }
 
 function addPhotoPin(pin, groundH, onDone) {
@@ -42,7 +41,7 @@ function addPhotoPin(pin, groundH, onDone) {
     openingYear: pin.openingYear || "",
     closingYear: pin.closingYear || "",
     category: pin.category || "",
-    activity: pin.activity || [],
+    role: pin.role || [],
     lon: pin.lon,
     lat: pin.lat
   };
