@@ -256,10 +256,41 @@ function isCameraInHistoricalArea(viewer, rectangle) {
     && carto.height <= HISTORICAL_MAP_MAX_CAMERA_DISTANCE * 1.2;
 }
 
+function isCameraViewingHistoricalArea(viewer, rectangle) {
+  if (isCameraInHistoricalArea(viewer, rectangle)) return true;
+
+  const scene = viewer.scene;
+  const canvas = scene.canvas;
+  const center = new Cesium.Cartesian2(canvas.clientWidth / 2, canvas.clientHeight / 2);
+  const ray = viewer.camera.getPickRay(center);
+  if (!ray) return false;
+
+  const hit = scene.globe.pick(ray, scene);
+  if (!hit) return false;
+
+  const carto = Cesium.Cartographic.fromCartesian(hit);
+  return carto.longitude >= rectangle.west
+    && carto.longitude <= rectangle.east
+    && carto.latitude >= rectangle.south
+    && carto.latitude <= rectangle.north;
+}
+
 function flyToHistoricalArea(viewer, rectangle, onComplete) {
+  const camera = viewer.camera;
+  const carto = camera.positionCartographic;
+  const center = Cesium.Rectangle.center(rectangle);
+  const height = carto
+    ? Cesium.Math.clamp(carto.height, 50, HISTORICAL_MAP_MAX_CAMERA_DISTANCE)
+    : HISTORICAL_MAP_MAX_CAMERA_DISTANCE * 0.5;
+
   viewer.camera.cancelFlight();
   viewer.camera.flyTo({
-    destination: rectangle,
+    destination: Cesium.Cartesian3.fromRadians(center.longitude, center.latitude, height),
+    orientation: {
+      heading: camera.heading,
+      pitch: camera.pitch,
+      roll: camera.roll
+    },
     duration: 0.8,
     complete: onComplete,
     cancel: onComplete
@@ -282,7 +313,7 @@ function setHistoricalView(year) {
   showDefaultImageryLayer();
   applyHistoricalCameraConstraints(viewer);
 
-  if (!wasActive || !isCameraInHistoricalArea(viewer, rectangle)) {
+  if (!wasActive && !isCameraViewingHistoricalArea(viewer, rectangle)) {
     flyToHistoricalArea(viewer, rectangle, function () {
       mountHistoricalImageryLayer(viewer, config);
     });
