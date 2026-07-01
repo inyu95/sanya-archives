@@ -1,9 +1,9 @@
 /** デプロイ時に increment して ES モジュールのブラウザキャッシュを無効化 */
-export const APP_MODULE_VERSION = "73";
+export const APP_MODULE_VERSION = "74";
 
 export const PIN_CIRCLE_SIZE = 48;
 /** ピン画像の描画倍率（表示サイズは PIN_CIRCLE_SIZE のまま） */
-export const PIN_RENDER_SCALE = 3;
+export const PIN_RENDER_SCALE = 4;
 /** 複数役割時の団子間隔（円の直径＝重ならない） */
 export const PIN_DANGO_SPACING = PIN_CIRCLE_SIZE;
 export const INITIAL_PIN_VIEW_RANGE = 3500;
