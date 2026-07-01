@@ -7,7 +7,7 @@ import {
 } from "../config/constants.js";
 
 const DEFAULT_PIN_BORDER_COLOR = "rgba(255,255,255,0.95)";
-const PIN_WHITE_BORDER_WIDTH = 2;
+const PIN_WHITE_BORDER_WIDTH = 3;
 const PIN_COLOR_RING_WIDTH = 5;
 const PIN_NO_COLOR_RING = "#9a9a9a";
 
