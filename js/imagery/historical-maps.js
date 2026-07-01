@@ -140,8 +140,14 @@ function clampCameraToRectangle(viewer) {
   const lat = Cesium.Math.clamp(carto.latitude, rectangle.south, rectangle.north);
   if (lon === carto.longitude && lat === carto.latitude) return;
 
-  viewer.camera.setView({
-    destination: Cesium.Cartesian3.fromRadians(lon, lat, carto.height)
+  const camera = viewer.camera;
+  camera.setView({
+    destination: Cesium.Cartesian3.fromRadians(lon, lat, carto.height),
+    orientation: {
+      heading: camera.heading,
+      pitch: camera.pitch,
+      roll: camera.roll
+    }
   });
 }
 
