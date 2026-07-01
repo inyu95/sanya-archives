@@ -131,15 +131,38 @@ function removeHistoricalLayers() {
   }
 }
 
+function isCartographicInRectangle(carto, rectangle) {
+  return carto.longitude >= rectangle.west
+    && carto.longitude <= rectangle.east
+    && carto.latitude >= rectangle.south
+    && carto.latitude <= rectangle.north;
+}
+
+function getViewCenterCartographic(viewer) {
+  const scene = viewer.scene;
+  const canvas = scene.canvas;
+  const center = new Cesium.Cartesian2(canvas.clientWidth / 2, canvas.clientHeight / 2);
+  const ray = viewer.camera.getPickRay(center);
+  if (!ray) return null;
+
+  const hit = scene.globe.pick(ray, scene);
+  if (!hit) return null;
+
+  return Cesium.Cartographic.fromCartesian(hit);
+}
+
 function clampCameraToRectangle(viewer) {
   const carto = viewer.camera.positionCartographic;
   if (!carto) return;
 
   const rectangle = getHistoricalMapRectangle();
+  if (isCartographicInRectangle(carto, rectangle)) return;
+
+  const viewCenter = getViewCenterCartographic(viewer);
+  if (viewCenter && isCartographicInRectangle(viewCenter, rectangle)) return;
+
   const lon = Cesium.Math.clamp(carto.longitude, rectangle.west, rectangle.east);
   const lat = Cesium.Math.clamp(carto.latitude, rectangle.south, rectangle.north);
-  if (lon === carto.longitude && lat === carto.latitude) return;
-
   const camera = viewer.camera;
   camera.setView({
     destination: Cesium.Cartesian3.fromRadians(lon, lat, carto.height),
@@ -234,7 +257,7 @@ function showModernGeometry() {
   }
 }
 
-function mountHistoricalImageryLayer(viewer, config) {
+function mountHistoricalImageryLayer(viewer, config, options) {
   removeHistoricalLayers();
   showDefaultImageryLayer();
   state.historicalImageryLayer = viewer.imageryLayers.addImageryProvider(createGsiProvider(config));
@@ -242,7 +265,9 @@ function mountHistoricalImageryLayer(viewer, config) {
   state.historicalImageryLayer.brightness = HISTORICAL_MAP_BRIGHTNESS;
   state.historicalImageryLayer.gamma = HISTORICAL_MAP_GAMMA;
   state.historicalMapActive = true;
-  clampCameraToRectangle(viewer);
+  if (!options || !options.skipCameraClamp) {
+    clampCameraToRectangle(viewer);
+  }
   viewer.scene.requestRender();
 }
 
@@ -259,20 +284,8 @@ function isCameraInHistoricalArea(viewer, rectangle) {
 function isCameraViewingHistoricalArea(viewer, rectangle) {
   if (isCameraInHistoricalArea(viewer, rectangle)) return true;
 
-  const scene = viewer.scene;
-  const canvas = scene.canvas;
-  const center = new Cesium.Cartesian2(canvas.clientWidth / 2, canvas.clientHeight / 2);
-  const ray = viewer.camera.getPickRay(center);
-  if (!ray) return false;
-
-  const hit = scene.globe.pick(ray, scene);
-  if (!hit) return false;
-
-  const carto = Cesium.Cartographic.fromCartesian(hit);
-  return carto.longitude >= rectangle.west
-    && carto.longitude <= rectangle.east
-    && carto.latitude >= rectangle.south
-    && carto.latitude <= rectangle.north;
+  const viewCenter = getViewCenterCartographic(viewer);
+  return viewCenter !== null && isCartographicInRectangle(viewCenter, rectangle);
 }
 
 function flyToHistoricalArea(viewer, rectangle, onComplete) {
@@ -320,7 +333,7 @@ function setHistoricalView(year) {
     return;
   }
 
-  mountHistoricalImageryLayer(viewer, config);
+  mountHistoricalImageryLayer(viewer, config, { skipCameraClamp: wasActive });
 }
 
 export function applyHistoricalMapLayer(year) {
