@@ -85,7 +85,7 @@ function getColumnIndexes(rows) {
     else if (header === "開業年") headerMap.openingYear = i;
     else if (header === "閉業年") headerMap.closingYear = i;
     else if (header === "category" || header === "カテゴリ") headerMap.category = i;
-    else if (header === "role" || header === "役割" || header === "activity" || header === "アクティビティ") headerMap.role = i;
+    else if (header === "role" || header === "役割" || header === "生活行為" || header === "activity" || header === "アクティビティ") headerMap.role = i;
   }
 
   const indexes = {};
@@ -370,7 +370,7 @@ function fetchRoleColorsFromSheetsApi() {
     .then(parseRoleColorsFromSheetsApi)
     .catch(function (err) {
       clearTimeout(timer);
-      console.warn("役割色の取得に失敗:", err);
+      console.warn("生活行為色の取得に失敗:", err);
       return {};
     });
 }
@@ -429,7 +429,7 @@ function fetchRoleList() {
       return parsed;
     })
     .catch(function (err) {
-      console.warn("役割リストの読み込みに失敗:", err);
+      console.warn("生活行為リストの読み込みに失敗:", err);
       return { names: [], colors: {} };
     });
 }
