@@ -121,7 +121,8 @@ function init() {
     homeButton: false,
     sceneModePicker: true,
     baseLayerPicker: false,
-    navigationHelpButton: true
+    navigationHelpButton: true,
+    navigationInstructionsInitiallyVisible: false
   });
 
   initHistoricalMaps(state.viewer);
