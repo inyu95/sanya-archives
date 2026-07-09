@@ -36,6 +36,26 @@ body:has(#year-filter-bar:not(.hidden)) {
   height: 100%;
 }
 
+#startup-title {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 500;
+  pointer-events: none;
+  color: #fff;
+  font-size: clamp(28px, 5vw, 56px);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-shadow: 0 4px 20px rgba(0, 0, 0, 0.45);
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+#startup-title.visible {
+  opacity: 1;
+}
+
 #home-btn,
 .cesium-toolbar-btn {
   display: inline-flex;

@@ -90,6 +90,14 @@ function setupClickHandler() {
 }
 
 function init() {
+  const startupTitle = document.getElementById("startup-title");
+  if (startupTitle) {
+    startupTitle.classList.add("visible");
+    window.setTimeout(function () {
+      startupTitle.classList.remove("visible");
+    }, 2200);
+  }
+
   if (location.protocol === "file:") {
     setStatus("npm start 後に http://localhost:8080 を開いてください。", "error");
     return;
