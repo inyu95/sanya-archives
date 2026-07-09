@@ -244,6 +244,14 @@ function setYearFilterAll() {
   applyFilters();
 }
 
+function toggleYearFilterAll() {
+  if (state.selectedYear === null) {
+    setYearFromSlider(getSliderPositionYear());
+    return;
+  }
+  setYearFilterAll();
+}
+
 function renderYearFilterTicks(min, max) {
   if (!dom.yearFilterTicks) return;
   dom.yearFilterTicks.innerHTML = "";
@@ -346,7 +354,7 @@ export function setupYearFilterBar() {
 
   if (dom.yearFilterAll) {
     dom.yearFilterAll.addEventListener("click", function () {
-      setYearFilterAll();
+      toggleYearFilterAll();
     });
   }
   if (dom.yearFilterSlider) {
