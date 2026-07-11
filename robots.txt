@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://inyu95.github.io/sanya-archives/sitemap.xml
