@@ -18,12 +18,15 @@ const ERA_YEAR_OFFSETS = {
 
 function normalizeWesternYear(year) {
   if (!Number.isFinite(year)) return null;
-  // 1060→1960 のように先頭の「9」が抜けた表記を補正
-  if (year >= 1000 && year < 1800) {
-    year += 900;
-  }
   const maxYear = new Date().getFullYear() + 2;
-  if (year < 1800 || year > maxYear) return null;
+  // 1060→1960 のように先頭の「9」が抜けた表記を補正（1000年代のみ）
+  if (year >= 1000 && year < 1100) {
+    const corrected = year + 900;
+    if (corrected >= 1900 && corrected <= maxYear) {
+      year = corrected;
+    }
+  }
+  if (year < 1 || year > maxYear) return null;
   return year;
 }
 

@@ -1,3 +1,20 @@
+function photoFileNameFromUrl(url) {
+  const part = String(url || "").split("/").pop() || "";
+  const withoutQuery = part.split("?")[0];
+  try {
+    return decodeURIComponent(withoutQuery);
+  } catch (_err) {
+    return withoutQuery;
+  }
+}
+
+function captionFromFileName(fileName) {
+  const base = String(fileName || "").trim();
+  if (!base) return "";
+  const lastDot = base.lastIndexOf(".");
+  return lastDot > 0 ? base.slice(0, lastDot) : base;
+}
+
 export function normalizePhotoEntry(entry) {
   if (!entry) return null;
 
@@ -11,7 +28,7 @@ export function normalizePhotoEntry(entry) {
     if (!url) return null;
     return {
       url: url,
-      title: String(entry.title || "").trim()
+      title: String(entry.title || entry.caption || "").trim()
     };
   }
 
@@ -30,5 +47,6 @@ export function getPhotoUrl(entry) {
 
 export function getPhotoTitle(entry) {
   const photo = normalizePhotoEntry(entry);
-  return photo ? photo.title : "";
+  if (!photo) return "";
+  return captionFromFileName(photoFileNameFromUrl(photo.url));
 }

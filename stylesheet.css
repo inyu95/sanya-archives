@@ -693,9 +693,15 @@ body:has(#year-filter-bar:not(.hidden)) {
 
 #image-gallery {
   display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0 0 16px;
+}
+
+#image-gallery-row {
+  display: flex;
   align-items: center;
   gap: 6px;
-  margin-bottom: 16px;
 }
 
 #image-gallery.hidden {
@@ -781,24 +787,26 @@ body:has(#year-filter-bar:not(.hidden)) {
   opacity: 1;
 }
 
-#image-gallery-counter {
+#image-gallery-counter,
+.image-gallery-counter {
   display: block;
-  margin-bottom: 8px;
   font-size: 12px;
   color: var(--jdr-text-muted);
   text-align: center;
 }
 
-#image-gallery-counter.hidden {
+#image-gallery-counter.hidden,
+.image-gallery-counter.hidden {
   display: none;
 }
 
 .image-caption {
   display: block;
-  margin: -8px 0 16px;
-  font-size: 12px;
+  margin: 0;
+  padding: 0 4px;
+  font-size: 13px;
   line-height: 1.5;
-  color: var(--jdr-text-muted);
+  color: var(--jdr-text-secondary);
   text-align: center;
 }
 
@@ -902,7 +910,11 @@ body:has(#year-filter-bar:not(.hidden)) {
 
 #photo-modal-caption {
   margin: 0;
-  color: rgba(255, 255, 255, 0.7);
+  padding: 0 12px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.78);
+  text-align: center;
 }
 
 #photo-modal-prev,

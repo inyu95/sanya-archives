@@ -1,7 +1,7 @@
 import { dom } from "../config/dom.js";
 import { ASSETS_ICONS_BASE } from "../config/constants.js";
 import { state } from "../state.js";
-import { parseCommaList, parsePinYear } from "../utils/parse.js?v=72";
+import { parseCommaList, parsePinYear } from "../utils/parse.js?v=73";
 import { renderPins, flyToPins } from "../pins/pins.js";
 import { setStatus, hideStatus } from "../ui/status.js";
 import { hidePinInfo } from "../info-panel.js";

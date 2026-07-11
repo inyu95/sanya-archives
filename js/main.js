@@ -6,7 +6,7 @@ import {
   setupSearchBox,
   setupFilterPanel,
   setupYearFilterBar
-} from "./filters/filters.js?v=72";
+} from "./filters/filters.js?v=73";
 import { setupInfoPanel, showPinInfo, hidePinInfo, resetCameraZoomState } from "./info-panel.js";
 import { setupHomeButton } from "./ui/home.js";
 import { setupArchiveList } from "./ui/archive-list.js";
@@ -150,7 +150,7 @@ function init() {
 
   loadGoogleEarth3D()
     .then(function () {
-      setStatus("3D地図を読み込みました。ピンを選択すると右側に3Dモデルのプレビューが表示されます。");
+      setStatus("3D地図を読み込みました。ピンを選択すると右側に3Dスキャンのプレビューが表示されます。");
     })
     .catch(function (err) {
       console.warn("Google Photorealistic 3D Tiles の読み込みに失敗:", err);

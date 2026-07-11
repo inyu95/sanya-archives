@@ -10,7 +10,7 @@ import {
   getAppBasePath
 } from "../config/constants.js";
 import { parseCommaList } from "../utils/parse.js";
-import { loadPinData } from "../filters/filters.js?v=72";
+import { loadPinData } from "../filters/filters.js?v=73";
 import { setStatus } from "../ui/status.js";
 
 function cellValue(cell) {
@@ -121,6 +121,45 @@ function isDirectImagePath(value) {
   return /\.(jpe?g|png|gif|webp|svg|bmp)$/i.test(text);
 }
 
+function normalizePathSeparators(value) {
+  return String(value || "").trim().replace(/\\/g, "/");
+}
+
+function extractFolderFromImagePath(value) {
+  const text = normalizePathSeparators(value)
+    .replace(/^\.\//, "")
+    .replace(/^\/+/, "");
+  const lastSlash = text.lastIndexOf("/");
+  if (lastSlash === -1) return "";
+  return text.slice(0, lastSlash);
+}
+
+function photoFileNameFromUrl(url) {
+  const part = String(url || "").split("/").pop() || "";
+  try {
+    return decodeURIComponent(part);
+  } catch (_err) {
+    return part;
+  }
+}
+
+function reorderPhotosWithPreferred(photos, preferredUrl, preferredFileName) {
+  if (!photos.length || (!preferredUrl && !preferredFileName)) return photos;
+
+  const index = photos.findIndex(function (photo) {
+    if (preferredUrl && photo.url === preferredUrl) return true;
+    if (!preferredFileName) return false;
+    return photoFileNameFromUrl(photo.url) === preferredFileName;
+  });
+
+  if (index <= 0) return photos;
+
+  const reordered = photos.slice();
+  const preferred = reordered.splice(index, 1)[0];
+  reordered.unshift(preferred);
+  return reordered;
+}
+
 function normalizeImageFolder(value) {
   let text = String(value || "").trim().replace(/\\/g, "/");
   text = text.replace(/^\.\//, "").replace(/^\/+/, "");
@@ -146,41 +185,64 @@ function encodePhotoFileName(fileName) {
     .join("/");
 }
 
-function parseManifestEntry(item, base) {
-  if (typeof item === "string") {
-    const file = String(item || "").trim();
-    if (!file) return null;
-    return { url: base + encodePhotoFileName(file), title: "" };
+function buildPhotoEntry(base, file) {
+  const name = String(file || "").trim();
+  if (!name) return null;
+  return { url: base + encodePhotoFileName(name), title: "" };
+}
+
+let photosIndexPromise = null;
+
+function fetchPhotosIndex() {
+  if (!photosIndexPromise) {
+    photosIndexPromise = fetch(ASSETS_PHOTOS_BASE + "index.json")
+      .then(function (res) {
+        if (!res.ok) return {};
+        return res.json();
+      })
+      .catch(function () {
+        return {};
+      });
+  }
+  return photosIndexPromise;
+}
+
+function normalizeFolderKey(value) {
+  const folder = normalizeImageFolder(value);
+  return folder ? folder.normalize("NFC") : "";
+}
+
+function lookupFilesInPhotosIndex(index, folder) {
+  const normalized = normalizeFolderKey(folder);
+  if (!normalized) return null;
+
+  const keys = Object.keys(index);
+  for (let i = 0; i < keys.length; i++) {
+    const key = keys[i];
+    if (key.normalize("NFC") !== normalized) continue;
+    const files = index[key];
+    if (Array.isArray(files) && files.length > 0) return files;
   }
 
-  if (item && typeof item === "object") {
-    const file = String(item.file || item.path || "").trim();
-    if (!file) return null;
-    return {
-      url: base + encodePhotoFileName(file),
-      title: String(item.title || item.caption || "").trim()
-    };
+  const leaf = normalized.split("/").filter(Boolean).pop();
+  if (!leaf || leaf === normalized) return null;
+  for (let j = 0; j < keys.length; j++) {
+    const key = keys[j];
+    if (key.normalize("NFC") !== leaf.normalize("NFC")) continue;
+    const files = index[key];
+    if (Array.isArray(files) && files.length > 0) return files;
   }
 
   return null;
 }
 
-function fetchManifestUrls(base) {
-  return fetch(base + "manifest.json")
-    .then(function (res) {
-      if (!res.ok) return null;
-      return res.json();
-    })
-    .then(function (files) {
-      if (!Array.isArray(files)) return null;
-      const photos = files
-        .map(function (file) { return parseManifestEntry(file, base); })
-        .filter(Boolean);
-      return photos.length > 0 ? photos : null;
-    })
-    .catch(function () {
-      return null;
-    });
+function photosFromIndex(index, folder, base) {
+  const files = lookupFilesInPhotosIndex(index, folder);
+  if (!files) return null;
+  const photos = files
+    .map(function (file) { return buildPhotoEntry(base, file); })
+    .filter(Boolean);
+  return photos.length > 0 ? photos : null;
 }
 
 function probeNumberedImages(base) {
@@ -206,15 +268,15 @@ function probeNumberedImages(base) {
 }
 
 function resolveImagesFromFolder(folderName) {
-  const folder = normalizeImageFolder(folderName);
+  const folder = normalizeFolderKey(folderName);
   if (!folder) return Promise.resolve([]);
 
   const base = buildPhotoBaseUrl(folder);
-  return fetchManifestUrls(base)
-    .then(function (urls) {
-      if (urls) return urls;
-      return probeNumberedImages(base);
-    });
+  return fetchPhotosIndex().then(function (index) {
+    const indexed = photosFromIndex(index, folder, base);
+    if (indexed) return indexed;
+    return probeNumberedImages(base);
+  });
 }
 
 function resolvePinImages(pins) {
@@ -225,15 +287,52 @@ function resolvePinImages(pins) {
       pin.image = "";
       return Promise.resolve();
     }
-    if (isDirectImagePath(raw)) {
+
+    if (isDirectImagePath(raw) && /^https?:\/\//i.test(raw)) {
       const url = resolveImageUrl(raw);
       pin.images = [{ url: url, title: "" }];
       pin.image = url;
       return Promise.resolve();
     }
-    return resolveImagesFromFolder(raw).then(function (photos) {
-      pin.images = photos;
-      pin.image = photos[0] ? photos[0].url : "";
+
+    const folderInput = isDirectImagePath(raw) ? extractFolderFromImagePath(raw) : raw;
+    const folder = normalizeFolderKey(folderInput);
+    const preferredUrl = isDirectImagePath(raw) ? resolveImageUrl(raw) : "";
+    const preferredFileName = isDirectImagePath(raw)
+      ? normalizePathSeparators(raw).split("/").pop()
+      : "";
+
+    if (isDirectImagePath(raw) && !folder) {
+      const url = preferredUrl;
+      pin.images = [{ url: url, title: "" }];
+      pin.image = url;
+      return Promise.resolve();
+    }
+
+    if (!folder) {
+      pin.images = [];
+      pin.image = "";
+      return Promise.resolve();
+    }
+
+    return resolveImagesFromFolder(folder).then(function (photos) {
+      if (photos.length === 0 && preferredUrl) {
+        pin.images = [{ url: preferredUrl, title: "" }];
+        pin.image = preferredUrl;
+        return;
+      }
+
+      const ordered = reorderPhotosWithPreferred(photos, preferredUrl, preferredFileName);
+      pin.images = ordered;
+      pin.image = ordered[0] ? ordered[0].url : "";
+      if (ordered.length === 0) {
+        console.warn(
+          "写真が見つかりません:",
+          pin.name,
+          "(" + raw + ")",
+          "— フォルダ名を確認するか、npm run photos:index で assets/photos/index.json を再生成してください。"
+        );
+      }
     });
   }));
 }

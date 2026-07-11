@@ -381,7 +381,7 @@ export function loadPointCloudPreview(assetId, title) {
     clearPointCloudTilesetCache();
   }
   state.currentPointCloudAssetId = assetId;
-  state.currentPointCloudTitle = title || "3Dモデル";
+  state.currentPointCloudTitle = title || "3Dスキャン";
   showPointCloudPreviewSection(true);
   setPointCloudPreviewLoading(true);
 
@@ -402,8 +402,8 @@ export function loadPointCloudPreview(assetId, title) {
       if (loadGeneration !== state.pointCloudPreviewLoadGeneration) return;
       showPointCloudPreviewSection(false);
       setPointCloudPreviewLoading(false, false);
-      console.error("3Dモデルプレビューの読み込みに失敗:", err);
-      setStatus("3Dモデルプレビューの読み込みに失敗しました: " + err.message, "error");
+      console.error("3Dスキャンプレビューの読み込みに失敗:", err);
+      setStatus("3Dスキャンプレビューの読み込みに失敗しました: " + err.message, "error");
     });
 }
 
@@ -417,8 +417,8 @@ function setPointCloudPreviewLoading(loading, previewReady) {
     const label = placeholder.querySelector("span");
     if (label) {
       label.textContent = loading
-        ? "3Dモデルを読み込み中..."
-        : "クリックして3Dモデルを表示";
+        ? "3Dスキャンを読み込み中..."
+        : "クリックして3Dスキャンを表示";
     }
   }
 }
@@ -466,7 +466,7 @@ function openPointCloudPopup() {
 
   destroyPointCloudPreviewViewer();
   openPointCloudModal(state.currentPointCloudTitle);
-  setStatus("3Dモデルを読み込み中...");
+  setStatus("3Dスキャンを読み込み中...");
 
   Promise.all([
     ensurePointCloudModalViewer(),
@@ -482,16 +482,16 @@ function openPointCloudPopup() {
     })
     .then(function (tileset) {
       if (!tileset) {
-        setStatus("3Dモデルの読み込みが中断されました。もう一度お試しください。", "error");
+        setStatus("3Dスキャンの読み込みが中断されました。もう一度お試しください。", "error");
         return;
       }
       state.pointCloudTileset = tileset;
       hideStatus();
     })
     .catch(function (err) {
-      console.error("3Dモデルの読み込みに失敗:", err);
+      console.error("3Dスキャンの読み込みに失敗:", err);
       clearPointCloudModal(false);
-      setStatus("3Dモデルの読み込みに失敗しました: " + err.message, "error");
+      setStatus("3Dスキャンの読み込みに失敗しました: " + err.message, "error");
     });
 }
 
