@@ -3,6 +3,7 @@ import { state } from "./state.js";
 import { flyToPin } from "./pins/pins.js";
 import { clearPointCloud, clearPointCloudPreview, loadPointCloudPreview } from "./pointcloud/viewer.js";
 import { renderSpotLinks } from "./ui/spot-links.js";
+import { getPhotoTitle, getPhotoUrl, normalizePhotoList } from "./utils/photos.js";
 
 let galleryImages = [];
 let galleryIndex = 0;
@@ -22,16 +23,39 @@ function setInfoField(element, value) {
   element.textContent = text || "—";
 }
 
+function spotName() {
+  return (dom.infoName && dom.infoName.textContent) || "写真";
+}
+
+function setCaptionElement(element, title) {
+  if (!element) return;
+  const text = String(title || "").trim();
+  if (text) {
+    element.textContent = text;
+    element.classList.remove("hidden");
+  } else {
+    element.textContent = "";
+    element.classList.add("hidden");
+  }
+}
+
 function updateGalleryView() {
   if (!dom.imageView) return;
 
-  const imageUrl = galleryImages[galleryIndex] || "";
+  const photo = galleryImages[galleryIndex];
+  const imageUrl = getPhotoUrl(photo);
+  const photoTitle = getPhotoTitle(photo);
+  const altText = photoTitle || spotName();
+
+  setCaptionElement(dom.imageCaption, photoTitle);
+
   if (imageUrl) {
     dom.imageView.src = imageUrl;
-    dom.imageView.alt = (dom.infoName && dom.infoName.textContent) || "写真";
+    dom.imageView.alt = altText;
   } else {
     dom.imageView.removeAttribute("src");
     dom.imageView.alt = "";
+    setCaptionElement(dom.imageCaption, "");
   }
 
   const hasMultiple = galleryImages.length > 1;
@@ -53,21 +77,25 @@ function updateGalleryView() {
 }
 
 function updatePhotoLightboxView() {
-  const imageUrl = galleryImages[galleryIndex] || "";
-  const title = (dom.infoName && dom.infoName.textContent) || "写真";
+  const photo = galleryImages[galleryIndex];
+  const imageUrl = getPhotoUrl(photo);
+  const photoTitle = getPhotoTitle(photo);
+  const spot = spotName();
+  const altText = photoTitle || spot;
 
   if (dom.photoModalImage) {
     if (imageUrl) {
       dom.photoModalImage.src = imageUrl;
-      dom.photoModalImage.alt = title;
+      dom.photoModalImage.alt = altText;
     } else {
       dom.photoModalImage.removeAttribute("src");
       dom.photoModalImage.alt = "";
     }
   }
   if (dom.photoModalTitle) {
-    dom.photoModalTitle.textContent = title;
+    dom.photoModalTitle.textContent = spot;
   }
+  setCaptionElement(dom.photoModalCaption, photoTitle);
 
   const hasMultiple = galleryImages.length > 1;
   if (dom.photoModalPrev) {
@@ -95,13 +123,14 @@ function closePhotoLightbox() {
 }
 
 function showGallery(images) {
-  galleryImages = Array.isArray(images) ? images.filter(Boolean) : [];
+  galleryImages = normalizePhotoList(images);
   galleryIndex = 0;
   closePhotoLightbox();
 
   if (galleryImages.length === 0) {
     if (dom.imageGallery) dom.imageGallery.classList.add("hidden");
     if (dom.imageGalleryCounter) dom.imageGalleryCounter.classList.add("hidden");
+    setCaptionElement(dom.imageCaption, "");
     return;
   }
 
@@ -123,7 +152,9 @@ export function showPinInfo(entity) {
   const props = entity.properties;
   const images = props.images ? props.images.getValue() : [];
   const imageUrl = props.image.getValue();
-  const imageList = images && images.length ? images : (imageUrl ? [imageUrl] : []);
+  const imageList = images && images.length
+    ? images
+    : (imageUrl ? [{ url: imageUrl, title: "" }] : []);
   const roles = props.role.getValue() || [];
 
   state.selectedPinEntity = entity;

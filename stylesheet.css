@@ -793,6 +793,19 @@ body:has(#year-filter-bar:not(.hidden)) {
   display: none;
 }
 
+.image-caption {
+  display: block;
+  margin: -8px 0 16px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--jdr-text-muted);
+  text-align: center;
+}
+
+.image-caption.hidden {
+  display: none;
+}
+
 #photo-modal {
   position: fixed;
   inset: 0;
@@ -877,6 +890,21 @@ body:has(#year-filter-bar:not(.hidden)) {
   min-height: 0;
 }
 
+#photo-modal-figure {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+#photo-modal-caption {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.7);
+}
+
 #photo-modal-prev,
 #photo-modal-next {
   flex-shrink: 0;
@@ -906,8 +934,7 @@ body:has(#year-filter-bar:not(.hidden)) {
 }
 
 #photo-modal-image {
-  flex: 1;
-  min-width: 0;
+  width: 100%;
   max-height: calc(90vh - 100px);
   object-fit: contain;
   border-radius: 6px;

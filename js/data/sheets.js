@@ -146,6 +146,25 @@ function encodePhotoFileName(fileName) {
     .join("/");
 }
 
+function parseManifestEntry(item, base) {
+  if (typeof item === "string") {
+    const file = String(item || "").trim();
+    if (!file) return null;
+    return { url: base + encodePhotoFileName(file), title: "" };
+  }
+
+  if (item && typeof item === "object") {
+    const file = String(item.file || item.path || "").trim();
+    if (!file) return null;
+    return {
+      url: base + encodePhotoFileName(file),
+      title: String(item.title || item.caption || "").trim()
+    };
+  }
+
+  return null;
+}
+
 function fetchManifestUrls(base) {
   return fetch(base + "manifest.json")
     .then(function (res) {
@@ -154,11 +173,10 @@ function fetchManifestUrls(base) {
     })
     .then(function (files) {
       if (!Array.isArray(files)) return null;
-      const urls = files
-        .map(function (file) { return String(file || "").trim(); })
-        .filter(Boolean)
-        .map(function (file) { return base + encodePhotoFileName(file); });
-      return urls.length > 0 ? urls : null;
+      const photos = files
+        .map(function (file) { return parseManifestEntry(file, base); })
+        .filter(Boolean);
+      return photos.length > 0 ? photos : null;
     })
     .catch(function () {
       return null;
@@ -174,7 +192,7 @@ function probeNumberedImages(base) {
     return fetch(url, { method: "HEAD" })
       .then(function (res) {
         if (res.ok) {
-          found.push(url);
+          found.push({ url: url, title: "" });
           return probe(index + 1, found);
         }
         return found;
@@ -209,13 +227,13 @@ function resolvePinImages(pins) {
     }
     if (isDirectImagePath(raw)) {
       const url = resolveImageUrl(raw);
-      pin.images = [url];
+      pin.images = [{ url: url, title: "" }];
       pin.image = url;
       return Promise.resolve();
     }
-    return resolveImagesFromFolder(raw).then(function (urls) {
-      pin.images = urls;
-      pin.image = urls[0] || "";
+    return resolveImagesFromFolder(raw).then(function (photos) {
+      pin.images = photos;
+      pin.image = photos[0] ? photos[0].url : "";
     });
   }));
 }

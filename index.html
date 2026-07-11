@@ -9,7 +9,7 @@
     <meta http-equiv="Expires" content="0">
 
     <link rel="stylesheet" href="node_modules/cesium/Build/Cesium/Widgets/widgets.css">
-    <link rel="stylesheet" href="stylesheet.css?v=10">
+    <link rel="stylesheet" href="stylesheet.css?v=11">
   </head>
 
   <body>
@@ -89,6 +89,7 @@
             <button id="image-gallery-next" type="button" aria-label="次の写真">›</button>
           </div>
           <span id="image-gallery-counter" class="hidden"></span>
+          <figcaption id="image-caption" class="image-caption hidden"></figcaption>
           <div id="pointcloud-preview-section" class="hidden">
             <h3>3Dモデル</h3>
             <div id="pointcloud-preview" class="pointcloud-preview" role="button" tabindex="0" aria-label="3Dモデルを拡大表示">
@@ -141,7 +142,10 @@
         </div>
         <div id="photo-modal-body">
           <button id="photo-modal-prev" type="button" aria-label="前の写真">‹</button>
-          <img id="photo-modal-image" alt="">
+          <figure id="photo-modal-figure">
+            <img id="photo-modal-image" alt="">
+            <figcaption id="photo-modal-caption" class="image-caption hidden"></figcaption>
+          </figure>
           <button id="photo-modal-next" type="button" aria-label="次の写真">›</button>
         </div>
       </div>
