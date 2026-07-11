@@ -16,6 +16,8 @@ export const state = {
   pointCloudScratchPos: null,
   pointCloudScratchA: null,
   pointCloudScratchB: null,
+  pointCloudScratchHpr: null,
+  pointCloudScratchEnu: null,
   allPins: [],
   filteredPins: [],
   pinHeightCache: new Map(),

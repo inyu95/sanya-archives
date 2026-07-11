@@ -7,6 +7,9 @@ export function isFlatMapHeightMode() {
   return state.viewer.scene.mode === Cesium.SceneMode.SCENE2D;
 }
 
+/** 基準オフセットからこの値以上外れた高さは外れ値とみなす（m） */
+const MAX_HEIGHT_OUTLIER_FROM_BASELINE = 25;
+
 function sampleTerrainHeight(lon, lat) {
   return new Promise(function (resolve) {
     const carto = Cesium.Cartographic.fromDegrees(lon, lat);
@@ -74,7 +77,33 @@ function sampleGroundHeights(pinDataList) {
           return carto.height;
         }
         return sampleTerrainHeight(pinDataList[index].lon, pinDataList[index].lat);
-      }));
+      })).then(function (sampledHeights) {
+        return sampleTerrainHeights(pinDataList).then(function (terrainHeights) {
+          const offsets = sampledHeights
+            .map(function (height, index) {
+              if (height == null || isNaN(height)) return null;
+              const terrainHeight = terrainHeights[index];
+              if (terrainHeight == null || isNaN(terrainHeight)) return null;
+              return height - terrainHeight;
+            })
+            .filter(function (offset) { return offset != null && !isNaN(offset); })
+            .sort(function (a, b) { return a - b; });
+
+          const baselineOffset = offsets.length === 0
+            ? 0
+            : offsets[Math.floor(offsets.length / 2)];
+
+          return sampledHeights.map(function (height, index) {
+            const terrainHeight = terrainHeights[index];
+            if (height == null || isNaN(height)) return terrainHeight;
+            const offset = height - terrainHeight;
+            if (Math.abs(offset - baselineOffset) > MAX_HEIGHT_OUTLIER_FROM_BASELINE) {
+              return terrainHeight + baselineOffset;
+            }
+            return height;
+          });
+        });
+      });
     })
     .catch(function (err) {
       console.warn("3Dタイルの高さ取得に失敗:", err);
@@ -83,7 +112,7 @@ function sampleGroundHeights(pinDataList) {
 }
 
 function pinCacheKey(pin) {
-  return pin.lon + "," + pin.lat + ":" + (isFlatMapHeightMode() ? "flat" : "3d");
+  return pin.lon + "," + pin.lat + ":" + (isFlatMapHeightMode() ? "flat-v3" : "3d-v3");
 }
 
 export function resolveHeights(pinDataList) {

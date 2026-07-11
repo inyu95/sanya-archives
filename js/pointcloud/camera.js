@@ -2,7 +2,8 @@ import {
   POINT_CLOUD_ZOOM_WHEEL_FACTOR,
   POINT_CLOUD_ZOOM_PINCH_FACTOR,
   POINT_CLOUD_ZOOM_DRAG_FACTOR,
-  POINT_CLOUD_PAN_DRAG_FACTOR
+  POINT_CLOUD_PAN_DRAG_FACTOR,
+  POINT_CLOUD_ROTATE_DRAG_FACTOR
 } from "../config/constants.js";
 import { state } from "../state.js";
 
@@ -11,11 +12,15 @@ function getPointCloudScratch() {
     state.pointCloudScratchPos = new Cesium.Cartesian3();
     state.pointCloudScratchA = new Cesium.Cartesian3();
     state.pointCloudScratchB = new Cesium.Cartesian3();
+    state.pointCloudScratchHpr = new Cesium.HeadingPitchRange();
+    state.pointCloudScratchEnu = new Cesium.Matrix4();
   }
   return {
     pos: state.pointCloudScratchPos,
     a: state.pointCloudScratchA,
-    b: state.pointCloudScratchB
+    b: state.pointCloudScratchB,
+    hpr: state.pointCloudScratchHpr,
+    enu: state.pointCloudScratchEnu
   };
 }
 
@@ -62,28 +67,24 @@ export function applyPointCloudViewState(viewer, tileset) {
   const scratch = getPointCloudScratch();
   const camera = viewer.scene.camera;
   const center = tileset.boundingSphere.center;
-  const enu = Cesium.Transforms.eastNorthUpToFixedFrame(center);
+  Cesium.Cartesian3.add(center, viewState.panWorld, scratch.b);
 
-  camera.lookAtTransform(
-    enu,
-    new Cesium.HeadingPitchRange(viewState.heading, viewState.pitch, viewState.range)
-  );
+  scratch.hpr.heading = viewState.heading;
+  scratch.hpr.pitch = viewState.pitch;
+  scratch.hpr.range = viewState.range;
+  Cesium.Transforms.eastNorthUpToFixedFrame(scratch.b, undefined, scratch.enu);
+  camera.lookAtTransform(scratch.enu, scratch.hpr);
 
   const heading = camera.heading;
   const pitch = camera.pitch;
   const roll = camera.roll;
   Cesium.Cartesian3.clone(camera.positionWC, scratch.pos);
-  if (viewState.panWorld && Cesium.Cartesian3.magnitudeSquared(viewState.panWorld) > 1e-16) {
-    Cesium.Cartesian3.add(scratch.pos, viewState.panWorld, scratch.pos);
-  }
 
   camera.lookAtTransform(Cesium.Matrix4.IDENTITY);
   camera.setView({
     destination: scratch.pos,
     orientation: { heading: heading, pitch: pitch, roll: roll }
   });
-
-  viewer.scene.requestRender();
 }
 
 function getPointCloudZoomLimits(tileset) {
@@ -131,45 +132,33 @@ function applyPointCloudPanDelta(viewer, tileset, deltaX, deltaY) {
   const camera = viewer.scene.camera;
   const scratch = getPointCloudScratch();
   const scale = Math.max(viewState.range * POINT_CLOUD_PAN_DRAG_FACTOR, 0.001);
+  const center = tileset.boundingSphere.center;
+  Cesium.Cartesian3.add(center, viewState.panWorld, scratch.b);
 
-  applyPointCloudViewState(viewer, tileset);
+  scratch.hpr.heading = viewState.heading;
+  scratch.hpr.pitch = viewState.pitch;
+  scratch.hpr.range = viewState.range;
+  Cesium.Transforms.eastNorthUpToFixedFrame(scratch.b, undefined, scratch.enu);
+  camera.lookAtTransform(scratch.enu, scratch.hpr);
 
   Cesium.Cartesian3.multiplyByScalar(camera.rightWC, -deltaX * scale, scratch.a);
   Cesium.Cartesian3.multiplyByScalar(camera.upWC, deltaY * scale, scratch.b);
-  Cesium.Cartesian3.add(viewState.panWorld, scratch.a, viewState.panWorld);
-  Cesium.Cartesian3.add(viewState.panWorld, scratch.b, viewState.panWorld);
+  Cesium.Cartesian3.add(scratch.a, scratch.b, scratch.a);
+  camera.lookAtTransform(Cesium.Matrix4.IDENTITY);
 
+  Cesium.Cartesian3.add(viewState.panWorld, scratch.a, viewState.panWorld);
   applyPointCloudViewState(viewer, tileset);
 }
 
-function applyPointCloudRotate(viewer, tileset, movement) {
+function applyPointCloudRotateDelta(viewer, tileset, deltaX, deltaY) {
   if (!isViewerUsable(viewer) || !tileset || tileset.isDestroyed()) return;
   const viewState = viewer._pointCloudViewState;
   if (!viewState) return;
-  const dx = movement.endPosition.x - movement.startPosition.x;
-  const dy = movement.endPosition.y - movement.startPosition.y;
-  if (dx === 0 && dy === 0) return;
+  if (deltaX === 0 && deltaY === 0) return;
 
-  const center = tileset.boundingSphere.center;
-  const camera = viewer.scene.camera;
-  camera.lookAtTransform(
-    Cesium.Transforms.eastNorthUpToFixedFrame(center),
-    new Cesium.HeadingPitchRange(viewState.heading, viewState.pitch, viewState.range)
-  );
-
-  const canvas = viewer.scene.canvas;
-  let phiRatio = -dx / canvas.clientWidth;
-  let thetaRatio = -dy / canvas.clientHeight;
-  phiRatio = Cesium.Math.clamp(phiRatio, -0.22, 0.22);
-  thetaRatio = Cesium.Math.clamp(thetaRatio, -0.22, 0.22);
-
-  const rotateRate = Cesium.Math.clamp(viewState.range * 0.5, 0.05, 1.77);
-  camera.rotateRight(rotateRate * phiRatio * Math.PI * 2);
-  camera.rotateUp(rotateRate * thetaRatio * Math.PI);
-
-  viewState.heading = camera.heading;
+  viewState.heading -= deltaX * POINT_CLOUD_ROTATE_DRAG_FACTOR;
   viewState.pitch = Cesium.Math.clamp(
-    camera.pitch,
+    viewState.pitch - deltaY * POINT_CLOUD_ROTATE_DRAG_FACTOR,
     -Cesium.Math.PI_OVER_TWO + 0.01,
     Cesium.Math.PI_OVER_TWO - 0.01
   );
@@ -177,54 +166,33 @@ function applyPointCloudRotate(viewer, tileset, movement) {
   applyPointCloudViewState(viewer, tileset);
 }
 
+function isDragButtonHeld(event, button) {
+  if (button === 0) return (event.buttons & 1) !== 0;
+  if (button === 1) return (event.buttons & 4) !== 0;
+  if (button === 2) return (event.buttons & 2) !== 0;
+  return false;
+}
+
 function setupPointCloudDragPointer(viewer) {
   teardownPointCloudDragPointer(viewer);
   const canvas = viewer.scene.canvas;
-  const dragState = { mode: null, lastX: 0, lastY: 0 };
-  const rotateStart = new Cesium.Cartesian2();
-  const rotateEnd = new Cesium.Cartesian2();
+  const dragState = { mode: null, button: -1, lastX: 0, lastY: 0, frameId: 0 };
+  const pendingMove = { deltaX: 0, deltaY: 0 };
 
-  const onPointerDown = function (event) {
-    if (event.button === 0) {
-      dragState.mode = event.ctrlKey ? "rotate" : "pan";
-    } else if (event.button === 1) {
-      dragState.mode = "rotate";
-    } else if (event.button === 2) {
-      dragState.mode = "zoom";
-    } else {
-      return;
-    }
-    dragState.lastX = event.clientX;
-    dragState.lastY = event.clientY;
-    event.preventDefault();
-    try {
-      canvas.setPointerCapture(event.pointerId);
-    } catch (err) {
-      // ignore
-    }
-  };
-
-  const onPointerMove = function (event) {
-    if (!dragState.mode) return;
-    const deltaX = event.clientX - dragState.lastX;
-    const deltaY = event.clientY - dragState.lastY;
+  const flushPendingMove = function () {
+    const deltaX = pendingMove.deltaX;
+    const deltaY = pendingMove.deltaY;
+    pendingMove.deltaX = 0;
+    pendingMove.deltaY = 0;
     if (deltaX === 0 && deltaY === 0) return;
 
     const activeTileset = viewer._pointCloudZoomTileset;
-    if (!activeTileset) return;
+    if (!activeTileset || !dragState.mode) return;
 
     if (dragState.mode === "pan") {
       applyPointCloudPanDelta(viewer, activeTileset, deltaX, deltaY);
     } else if (dragState.mode === "rotate") {
-      const rect = canvas.getBoundingClientRect();
-      rotateEnd.x = event.clientX - rect.left;
-      rotateEnd.y = event.clientY - rect.top;
-      rotateStart.x = rotateEnd.x - deltaX;
-      rotateStart.y = rotateEnd.y - deltaY;
-      applyPointCloudRotate(viewer, activeTileset, {
-        startPosition: rotateStart,
-        endPosition: rotateEnd
-      });
+      applyPointCloudRotateDelta(viewer, activeTileset, deltaX, deltaY);
     } else if (dragState.mode === "zoom") {
       const range = getPointCloudCameraRange(viewer, activeTileset);
       applyPointCloudZoom(
@@ -233,29 +201,103 @@ function setupPointCloudDragPointer(viewer) {
         -deltaY * Math.max(range * POINT_CLOUD_ZOOM_DRAG_FACTOR, 0.005)
       );
     }
+  };
 
+  const stopDragLoop = function () {
+    if (!dragState.frameId) return;
+    cancelAnimationFrame(dragState.frameId);
+    dragState.frameId = 0;
+    flushPendingMove();
+  };
+
+  const dragLoopTick = function () {
+    if (!dragState.mode) {
+      dragState.frameId = 0;
+      return;
+    }
+    flushPendingMove();
+    dragState.frameId = requestAnimationFrame(dragLoopTick);
+  };
+
+  const startDragLoop = function () {
+    if (dragState.frameId) return;
+    dragState.frameId = requestAnimationFrame(dragLoopTick);
+  };
+
+  const onPointerDown = function (event) {
+    if (event.button === 0) {
+      dragState.mode = event.ctrlKey ? "rotate" : "pan";
+      dragState.button = 0;
+    } else if (event.button === 1) {
+      dragState.mode = "rotate";
+      dragState.button = 1;
+    } else if (event.button === 2) {
+      dragState.mode = "zoom";
+      dragState.button = 2;
+    } else {
+      return;
+    }
     dragState.lastX = event.clientX;
     dragState.lastY = event.clientY;
+    pendingMove.deltaX = 0;
+    pendingMove.deltaY = 0;
+    event.preventDefault();
+    event.stopPropagation();
+    try {
+      canvas.setPointerCapture(event.pointerId);
+    } catch (err) {
+      // ignore
+    }
+    startDragLoop();
+  };
+
+  const onPointerMove = function (event) {
+    if (!dragState.mode) return;
+    if (!isDragButtonHeld(event, dragState.button)) return;
+    const deltaX = event.clientX - dragState.lastX;
+    const deltaY = event.clientY - dragState.lastY;
+    if (deltaX === 0 && deltaY === 0) return;
+
+    pendingMove.deltaX += deltaX;
+    pendingMove.deltaY += deltaY;
+    dragState.lastX = event.clientX;
+    dragState.lastY = event.clientY;
+    event.preventDefault();
   };
 
   const endDrag = function (event) {
     if (!dragState.mode) return;
+    if (event.button !== dragState.button) return;
+    stopDragLoop();
     dragState.mode = null;
+    dragState.button = -1;
     try {
       canvas.releasePointerCapture(event.pointerId);
     } catch (err) {
       // ignore
     }
+    event.preventDefault();
+  };
+
+  const onLostPointerCapture = function () {
+    if (!dragState.mode) return;
+    stopDragLoop();
+    dragState.mode = null;
+    dragState.button = -1;
   };
 
   canvas.addEventListener("pointerdown", onPointerDown, { passive: false });
   canvas.addEventListener("pointermove", onPointerMove, { passive: false });
   canvas.addEventListener("pointerup", endDrag);
   canvas.addEventListener("pointercancel", endDrag);
+  canvas.addEventListener("lostpointercapture", onLostPointerCapture);
   viewer._pointCloudDragPointer = {
     onPointerDown: onPointerDown,
     onPointerMove: onPointerMove,
-    endDrag: endDrag
+    endDrag: endDrag,
+    onLostPointerCapture: onLostPointerCapture,
+    dragState: dragState,
+    stopDragLoop: stopDragLoop
   };
 }
 
@@ -263,10 +305,12 @@ function teardownPointCloudDragPointer(viewer) {
   if (!viewer || !viewer._pointCloudDragPointer) return;
   const canvas = viewer.scene.canvas;
   const pointer = viewer._pointCloudDragPointer;
+  pointer.stopDragLoop();
   canvas.removeEventListener("pointerdown", pointer.onPointerDown);
   canvas.removeEventListener("pointermove", pointer.onPointerMove);
   canvas.removeEventListener("pointerup", pointer.endDrag);
   canvas.removeEventListener("pointercancel", pointer.endDrag);
+  canvas.removeEventListener("lostpointercapture", pointer.onLostPointerCapture);
   viewer._pointCloudDragPointer = null;
 }
 
@@ -276,14 +320,24 @@ function setupPointCloudCanvasBlockers(viewer) {
   const onContextMenu = function (event) {
     event.preventDefault();
   };
+  const onAuxClick = function (event) {
+    event.preventDefault();
+    event.stopPropagation();
+  };
   const onMouseDown = function (event) {
     if (event.button === 1 || event.button === 2) {
       event.preventDefault();
+      event.stopPropagation();
     }
   };
   canvas.addEventListener("contextmenu", onContextMenu);
+  canvas.addEventListener("auxclick", onAuxClick, { passive: false });
   canvas.addEventListener("mousedown", onMouseDown, { passive: false });
-  viewer._pointCloudCanvasBlockers = { onContextMenu: onContextMenu, onMouseDown: onMouseDown };
+  viewer._pointCloudCanvasBlockers = {
+    onContextMenu: onContextMenu,
+    onAuxClick: onAuxClick,
+    onMouseDown: onMouseDown
+  };
 }
 
 function teardownPointCloudCanvasBlockers(viewer) {
@@ -291,6 +345,9 @@ function teardownPointCloudCanvasBlockers(viewer) {
   const canvas = viewer.scene.canvas;
   const blockers = viewer._pointCloudCanvasBlockers;
   canvas.removeEventListener("contextmenu", blockers.onContextMenu);
+  if (blockers.onAuxClick) {
+    canvas.removeEventListener("auxclick", blockers.onAuxClick);
+  }
   canvas.removeEventListener("mousedown", blockers.onMouseDown);
   viewer._pointCloudCanvasBlockers = null;
 }

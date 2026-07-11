@@ -94,7 +94,7 @@ function createPointCloudViewer(containerId, isPreview) {
     timeline: false,
     infoBox: false,
     selectionIndicator: false,
-    requestRenderMode: false,
+    requestRenderMode: isPreview,
     useDefaultRenderLoop: true
   });
 

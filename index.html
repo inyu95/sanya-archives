@@ -14,7 +14,10 @@
 
   <body>
     <div id="cesium"></div>
-    <div id="startup-title" aria-hidden="true">山谷アーカイブ</div>
+    <div id="startup-title" aria-hidden="true">
+      <span class="startup-title-main">山谷アーカイブ</span>
+      <span class="startup-title-sub">Sanya Archives</span>
+    </div>
 
     <button id="about-btn" class="cesium-toolbar-btn cesium-toolbar-btn--text" type="button">本アーカイブについて</button>
 
@@ -118,7 +121,7 @@
     </div>
 
     <div id="year-filter-bar" class="hidden">
-      <button id="year-filter-all" type="button" class="year-filter-all">すべてのピンを表示</button>
+      <button id="year-filter-all" type="button" class="year-filter-all" aria-pressed="true">全ピン表示</button>
       <div id="year-filter-slider-wrap">
         <span id="year-filter-thumb-label" class="year-filter-thumb-label" aria-hidden="true"></span>
         <div id="year-filter-ticks" aria-hidden="true"></div>
@@ -177,6 +180,6 @@
       window.CESIUM_BASE_URL = "node_modules/cesium/Build/Cesium/";
     </script>
     <script src="node_modules/cesium/Build/Cesium/Cesium.js"></script>
-    <script type="module" src="js/main.js?v=74"></script>
+    <script type="module" src="js/main.js?v=76"></script>
   </body>
 </html>

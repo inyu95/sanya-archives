@@ -176,10 +176,11 @@ function updateYearFilterThumbLabel(year) {
 function updateYearFilterAllButton() {
   if (!dom.yearFilterAll) return;
   const isAll = state.selectedYear === null;
-  const isPreviewing = yearSliderPreviewYear !== null;
-  dom.yearFilterAll.classList.toggle("active", isAll && !isPreviewing);
+  dom.yearFilterAll.classList.toggle("active", isAll);
+  dom.yearFilterAll.setAttribute("aria-pressed", isAll ? "true" : "false");
+  dom.yearFilterAll.textContent = "全ピン表示";
   if (dom.yearFilterSliderWrap) {
-    dom.yearFilterSliderWrap.classList.toggle("year-filter-slider-wrap--inactive", isAll && !isPreviewing);
+    dom.yearFilterSliderWrap.classList.toggle("year-filter-slider-wrap--inactive", isAll);
   }
 }
 
@@ -219,10 +220,29 @@ function previewYearSlider(year) {
   updateYearFilterLabel(yearSliderPreviewYear);
 }
 
-function setYearFromSlider(year) {
+function commitYearSliderSelection() {
+  if (!dom.yearFilterSlider) return;
+  if (yearSliderPreviewYear === null) return;
+  setYearFromSlider(parseInt(dom.yearFilterSlider.value, 10));
+}
+
+function setYearFromSlider(year, forceYearFilter) {
   yearSliderPreviewYear = null;
   const clamped = clampSliderYear(year);
-  const enteringFromAll = state.selectedYear === null;
+  const shouldForceYearFilter = forceYearFilter === true;
+  const isAllMode = state.selectedYear === null;
+  if (isAllMode && !shouldForceYearFilter) {
+    if (dom.yearFilterSlider) {
+      dom.yearFilterSlider.value = String(clamped);
+    }
+    updateYearFilterAllButton();
+    updateYearFilterLabel(null);
+    updateYearFilterSliderFill(null);
+    syncHistoricalMapForYear(clamped, true);
+    return;
+  }
+
+  const enteringFromAll = isAllMode;
   state.selectedYear = clamped;
   if (dom.yearFilterSlider) {
     dom.yearFilterSlider.value = String(clamped);
@@ -230,8 +250,8 @@ function setYearFromSlider(year) {
   updateYearFilterAllButton();
   updateYearFilterLabel(clamped);
   updateYearFilterSliderFill(clamped);
-  syncHistoricalMapForYear(clamped, enteringFromAll);
   applyFilters();
+  syncHistoricalMapForYear(clamped, enteringFromAll);
 }
 
 function setYearFilterAll() {
@@ -240,13 +260,13 @@ function setYearFilterAll() {
   updateYearFilterAllButton();
   updateYearFilterLabel(null);
   updateYearFilterSliderFill(null);
-  syncHistoricalMapForYear(null, true);
   applyFilters();
+  syncHistoricalMapForYear(null, true);
 }
 
 function toggleYearFilterAll() {
   if (state.selectedYear === null) {
-    setYearFromSlider(getSliderPositionYear());
+    setYearFromSlider(getSliderPositionYear(), true);
     return;
   }
   setYearFilterAll();
@@ -363,6 +383,15 @@ export function setupYearFilterBar() {
     });
     dom.yearFilterSlider.addEventListener("input", function () {
       previewYearSlider(parseInt(dom.yearFilterSlider.value, 10));
+    });
+    dom.yearFilterSlider.addEventListener("pointerup", function () {
+      commitYearSliderSelection();
+    });
+    dom.yearFilterSlider.addEventListener("pointercancel", function () {
+      commitYearSliderSelection();
+    });
+    dom.yearFilterSlider.addEventListener("blur", function () {
+      commitYearSliderSelection();
     });
     dom.yearFilterSlider.addEventListener("change", function () {
       setYearFromSlider(parseInt(dom.yearFilterSlider.value, 10));

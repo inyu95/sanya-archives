@@ -11,6 +11,9 @@ import { state } from "../state.js";
 import { createPinCircleImageDataUrl, createPinWithStemImageDataUrl } from "./pin-art.js";
 import { resolveHeights } from "./pin-heights.js";
 
+/** 非同期の高さ解決が重なったとき、古い renderPins 結果を捨てる */
+let pinRenderGeneration = 0;
+
 function isScene2D() {
   return state.viewer && state.viewer.scene.mode === Cesium.SceneMode.SCENE2D;
 }
@@ -103,6 +106,7 @@ export function refreshPinsForMapMode() {
 }
 
 export function renderPins(pinDataList, onComplete) {
+  const generation = ++pinRenderGeneration;
   state.viewer.entities.removeAll();
   if (pinDataList.length === 0) {
     if (onComplete) onComplete();
@@ -110,9 +114,11 @@ export function renderPins(pinDataList, onComplete) {
   }
 
   resolveHeights(pinDataList).then(function (heights) {
+    if (generation !== pinRenderGeneration) return;
     let remaining = pinDataList.length;
     for (let i = 0; i < pinDataList.length; i++) {
       addPhotoPin(pinDataList[i], heights[i], function () {
+        if (generation !== pinRenderGeneration) return;
         remaining -= 1;
         if (remaining === 0) {
           state.viewer.scene.requestRender();

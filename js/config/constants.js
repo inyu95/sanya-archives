@@ -1,5 +1,5 @@
 /** デプロイ時に increment して ES モジュールのブラウザキャッシュを無効化 */
-export const APP_MODULE_VERSION = "74";
+export const APP_MODULE_VERSION = "76";
 
 export const PIN_CIRCLE_SIZE = 48;
 /** ピン画像の描画倍率（表示サイズは PIN_CIRCLE_SIZE のまま） */
@@ -43,6 +43,7 @@ export const POINT_CLOUD_ZOOM_WHEEL_FACTOR = 0.003;
 export const POINT_CLOUD_ZOOM_PINCH_FACTOR = 0.08;
 export const POINT_CLOUD_ZOOM_DRAG_FACTOR = 0.008;
 export const POINT_CLOUD_PAN_DRAG_FACTOR = 0.005;
+export const POINT_CLOUD_ROTATE_DRAG_FACTOR = 0.004;
 
 export const CESIUM_ION_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI0YWEzZjAzZi1lYWNjLTQ1MjEtODNiNS1hODhhNzNiZDZmZWYiLCJpZCI6NDE3MTQ4LCJzdWIiOiJpbnl1MTk5NSIsImlzcyI6Imh0dHBzOi8vYXBpLmNlc2l1bS5jb20iLCJhdWQiOiJVbnRpdGxlZCIsImlhdCI6MTc4MDY2NzA4OX0.1Uh_YIa1s77JZ4JBrDFaTMt4XT9P8YyQq22-lak_M7s";
 
