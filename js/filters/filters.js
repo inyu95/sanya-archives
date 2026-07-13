@@ -11,7 +11,7 @@ import {
   EARLIEST_MAPPED_DECADE,
   getCurrentMapYear,
   resolveLayerForYear
-} from "../imagery/historical-maps.js?v=72";
+} from "../imagery/historical-maps.js?v=81";
 
 /** 地図レイヤー切替の重複呼び出しを防ぐ */
 let activeHistoricalLayerId = null;

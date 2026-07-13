@@ -1,5 +1,5 @@
 /** デプロイ時に increment して ES モジュールのブラウザキャッシュを無効化 */
-export const APP_MODULE_VERSION = "78";
+export const APP_MODULE_VERSION = "81";
 
 export const PIN_CIRCLE_SIZE = 48;
 /** ピン画像の描画倍率（表示サイズは PIN_CIRCLE_SIZE のまま） */
@@ -15,7 +15,8 @@ export const HISTORICAL_MAP_FALLBACK_BOUNDS = {
   east: 139.821,
   north: 35.742
 };
-export const HISTORICAL_MAP_MAX_ZOOM_LEVEL = 15;
+/** 地理院タイルの最大ズーム（seamlessphoto 等は z18 まで提供） */
+export const HISTORICAL_MAP_MAX_ZOOM_LEVEL = 18;
 export const HISTORICAL_MAP_MAX_CAMERA_DISTANCE = 3500;
 /** タイル読み込み前の地球色（暗すぎないベージュ系） */
 export const HISTORICAL_MAP_GLOBE_BASE_COLOR = "#e0d8cc";

@@ -13,7 +13,7 @@ import { setupArchiveList } from "./ui/archive-list.js";
 import { setupAboutSheet } from "./ui/about.js";
 import { setupPointCloudModal, clearPointCloudModal } from "./pointcloud/viewer.js";
 import { mountCustomToolbarButtons } from "./ui/toolbar.js";
-import { initHistoricalMaps, syncMapDisplayMode } from "./imagery/historical-maps.js?v=72";
+import { initHistoricalMaps, syncMapDisplayMode } from "./imagery/historical-maps.js?v=81";
 import { refreshPinsForMapMode } from "./pins/pins.js";
 
 const GOOGLE_3D_TILES_TIMEOUT_MS = 45000;
