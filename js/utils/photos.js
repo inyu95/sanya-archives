@@ -1,3 +1,9 @@
+import {
+  getYouTubeThumbnailUrl,
+  isYouTubeUrl,
+  parseYouTubeVideoId
+} from "./youtube.js";
+
 function photoFileNameFromUrl(url) {
   const part = String(url || "").split("/").pop() || "";
   const withoutQuery = part.split("?")[0];
@@ -48,5 +54,22 @@ export function getPhotoUrl(entry) {
 export function getPhotoTitle(entry) {
   const photo = normalizePhotoEntry(entry);
   if (!photo) return "";
+  if (photo.title) return photo.title;
   return captionFromFileName(photoFileNameFromUrl(photo.url));
+}
+
+export function isYouTubePhoto(entry) {
+  return isYouTubeUrl(getPhotoUrl(entry));
+}
+
+export function getPhotoYouTubeVideoId(entry) {
+  return parseYouTubeVideoId(getPhotoUrl(entry));
+}
+
+export function getPhotoDisplayUrl(entry) {
+  const url = getPhotoUrl(entry);
+  if (!url) return "";
+  const videoId = parseYouTubeVideoId(url);
+  if (videoId) return getYouTubeThumbnailUrl(videoId);
+  return url;
 }

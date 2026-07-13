@@ -13,8 +13,9 @@ import { setupArchiveList } from "./ui/archive-list.js";
 import { setupAboutSheet } from "./ui/about.js";
 import { setupPointCloudModal, clearPointCloudModal } from "./pointcloud/viewer.js";
 import { mountCustomToolbarButtons } from "./ui/toolbar.js";
-import { initHistoricalMaps, syncMapDisplayMode } from "./imagery/historical-maps.js?v=81";
+import { initHistoricalMaps, syncMapDisplayMode } from "./imagery/historical-maps.js?v=86";
 import { refreshPinsForMapMode } from "./pins/pins.js";
+import { invalidatePinHeightCache } from "./pins/pin-heights.js";
 
 const GOOGLE_3D_TILES_TIMEOUT_MS = 45000;
 
@@ -128,6 +129,7 @@ function init() {
   initHistoricalMaps(state.viewer);
 
   state.viewer.scene.morphComplete.addEventListener(function () {
+    invalidatePinHeightCache();
     refreshPinsForMapMode();
   });
 

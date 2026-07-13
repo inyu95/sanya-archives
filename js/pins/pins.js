@@ -14,10 +14,6 @@ import { resolveHeights } from "./pin-heights.js";
 /** 非同期の高さ解決が重なったとき、古い renderPins 結果を捨てる */
 let pinRenderGeneration = 0;
 
-function isScene2D() {
-  return state.viewer && state.viewer.scene.mode === Cesium.SceneMode.SCENE2D;
-}
-
 function buildPinLayers(pin) {
   const roles = pin.role || [];
   if (roles.length === 0) {
@@ -32,50 +28,44 @@ function buildPinLayers(pin) {
   });
 }
 
-function addPhotoPin(pin, groundH, onDone) {
-  const props = {
-    image: pin.image || "",
-    images: pin.images || [],
-    text: pin.text || "",
-    pointcloudAssetId: pin.pointcloud,
-    url: pin.url || "",
-    urlLabel: pin.urlLabel || "",
-    openingYear: pin.openingYear || "",
-    closingYear: pin.closingYear || "",
-    category: pin.category || "",
-    role: pin.role || [],
-    lon: pin.lon,
-    lat: pin.lat
-  };
-
-  const groundPos = Cesium.Cartesian3.fromDegrees(pin.lon, pin.lat, groundH);
-
-  const layers = buildPinLayers(pin);
-
-  if (isScene2D()) {
-    createPinWithStemImageDataUrl(pin.name, layers, function (dataUrl, totalHeight) {
-      state.viewer.entities.add({
-        name: pin.name,
-        position: groundPos,
-        billboard: {
-          image: dataUrl,
-          width: PIN_CIRCLE_SIZE,
-          height: totalHeight,
-          verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
-          horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
-          sizeInMeters: false,
-          disableDepthTestDistance: Number.POSITIVE_INFINITY
-        },
-        properties: props
-      });
+/** Cesium 2D モード専用: 画面上の茎付きビルボード */
+function addScreenFlatPin(pin, props, layers, onDone, generation) {
+  const surfacePos = Cesium.Cartesian3.fromDegrees(pin.lon, pin.lat);
+  createPinWithStemImageDataUrl(pin.name, layers, function (dataUrl, totalHeight) {
+    if (generation !== pinRenderGeneration) {
       if (onDone) onDone();
+      return;
+    }
+    state.viewer.entities.add({
+      name: pin.name,
+      position: surfacePos,
+      heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+      billboard: {
+        image: dataUrl,
+        width: PIN_CIRCLE_SIZE,
+        height: totalHeight,
+        verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+        horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
+        sizeInMeters: false,
+        disableDepthTestDistance: Number.POSITIVE_INFINITY,
+        heightReference: Cesium.HeightReference.CLAMP_TO_GROUND
+      },
+      properties: props
     });
-    return;
-  }
+    if (onDone) onDone();
+  });
+}
 
+/** 3D / 歴史地図: メートル単位のポール（3D と同じ見た目） */
+function addPolePin(pin, groundH, props, layers, onDone, generation) {
+  const groundPos = Cesium.Cartesian3.fromDegrees(pin.lon, pin.lat, groundH);
   const topPos = Cesium.Cartesian3.fromDegrees(pin.lon, pin.lat, groundH + PIN_POLE_HEIGHT_METERS);
 
   createPinCircleImageDataUrl(pin.name, layers, function (dataUrl, totalHeight) {
+    if (generation !== pinRenderGeneration) {
+      if (onDone) onDone();
+      return;
+    }
     state.viewer.entities.add({
       name: pin.name,
       position: topPos,
@@ -100,6 +90,32 @@ function addPhotoPin(pin, groundH, onDone) {
   });
 }
 
+function addPhotoPin(pin, groundH, onDone, generation, scene2D) {
+  const props = {
+    image: pin.image || "",
+    images: pin.images || [],
+    text: pin.text || "",
+    pointcloudAssetId: pin.pointcloud,
+    url: pin.url || "",
+    urlLabel: pin.urlLabel || "",
+    openingYear: pin.openingYear || "",
+    closingYear: pin.closingYear || "",
+    category: pin.category || "",
+    role: pin.role || [],
+    lon: pin.lon,
+    lat: pin.lat
+  };
+
+  const layers = buildPinLayers(pin);
+
+  if (scene2D) {
+    addScreenFlatPin(pin, props, layers, onDone, generation);
+    return;
+  }
+
+  addPolePin(pin, groundH, props, layers, onDone, generation);
+}
+
 export function refreshPinsForMapMode() {
   if (!state.viewer || state.filteredPins.length === 0) return;
   renderPins(state.filteredPins);
@@ -107,13 +123,16 @@ export function refreshPinsForMapMode() {
 
 export function renderPins(pinDataList, onComplete) {
   const generation = ++pinRenderGeneration;
+  const scene2D = state.viewer.scene.mode === Cesium.SceneMode.SCENE2D;
+  const historicalFlat = state.historicalMapActive;
+  const flatHeights = scene2D || historicalFlat;
   state.viewer.entities.removeAll();
   if (pinDataList.length === 0) {
     if (onComplete) onComplete();
     return;
   }
 
-  resolveHeights(pinDataList).then(function (heights) {
+  function placePins(heights) {
     if (generation !== pinRenderGeneration) return;
     let remaining = pinDataList.length;
     for (let i = 0; i < pinDataList.length; i++) {
@@ -124,8 +143,13 @@ export function renderPins(pinDataList, onComplete) {
           state.viewer.scene.requestRender();
           if (onComplete) onComplete();
         }
-      });
+      }, generation, scene2D);
     }
+  }
+
+  resolveHeights(pinDataList, flatHeights).then(placePins).catch(function (err) {
+    console.error("ピンの高さ取得に失敗:", err);
+    placePins(pinDataList.map(function () { return 0; }));
   });
 }
 

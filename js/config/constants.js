@@ -1,5 +1,5 @@
 /** デプロイ時に increment して ES モジュールのブラウザキャッシュを無効化 */
-export const APP_MODULE_VERSION = "81";
+export const APP_MODULE_VERSION = "86";
 
 export const PIN_CIRCLE_SIZE = 48;
 /** ピン画像の描画倍率（表示サイズは PIN_CIRCLE_SIZE のまま） */
@@ -24,6 +24,7 @@ export const HISTORICAL_MAP_GLOBE_BASE_COLOR = "#e0d8cc";
 export const HISTORICAL_MAP_BRIGHTNESS = 1.3;
 export const HISTORICAL_MAP_GAMMA = 0.9;
 export const PIN_POLE_HEIGHT_METERS = 48;
+/** Cesium 2D モード専用の茎（画面上のピクセル） */
 export const PIN_STEM_PIXEL_HEIGHT = 22;
 export const PIN_STEM_WIDTH = 1;
 export const PIN_STEM_COLOR = "#ffffff";

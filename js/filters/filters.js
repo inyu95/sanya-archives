@@ -2,7 +2,7 @@ import { dom } from "../config/dom.js";
 import { ASSETS_ICONS_BASE } from "../config/constants.js";
 import { state } from "../state.js";
 import { parseCommaList, parsePinYear } from "../utils/parse.js?v=73";
-import { renderPins, flyToPins } from "../pins/pins.js";
+import { renderPins, flyToPins, refreshPinsForMapMode } from "../pins/pins.js";
 import { setStatus, hideStatus } from "../ui/status.js";
 import { hidePinInfo } from "../info-panel.js";
 import { renderArchiveList } from "../ui/archive-list.js";
@@ -11,7 +11,7 @@ import {
   EARLIEST_MAPPED_DECADE,
   getCurrentMapYear,
   resolveLayerForYear
-} from "../imagery/historical-maps.js?v=81";
+} from "../imagery/historical-maps.js?v=86";
 
 /** 地図レイヤー切替の重複呼び出しを防ぐ */
 let activeHistoricalLayerId = null;
@@ -239,6 +239,7 @@ function setYearFromSlider(year, forceYearFilter) {
     updateYearFilterLabel(null);
     updateYearFilterSliderFill(null);
     syncHistoricalMapForYear(clamped, true);
+    refreshPinsForMapMode();
     return;
   }
 
@@ -250,8 +251,8 @@ function setYearFromSlider(year, forceYearFilter) {
   updateYearFilterAllButton();
   updateYearFilterLabel(clamped);
   updateYearFilterSliderFill(clamped);
-  applyFilters();
   syncHistoricalMapForYear(clamped, enteringFromAll);
+  applyFilters();
 }
 
 function setYearFilterAll() {
@@ -260,8 +261,8 @@ function setYearFilterAll() {
   updateYearFilterAllButton();
   updateYearFilterLabel(null);
   updateYearFilterSliderFill(null);
-  applyFilters();
   syncHistoricalMapForYear(null, true);
+  applyFilters();
 }
 
 function toggleYearFilterAll() {

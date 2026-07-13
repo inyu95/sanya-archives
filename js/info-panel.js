@@ -3,10 +3,19 @@ import { state } from "./state.js";
 import { flyToPin } from "./pins/pins.js";
 import { clearPointCloud, clearPointCloudPreview, loadPointCloudPreview } from "./pointcloud/viewer.js";
 import { renderSpotLinks } from "./ui/spot-links.js";
-import { getPhotoTitle, getPhotoUrl, normalizePhotoList } from "./utils/photos.js";
+import {
+  getPhotoDisplayUrl,
+  getPhotoTitle,
+  getPhotoYouTubeVideoId,
+  isYouTubePhoto,
+  normalizePhotoList
+} from "./utils/photos.js";
+import { getYouTubeEmbedUrl } from "./utils/youtube.js";
 
 let galleryImages = [];
 let galleryIndex = 0;
+let lightboxMode = "gallery";
+let standaloneVideoId = "";
 
 function formatActiveYears(openingYear, closingYear) {
   const open = String(openingYear || "").trim();
@@ -39,15 +48,49 @@ function setCaptionElement(element, title) {
   }
 }
 
+function setGalleryViewportVideoState(isVideo) {
+  if (dom.imageGalleryViewport) {
+    dom.imageGalleryViewport.classList.toggle("is-youtube", isVideo);
+    dom.imageGalleryViewport.setAttribute(
+      "aria-label",
+      isVideo ? "動画を拡大再生" : "写真を拡大表示"
+    );
+  }
+  if (dom.imageGalleryPlay) {
+    dom.imageGalleryPlay.classList.toggle("hidden", !isVideo);
+  }
+  const hint = dom.imageGalleryViewport
+    ? dom.imageGalleryViewport.querySelector(".image-gallery-hint")
+    : null;
+  if (hint) {
+    hint.textContent = isVideo ? "クリックで再生" : "クリックで拡大表示";
+  }
+}
+
+function setLightboxMediaMode(mode) {
+  const isVideo = mode === "video";
+  if (dom.photoModalImage) {
+    dom.photoModalImage.classList.toggle("hidden", isVideo);
+  }
+  if (dom.photoModalEmbedWrap) {
+    dom.photoModalEmbedWrap.classList.toggle("hidden", !isVideo);
+  }
+  if (!isVideo && dom.photoModalEmbed) {
+    dom.photoModalEmbed.removeAttribute("src");
+  }
+}
+
 function updateGalleryView() {
   if (!dom.imageView) return;
 
   const photo = galleryImages[galleryIndex];
-  const imageUrl = getPhotoUrl(photo);
+  const imageUrl = getPhotoDisplayUrl(photo);
   const photoTitle = getPhotoTitle(photo);
   const altText = photoTitle || spotName();
+  const isVideo = isYouTubePhoto(photo);
 
   setCaptionElement(dom.imageCaption, photoTitle);
+  setGalleryViewportVideoState(isVideo);
 
   if (imageUrl) {
     dom.imageView.src = imageUrl;
@@ -56,6 +99,7 @@ function updateGalleryView() {
     dom.imageView.removeAttribute("src");
     dom.imageView.alt = "";
     setCaptionElement(dom.imageCaption, "");
+    setGalleryViewportVideoState(false);
   }
 
   const hasMultiple = galleryImages.length > 1;
@@ -77,13 +121,26 @@ function updateGalleryView() {
 }
 
 function updatePhotoLightboxView() {
+  if (lightboxMode === "standalone-video") {
+    updateStandaloneVideoLightboxView();
+    return;
+  }
+
   const photo = galleryImages[galleryIndex];
-  const imageUrl = getPhotoUrl(photo);
+  const imageUrl = getPhotoDisplayUrl(photo);
   const photoTitle = getPhotoTitle(photo);
   const spot = spotName();
   const altText = photoTitle || spot;
+  const videoId = getPhotoYouTubeVideoId(photo);
+  const isVideo = Boolean(videoId);
 
-  if (dom.photoModalImage) {
+  setLightboxMediaMode(isVideo ? "video" : "image");
+
+  if (isVideo) {
+    if (dom.photoModalEmbed) {
+      dom.photoModalEmbed.src = getYouTubeEmbedUrl(videoId);
+    }
+  } else if (dom.photoModalImage) {
     if (imageUrl) {
       dom.photoModalImage.src = imageUrl;
       dom.photoModalImage.alt = altText;
@@ -92,6 +149,7 @@ function updatePhotoLightboxView() {
       dom.photoModalImage.alt = "";
     }
   }
+
   if (dom.photoModalTitle) {
     dom.photoModalTitle.textContent = spot;
   }
@@ -111,15 +169,42 @@ function updatePhotoLightboxView() {
   }
 }
 
+function updateStandaloneVideoLightboxView() {
+  setLightboxMediaMode("video");
+  if (dom.photoModalEmbed && standaloneVideoId) {
+    dom.photoModalEmbed.src = getYouTubeEmbedUrl(standaloneVideoId);
+  }
+  if (dom.photoModalPrev) dom.photoModalPrev.disabled = true;
+  if (dom.photoModalNext) dom.photoModalNext.disabled = true;
+  if (dom.photoModalCounter) dom.photoModalCounter.textContent = "";
+}
+
 function openPhotoLightbox() {
   if (!dom.photoModal || galleryImages.length === 0) return;
+  lightboxMode = "gallery";
+  standaloneVideoId = "";
   updatePhotoLightboxView();
+  dom.photoModal.classList.remove("hidden");
+}
+
+export function openVideoLightbox(videoId, title) {
+  if (!dom.photoModal || !videoId) return;
+  lightboxMode = "standalone-video";
+  standaloneVideoId = videoId;
+  if (dom.photoModalTitle) {
+    dom.photoModalTitle.textContent = title || "動画";
+  }
+  setCaptionElement(dom.photoModalCaption, "");
+  updateStandaloneVideoLightboxView();
   dom.photoModal.classList.remove("hidden");
 }
 
 function closePhotoLightbox() {
   if (!dom.photoModal) return;
   dom.photoModal.classList.add("hidden");
+  lightboxMode = "gallery";
+  standaloneVideoId = "";
+  setLightboxMediaMode("image");
 }
 
 function showGallery(images) {
@@ -142,7 +227,7 @@ function stepGallery(delta) {
   if (galleryImages.length <= 1) return;
   galleryIndex = (galleryIndex + delta + galleryImages.length) % galleryImages.length;
   updateGalleryView();
-  if (dom.photoModal && !dom.photoModal.classList.contains("hidden")) {
+  if (dom.photoModal && !dom.photoModal.classList.contains("hidden") && lightboxMode === "gallery") {
     updatePhotoLightboxView();
   }
 }
@@ -180,7 +265,8 @@ export function showPinInfo(entity) {
   renderSpotLinks(
     dom.spotHomepageLinks,
     props.url ? props.url.getValue() : "",
-    props.urlLabel ? props.urlLabel.getValue() : ""
+    props.urlLabel ? props.urlLabel.getValue() : "",
+    { onVideoClick: openVideoLightbox }
   );
 
   dom.infoPanel.classList.remove("hidden");
@@ -268,9 +354,9 @@ export function setupInfoPanel() {
     if (!dom.photoModal || dom.photoModal.classList.contains("hidden")) return;
     if (event.key === "Escape") {
       closePhotoLightbox();
-    } else if (event.key === "ArrowLeft") {
+    } else if (lightboxMode === "gallery" && event.key === "ArrowLeft") {
       stepGallery(-1);
-    } else if (event.key === "ArrowRight") {
+    } else if (lightboxMode === "gallery" && event.key === "ArrowRight") {
       stepGallery(1);
     }
   });

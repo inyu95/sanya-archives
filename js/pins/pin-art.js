@@ -148,18 +148,46 @@ function createHiDpiCanvas(logicalW, logicalH) {
   return { canvas: canvas, ctx: ctx };
 }
 
+function layersCacheKey(layers) {
+  return layers.map(function (layer) {
+    return (layer.imageUrl || "") + "|" + (layer.borderColor || "") + "|" + (layer.label || "");
+  }).join(";");
+}
+
+const circleImageCache = new Map();
+const stemImageCache = new Map();
+
 export function createPinCircleImageDataUrl(name, layers, callback) {
+  const key = name + "::" + layersCacheKey(layers);
+  const cached = circleImageCache.get(key);
+  if (cached) {
+    callback(cached.dataUrl, cached.totalHeight);
+    return;
+  }
+
   loadLayerImages(layers, function (normalized, images) {
     const clusterHeight = getDangoHeight(normalized.length);
     const surface = createHiDpiCanvas(PIN_CIRCLE_SIZE, clusterHeight);
 
     drawDangoLayers(surface.ctx, clusterHeight, name, normalized, images);
-    callback(surface.canvas.toDataURL("image/png"), clusterHeight);
+    const result = {
+      dataUrl: surface.canvas.toDataURL("image/png"),
+      totalHeight: clusterHeight
+    };
+    circleImageCache.set(key, result);
+    callback(result.dataUrl, result.totalHeight);
   });
 }
 
 /** 2D モード用: 団子アイコン + 下方向の棒を 1 枚の画像にまとめる */
 export function createPinWithStemImageDataUrl(name, layers, callback) {
+  const key = name + "::" + layersCacheKey(layers) + "::stem" + PIN_STEM_PIXEL_HEIGHT;
+  const cached = stemImageCache.get(key);
+  if (cached) {
+    callback(cached.dataUrl, cached.totalHeight);
+    return;
+  }
+
   loadLayerImages(layers, function (normalized, images) {
     const clusterHeight = getDangoHeight(normalized.length);
     const stemH = PIN_STEM_PIXEL_HEIGHT;
@@ -178,6 +206,11 @@ export function createPinWithStemImageDataUrl(name, layers, callback) {
     ctx.globalAlpha = 1;
 
     drawDangoLayers(ctx, clusterHeight, name, normalized, images);
-    callback(surface.canvas.toDataURL("image/png"), totalH);
+    const result = {
+      dataUrl: surface.canvas.toDataURL("image/png"),
+      totalHeight: totalH
+    };
+    stemImageCache.set(key, result);
+    callback(result.dataUrl, result.totalHeight);
   });
 }

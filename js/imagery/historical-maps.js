@@ -1,5 +1,6 @@
 import { state } from "../state.js";
 import { refreshPinsForMapMode } from "../pins/pins.js";
+import { invalidatePinHeightCache } from "../pins/pin-heights.js";
 import {
   HISTORICAL_MAP_BRIGHTNESS,
   HISTORICAL_MAP_FALLBACK_BOUNDS,
@@ -244,6 +245,9 @@ function setModernView() {
   const viewer = state.viewer;
   if (!viewer) return;
 
+  state.historicalMapActive = false;
+  invalidatePinHeightCache();
+
   ensureDefaultImageryLayer();
   removeHistoricalLayers();
   restoreCameraConstraints(viewer);
@@ -263,7 +267,6 @@ function setModernView() {
     viewer.scene.globe.depthTestAgainstTerrain = false;
   }
 
-  state.historicalMapActive = false;
   refreshPinsForMapMode();
   viewer.scene.requestRender();
 }
@@ -350,6 +353,9 @@ function setHistoricalView(year) {
   const rectangle = getHistoricalMapRectangle();
   const wasActive = state.historicalMapActive;
   const preserveCamera = wasActive || isCameraViewingHistoricalArea(viewer, rectangle);
+
+  state.historicalMapActive = true;
+  invalidatePinHeightCache();
 
   hideModernGeometry();
 

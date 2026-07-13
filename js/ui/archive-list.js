@@ -2,7 +2,7 @@ import { dom } from "../config/dom.js";
 import { state } from "../state.js";
 import { renderSpotLinks } from "./spot-links.js";
 import { findPinEntity, flyToPin } from "../pins/pins.js";
-import { showPinInfo, resetCameraZoomState } from "../info-panel.js";
+import { showPinInfo, resetCameraZoomState, openVideoLightbox } from "../info-panel.js";
 import { clearPointCloudModal } from "../pointcloud/viewer.js";
 
 let isOpen = false;
@@ -42,7 +42,10 @@ function createArchiveCard(pin) {
 
   const linksContainer = document.createElement("div");
   linksContainer.className = "spot-homepage-links";
-  const links = renderSpotLinks(linksContainer, pin.url, pin.urlLabel, { stopPropagation: true });
+  const links = renderSpotLinks(linksContainer, pin.url, pin.urlLabel, {
+    stopPropagation: true,
+    onVideoClick: openVideoLightbox
+  });
   if (links.length > 0) card.appendChild(linksContainer);
 
   function selectPin() {

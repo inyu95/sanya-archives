@@ -10,6 +10,15 @@ export function isFlatMapHeightMode() {
 /** 基準オフセットからこの値以上外れた高さは外れ値とみなす（m） */
 const MAX_HEIGHT_OUTLIER_FROM_BASELINE = 25;
 
+/** 路面付近の高さオフセット（下位25%の中央値） */
+function computeStreetBaselineOffset(offsets) {
+  if (offsets.length === 0) return 0;
+  const sorted = offsets.slice().sort(function (a, b) { return a - b; });
+  const count = Math.max(1, Math.ceil(sorted.length * 0.25));
+  const lower = sorted.slice(0, count);
+  return lower[Math.floor(lower.length / 2)];
+}
+
 function sampleTerrainHeight(lon, lat) {
   return new Promise(function (resolve) {
     const carto = Cesium.Cartographic.fromDegrees(lon, lat);
@@ -89,15 +98,17 @@ function sampleGroundHeights(pinDataList) {
             .filter(function (offset) { return offset != null && !isNaN(offset); })
             .sort(function (a, b) { return a - b; });
 
-          const baselineOffset = offsets.length === 0
-            ? 0
-            : offsets[Math.floor(offsets.length / 2)];
+          const baselineOffset = computeStreetBaselineOffset(offsets);
 
           return sampledHeights.map(function (height, index) {
             const terrainHeight = terrainHeights[index];
-            if (height == null || isNaN(height)) return terrainHeight;
+            if (height == null || isNaN(height)) return terrainHeight + baselineOffset;
             const offset = height - terrainHeight;
             if (Math.abs(offset - baselineOffset) > MAX_HEIGHT_OUTLIER_FROM_BASELINE) {
+              return terrainHeight + baselineOffset;
+            }
+            // 屋上など路面より高いサンプルは基準高さにそろえ、茎が地面から生える見た目にする
+            if (offset > baselineOffset + 3) {
               return terrainHeight + baselineOffset;
             }
             return height;
@@ -112,10 +123,19 @@ function sampleGroundHeights(pinDataList) {
 }
 
 function pinCacheKey(pin) {
-  return pin.lon + "," + pin.lat + ":" + (isFlatMapHeightMode() ? "flat-v3" : "3d-v3");
+  return pin.lon + "," + pin.lat + ":" + (isFlatMapHeightMode() ? "flat-v4" : "3d-v4");
 }
 
-export function resolveHeights(pinDataList) {
+export function invalidatePinHeightCache() {
+  state.pinHeightCache.clear();
+}
+
+export function resolveHeights(pinDataList, forceFlat) {
+  const flat = forceFlat != null ? forceFlat : isFlatMapHeightMode();
+  if (flat) {
+    return Promise.resolve(pinDataList.map(function () { return 0; }));
+  }
+
   const missingPins = [];
   const missingIndexes = [];
 
