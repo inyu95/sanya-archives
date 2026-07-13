@@ -133,6 +133,7 @@
               <button id="image-gallery-prev" type="button" aria-label="前の写真">‹</button>
               <div id="image-gallery-viewport" role="button" tabindex="0" aria-label="写真を拡大表示">
                 <img id="image-view" alt="">
+                <span id="image-gallery-play" class="video-play-overlay hidden" aria-hidden="true"></span>
                 <span class="image-gallery-hint">クリックで拡大表示</span>
               </div>
               <button id="image-gallery-next" type="button" aria-label="次の写真">›</button>
@@ -140,6 +141,7 @@
             <figcaption id="image-caption" class="image-caption hidden"></figcaption>
             <span id="image-gallery-counter" class="image-gallery-counter hidden"></span>
           </figure>
+          <div id="spot-youtube-previews" class="spot-youtube-previews hidden"></div>
           <div id="pointcloud-preview-section" class="hidden">
             <h3>3Dスキャン</h3>
             <div id="pointcloud-preview" class="pointcloud-preview" role="button" tabindex="0" aria-label="3Dスキャンを拡大表示">
@@ -194,6 +196,9 @@
           <button id="photo-modal-prev" type="button" aria-label="前の写真">‹</button>
           <figure id="photo-modal-figure">
             <img id="photo-modal-image" alt="">
+            <div id="photo-modal-embed-wrap" class="hidden">
+              <iframe id="photo-modal-embed" title="YouTube動画" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+            </div>
             <figcaption id="photo-modal-caption" class="image-caption hidden"></figcaption>
           </figure>
           <button id="photo-modal-next" type="button" aria-label="次の写真">›</button>

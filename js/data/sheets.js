@@ -9,6 +9,7 @@ import {
   ASSETS_PHOTOS_BASE,
   getAppBasePath
 } from "../config/constants.js";
+import { isYouTubeUrl } from "../utils/youtube.js";
 import { parseCommaList } from "../utils/parse.js";
 import { loadPinData } from "../filters/filters.js?v=73";
 import { setStatus } from "../ui/status.js";
@@ -282,13 +283,18 @@ function resolveImagesFromFolder(folderName) {
 function resolvePinImages(pins) {
   return Promise.all(pins.map(function (pin) {
     const raw = pin.imageFolder || "";
-    if (!raw) {
+    if (!raw || isYouTubeUrl(raw)) {
       pin.images = [];
       pin.image = "";
       return Promise.resolve();
     }
 
     if (isDirectImagePath(raw) && /^https?:\/\//i.test(raw)) {
+      if (isYouTubeUrl(raw)) {
+        pin.images = [];
+        pin.image = "";
+        return Promise.resolve();
+      }
       const url = resolveImageUrl(raw);
       pin.images = [{ url: url, title: "" }];
       pin.image = url;
@@ -301,9 +307,15 @@ function resolvePinImages(pins) {
     const preferredFileName = isDirectImagePath(raw)
       ? normalizePathSeparators(raw).split("/").pop()
       : "";
+    const safePreferredUrl = isYouTubeUrl(preferredUrl) ? "" : preferredUrl;
 
     if (isDirectImagePath(raw) && !folder) {
-      const url = preferredUrl;
+      if (!safePreferredUrl) {
+        pin.images = [];
+        pin.image = "";
+        return Promise.resolve();
+      }
+      const url = safePreferredUrl;
       pin.images = [{ url: url, title: "" }];
       pin.image = url;
       return Promise.resolve();
@@ -316,13 +328,21 @@ function resolvePinImages(pins) {
     }
 
     return resolveImagesFromFolder(folder).then(function (photos) {
-      if (photos.length === 0 && preferredUrl) {
-        pin.images = [{ url: preferredUrl, title: "" }];
-        pin.image = preferredUrl;
+      const galleryPhotos = photos.filter(function (photo) {
+        return !isYouTubeUrl(photo.url);
+      });
+
+      if (galleryPhotos.length === 0 && safePreferredUrl) {
+        pin.images = [{ url: safePreferredUrl, title: "" }];
+        pin.image = safePreferredUrl;
         return;
       }
 
-      const ordered = reorderPhotosWithPreferred(photos, preferredUrl, preferredFileName);
+      const ordered = reorderPhotosWithPreferred(
+        galleryPhotos,
+        safePreferredUrl,
+        isYouTubeUrl(preferredFileName) ? "" : preferredFileName
+      );
       pin.images = ordered;
       pin.image = ordered[0] ? ordered[0].url : "";
       if (ordered.length === 0) {

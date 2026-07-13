@@ -1,3 +1,5 @@
+import { parseYouTubeVideoId } from "./youtube.js";
+
 export function parseCommaList(value) {
   if (!value) return [];
   return String(value).split(",").map(function (item) { return item.trim(); }).filter(Boolean);
@@ -72,13 +74,20 @@ export function normalizeUrl(value) {
 }
 
 export function parseUrlLinks(urlValue, labelValue) {
+  return parseMediaLinks(urlValue, labelValue);
+}
+
+export function parseMediaLinks(urlValue, labelValue) {
   const urls = parseLineList(urlValue).map(normalizeUrl).filter(Boolean);
   const labels = parseLineList(labelValue);
   const defaultLabel = "リンク";
   return urls.map(function (href, index) {
+    const videoId = parseYouTubeVideoId(href);
     return {
       href: href,
-      label: labels[index] || defaultLabel
+      label: labels[index] || (videoId ? "動画" : defaultLabel),
+      type: videoId ? "youtube" : "link",
+      videoId: videoId || ""
     };
   });
 }

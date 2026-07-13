@@ -35,6 +35,7 @@ export const dom = {
   imageGalleryViewport: document.getElementById("image-gallery-viewport"),
   imageGalleryPlay: document.getElementById("image-gallery-play"),
   imageCaption: document.getElementById("image-caption"),
+  spotYoutubePreviews: document.getElementById("spot-youtube-previews"),
   photoModal: document.getElementById("photo-modal"),
   photoModalBackdrop: document.getElementById("photo-modal-backdrop"),
   photoModalTitle: document.getElementById("photo-modal-title"),

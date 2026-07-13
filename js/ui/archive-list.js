@@ -1,6 +1,6 @@
 import { dom } from "../config/dom.js";
 import { state } from "../state.js";
-import { renderSpotLinks } from "./spot-links.js";
+import { renderSpotLinks, renderSpotYouTubePreviews } from "./spot-links.js";
 import { findPinEntity, flyToPin } from "../pins/pins.js";
 import { showPinInfo, resetCameraZoomState, openVideoLightbox } from "../info-panel.js";
 import { clearPointCloudModal } from "../pointcloud/viewer.js";
@@ -39,6 +39,14 @@ function createArchiveCard(pin) {
 
   card.appendChild(top);
   if (pin.text) card.appendChild(desc);
+
+  const youtubeContainer = document.createElement("div");
+  youtubeContainer.className = "spot-youtube-previews";
+  const videos = renderSpotYouTubePreviews(youtubeContainer, pin.url, pin.urlLabel, {
+    stopPropagation: true,
+    onVideoClick: openVideoLightbox
+  });
+  if (videos.length > 0) card.appendChild(youtubeContainer);
 
   const linksContainer = document.createElement("div");
   linksContainer.className = "spot-homepage-links";

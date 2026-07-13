@@ -46,6 +46,12 @@ export function normalizePhotoList(entries) {
   return entries.map(normalizePhotoEntry).filter(Boolean);
 }
 
+export function filterGalleryPhotos(entries) {
+  return normalizePhotoList(entries).filter(function (entry) {
+    return !isYouTubeUrl(getPhotoUrl(entry));
+  });
+}
+
 export function getPhotoUrl(entry) {
   const photo = normalizePhotoEntry(entry);
   return photo ? photo.url : "";

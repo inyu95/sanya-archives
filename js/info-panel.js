@@ -2,13 +2,13 @@ import { dom } from "./config/dom.js";
 import { state } from "./state.js";
 import { flyToPin } from "./pins/pins.js";
 import { clearPointCloud, clearPointCloudPreview, loadPointCloudPreview } from "./pointcloud/viewer.js";
-import { renderSpotLinks } from "./ui/spot-links.js";
+import { renderSpotLinks, renderSpotYouTubePreviews } from "./ui/spot-links.js";
 import {
+  filterGalleryPhotos,
   getPhotoDisplayUrl,
   getPhotoTitle,
   getPhotoYouTubeVideoId,
   isYouTubePhoto,
-  normalizePhotoList
 } from "./utils/photos.js";
 import { getYouTubeEmbedUrl } from "./utils/youtube.js";
 
@@ -208,7 +208,7 @@ function closePhotoLightbox() {
 }
 
 function showGallery(images) {
-  galleryImages = normalizePhotoList(images);
+  galleryImages = filterGalleryPhotos(images);
   galleryIndex = 0;
   closePhotoLightbox();
 
@@ -261,6 +261,13 @@ export function showPinInfo(entity) {
   } else {
     clearPointCloudPreview();
   }
+
+  renderSpotYouTubePreviews(
+    dom.spotYoutubePreviews,
+    props.url ? props.url.getValue() : "",
+    props.urlLabel ? props.urlLabel.getValue() : "",
+    { onVideoClick: openVideoLightbox }
+  );
 
   renderSpotLinks(
     dom.spotHomepageLinks,
