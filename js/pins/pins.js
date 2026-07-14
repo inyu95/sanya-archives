@@ -5,6 +5,7 @@ import {
   PIN_STEM_COLOR,
   PIN_STEM_ALPHA,
   INITIAL_PIN_VIEW_RANGE,
+  HISTORICAL_MAP_FALLBACK_BOUNDS,
   ASSETS_ICONS_BASE
 } from "../config/constants.js";
 import { state } from "../state.js";
@@ -117,7 +118,8 @@ function addPhotoPin(pin, groundH, onDone, generation, scene2D) {
 }
 
 export function refreshPinsForMapMode() {
-  if (!state.viewer || state.filteredPins.length === 0) return;
+  if (!state.viewer || state.appMode === "memory") return;
+  if (state.filteredPins.length === 0) return;
   renderPins(state.filteredPins);
 }
 
@@ -153,8 +155,46 @@ export function renderPins(pinDataList, onComplete) {
   });
 }
 
+/** 山谷地区の概観へ飛行（ピン未配置時でも使える） */
+export function flyToSanyaDistrict(opts) {
+  if (!state.viewer) return;
+  const options = opts || {};
+  const b = HISTORICAL_MAP_FALLBACK_BOUNDS;
+  const rectangle = Cesium.Rectangle.fromDegrees(b.west, b.south, b.east, b.north);
+  const center = Cesium.Rectangle.center(rectangle);
+  const controller = state.viewer.scene.screenSpaceCameraController;
+  const previousCollision = controller.enableCollisionDetection;
+  state.viewer.camera.cancelFlight();
+  controller.enableCollisionDetection = false;
+
+  state.viewer.camera.flyTo({
+    destination: Cesium.Cartesian3.fromRadians(
+      center.longitude,
+      center.latitude,
+      INITIAL_PIN_VIEW_RANGE
+    ),
+    orientation: {
+      heading: 0,
+      pitch: Cesium.Math.toRadians(-55),
+      roll: 0
+    },
+    duration: options.duration != null ? options.duration : 2.5,
+    complete: function () {
+      controller.enableCollisionDetection = previousCollision;
+      if (typeof options.complete === "function") options.complete();
+    },
+    cancel: function () {
+      controller.enableCollisionDetection = previousCollision;
+      if (typeof options.cancel === "function") options.cancel();
+    }
+  });
+}
+
 export function flyToPins() {
-  if (state.viewer.entities.values.length === 0) return;
+  if (!state.viewer || state.viewer.entities.values.length === 0) {
+    flyToSanyaDistrict();
+    return;
+  }
   const controller = state.viewer.scene.screenSpaceCameraController;
   const previousCollision = controller.enableCollisionDetection;
   state.viewer.camera.cancelFlight();

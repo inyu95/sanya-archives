@@ -6,8 +6,8 @@ import {
   setupSearchBox,
   setupFilterPanel,
   setupYearFilterBar
-} from "./filters/filters.js?v=73";
-import { setupInfoPanel, showPinInfo, hidePinInfo, resetCameraZoomState } from "./info-panel.js";
+} from "./filters/filters.js?v=99";
+import { setupInfoPanel, showPinInfo, hidePinInfo, resetCameraZoomState, closePhotoLightboxIfOpen } from "./info-panel.js";
 import { setupHomeButton } from "./ui/home.js";
 import { setupArchiveList } from "./ui/archive-list.js";
 import { setupAboutSheet } from "./ui/about.js";
@@ -16,6 +16,13 @@ import { mountCustomToolbarButtons } from "./ui/toolbar.js";
 import { initHistoricalMaps, syncMapDisplayMode } from "./imagery/historical-maps.js?v=86";
 import { refreshPinsForMapMode } from "./pins/pins.js";
 import { invalidatePinHeightCache } from "./pins/pin-heights.js";
+import {
+  setupModeSwitcher,
+  syncModeAfterDataLoad,
+  syncMemoryTownAppearance
+} from "./modes/mode-switcher.js";
+import { handleMemoryEntityClick, isMemoryEntity, renderMemoryPins } from "./memory/memory-pins.js";
+import { setupCameraCapture } from "./memory/camera-capture.js";
 
 const GOOGLE_3D_TILES_TIMEOUT_MS = 45000;
 
@@ -59,6 +66,7 @@ function loadGoogleEarth3D() {
     state.mapGeometryReady = true;
     configureGlobeForGoogle3DTiles(state.viewer);
     syncMapDisplayMode();
+    syncMemoryTownAppearance();
     state.viewer.scene.requestRender();
   });
 }
@@ -70,6 +78,7 @@ function loadFallbackBuildings() {
     state.viewer.scene.primitives.add(buildings);
     state.mapGeometryReady = true;
     syncMapDisplayMode();
+    syncMemoryTownAppearance();
     state.viewer.scene.requestRender();
   });
 }
@@ -79,11 +88,22 @@ function setupClickHandler() {
   handler.setInputAction(function (click) {
     const picked = state.viewer.scene.pick(click.position);
     state.viewer.selectedEntity = undefined;
+
     if (!Cesium.defined(picked) || !picked.id || !picked.id.properties) {
-      hidePinInfo();
+      if (state.appMode === "life") hidePinInfo();
+      else closePhotoLightboxIfOpen();
       return;
     }
+
     const entity = picked.id;
+
+    if (state.appMode === "memory" || isMemoryEntity(entity)) {
+      handleMemoryEntityClick(entity);
+      return;
+    }
+
+    if (state.appMode !== "life") return;
+
     resetCameraZoomState();
     clearPointCloudModal();
     showPinInfo(entity);
@@ -91,14 +111,6 @@ function setupClickHandler() {
 }
 
 function init() {
-  const startupTitle = document.getElementById("startup-title");
-  if (startupTitle) {
-    startupTitle.classList.add("visible");
-    window.setTimeout(function () {
-      startupTitle.classList.remove("visible");
-    }, 2200);
-  }
-
   if (location.protocol === "file:") {
     setStatus("npm start 後に http://localhost:8080 を開いてください。", "error");
     return;
@@ -130,7 +142,11 @@ function init() {
 
   state.viewer.scene.morphComplete.addEventListener(function () {
     invalidatePinHeightCache();
-    refreshPinsForMapMode();
+    if (state.appMode === "memory") {
+      renderMemoryPins(state.filteredMemoryPhotos);
+    } else if (state.appMode === "life") {
+      refreshPinsForMapMode();
+    }
   });
 
   // 3D Tiles 読み込み完了までは Cesium 標準地図を表示（白画面を防ぐ）
@@ -138,6 +154,8 @@ function init() {
   state.viewer.scene.globe.depthTestAgainstTerrain = false;
   state.viewer.scene.screenSpaceCameraController.enableCollisionDetection = true;
   mountCustomToolbarButtons();
+  setupModeSwitcher();
+  setupCameraCapture();
   setupClickHandler();
   setupSearchBox();
   setupFilterPanel();
@@ -152,7 +170,7 @@ function init() {
 
   loadGoogleEarth3D()
     .then(function () {
-      setStatus("3D地図を読み込みました。ピンを選択すると右側に3Dスキャンのプレビューが表示されます。");
+      setStatus("3D地図を読み込みました。モードを選択してください。");
     })
     .catch(function (err) {
       console.warn("Google Photorealistic 3D Tiles の読み込みに失敗:", err);
@@ -161,7 +179,10 @@ function init() {
       return loadFallbackBuildings();
     })
     .then(function () {
-      tryLoadSheet();
+      return tryLoadSheet();
+    })
+    .then(function () {
+      syncModeAfterDataLoad();
     })
     .catch(function (err) {
       console.error(err);

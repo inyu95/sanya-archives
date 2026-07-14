@@ -1,5 +1,5 @@
 /** デプロイ時に increment して ES モジュールのブラウザキャッシュを無効化 */
-export const APP_MODULE_VERSION = "86";
+export const APP_MODULE_VERSION = "99";
 
 export const PIN_CIRCLE_SIZE = 48;
 /** ピン画像の描画倍率（表示サイズは PIN_CIRCLE_SIZE のまま） */
@@ -32,8 +32,18 @@ export const PIN_STEM_ALPHA = 0.8;
 
 export const SHEET_ID = "1aHy03FK6Yq1Lu37zzjlgoGtM622Ztrpmammcut22uuo";
 export const SHEET_MAPPING = "マッピング";
+export const SHEET_MEMORY = "過去写真";
 export const SHEET_CATEGORIES = "カテゴリリスト";
 export const SHEET_ROLES = "生活行為リスト";
+
+/** 記憶モード写真のデフォルトカメラ（シート未設定時） */
+export const MEMORY_DEFAULT_HEIGHT = 120;
+export const MEMORY_DEFAULT_HEADING = 0;
+export const MEMORY_DEFAULT_PITCH = -40;
+export const MEMORY_THUMB_SIZE = 72;
+export const INITIAL_MEMORY_VIEW_RANGE = 3500;
+/** 記憶モード時のまち（3Dタイル）の明度。写真を目立たせるため 1 未満にする */
+export const MEMORY_TOWN_BRIGHTNESS = 0.62;
 export const SHEET_FETCH_TIMEOUT_MS = 30000;
 export const SHEET_FETCH_MAX_RETRIES = 2;
 export const GOOGLE_SHEETS_API_KEY = "AIzaSyAj3HmCQbFFqq1G7L9OhLMW2yT8cTJckJc";

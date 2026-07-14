@@ -16,6 +16,14 @@ let galleryImages = [];
 let galleryIndex = 0;
 let lightboxMode = "gallery";
 let standaloneVideoId = "";
+/** 記憶モード写真ライトボックス閉鎖時にカメラを戻すか */
+let restoreCameraOnLightboxClose = false;
+/** 記憶モード時のモーダル左上タイトル（写真タイトル） */
+let memoryLightboxTitle = "";
+/** 記憶モード時のモーダル下説明（C列）。null なら通常の photoTitle 表示 */
+let memoryLightboxCaption = null;
+/** 記憶モード時の撮影年代（D列）。空なら非表示 */
+let memoryLightboxYear = "";
 
 function formatActiveYears(openingYear, closingYear) {
   const open = String(openingYear || "").trim();
@@ -45,6 +53,18 @@ function setCaptionElement(element, title) {
   } else {
     element.textContent = "";
     element.classList.add("hidden");
+  }
+}
+
+function setMemoryLightboxYearElement(year) {
+  if (!dom.photoModalYear) return;
+  const text = String(year || "").trim();
+  if (text) {
+    dom.photoModalYear.textContent = "撮影時期：" + text;
+    dom.photoModalYear.classList.remove("hidden");
+  } else {
+    dom.photoModalYear.textContent = "";
+    dom.photoModalYear.classList.add("hidden");
   }
 }
 
@@ -142,18 +162,23 @@ function updatePhotoLightboxView() {
     }
   } else if (dom.photoModalImage) {
     if (imageUrl) {
-      dom.photoModalImage.src = imageUrl;
-      dom.photoModalImage.alt = altText;
+      prepareLightboxImageReveal(dom.photoModalImage, imageUrl, altText);
     } else {
+      dom.photoModalImage.classList.remove("is-revealed");
       dom.photoModalImage.removeAttribute("src");
       dom.photoModalImage.alt = "";
     }
   }
 
   if (dom.photoModalTitle) {
-    dom.photoModalTitle.textContent = spot;
+    dom.photoModalTitle.textContent = memoryLightboxTitle || spot || "写真";
   }
-  setCaptionElement(dom.photoModalCaption, photoTitle);
+  if (memoryLightboxCaption !== null) {
+    setCaptionElement(dom.photoModalCaption, memoryLightboxCaption);
+  } else {
+    setCaptionElement(dom.photoModalCaption, photoTitle);
+  }
+  setMemoryLightboxYearElement(memoryLightboxYear);
 
   const hasMultiple = galleryImages.length > 1;
   if (dom.photoModalPrev) {
@@ -183,28 +208,172 @@ function openPhotoLightbox() {
   if (!dom.photoModal || galleryImages.length === 0) return;
   lightboxMode = "gallery";
   standaloneVideoId = "";
+  restoreCameraOnLightboxClose = false;
+  memoryLightboxTitle = "";
+  memoryLightboxCaption = null;
+  memoryLightboxYear = "";
   updatePhotoLightboxView();
-  dom.photoModal.classList.remove("hidden");
+  showPhotoModal({ fadeIn: false });
+}
+
+/** 記憶モードなど、パネル外から単一写真のライトボックスを開く */
+export function openMemoryPhotoLightbox(photo, spotTitle, opts) {
+  if (!dom.photoModal || !photo) return;
+  const options = opts || {};
+  galleryImages = filterGalleryPhotos([photo]);
+  galleryIndex = 0;
+  lightboxMode = "gallery";
+  standaloneVideoId = "";
+  restoreCameraOnLightboxClose = Boolean(options.restoreCameraOnClose);
+  // ヘッダー: 写真タイトル + 撮影年代（D列） / 下: C列の説明（あれば）
+  memoryLightboxTitle = String(spotTitle || "").trim() || "写真";
+  memoryLightboxCaption = Object.prototype.hasOwnProperty.call(options, "caption")
+    ? String(options.caption || "").trim()
+    : "";
+  memoryLightboxYear = Object.prototype.hasOwnProperty.call(options, "year")
+    ? String(options.year || "").trim()
+    : String(photo.year || "").trim();
+  updatePhotoLightboxView();
+  showPhotoModal({ fadeIn: options.fadeIn !== false });
 }
 
 export function openVideoLightbox(videoId, title) {
   if (!dom.photoModal || !videoId) return;
   lightboxMode = "standalone-video";
   standaloneVideoId = videoId;
+  restoreCameraOnLightboxClose = false;
+  memoryLightboxTitle = "";
+  memoryLightboxCaption = null;
+  memoryLightboxYear = "";
   if (dom.photoModalTitle) {
     dom.photoModalTitle.textContent = title || "動画";
   }
   setCaptionElement(dom.photoModalCaption, "");
+  setMemoryLightboxYearElement("");
   updateStandaloneVideoLightboxView();
-  dom.photoModal.classList.remove("hidden");
+  showPhotoModal({ fadeIn: false });
 }
 
-function closePhotoLightbox() {
+let photoModalFadeTimer = null;
+let photoModalRevealRaf = 0;
+const PHOTO_MODAL_FADE_MS = 1350;
+
+function prepareLightboxImageReveal(img, imageUrl, altText) {
+  const reveal = function () {
+    if (!img || img.getAttribute("src") !== imageUrl) return;
+    requestAnimationFrame(function () {
+      img.classList.add("is-revealed");
+    });
+  };
+
+  img.classList.remove("is-revealed");
+  img.alt = altText;
+  img.onload = reveal;
+  img.onerror = reveal;
+  img.src = imageUrl;
+  if (img.complete && img.naturalWidth > 0) {
+    reveal();
+  }
+}
+
+function showPhotoModal(opts) {
   if (!dom.photoModal) return;
+  const options = opts || {};
+  if (photoModalFadeTimer) {
+    window.clearTimeout(photoModalFadeTimer);
+    photoModalFadeTimer = null;
+  }
+  if (photoModalRevealRaf) {
+    window.cancelAnimationFrame(photoModalRevealRaf);
+    photoModalRevealRaf = 0;
+  }
+
+  dom.photoModal.classList.remove("hidden");
+
+  if (options.fadeIn) {
+    dom.photoModal.classList.add("photo-modal--fade");
+    dom.photoModal.classList.remove("photo-modal--visible");
+    // 2フレーム空けてから visible を付け、トランジションが確実に走るようにする
+    void dom.photoModal.offsetWidth;
+    photoModalRevealRaf = requestAnimationFrame(function () {
+      photoModalRevealRaf = requestAnimationFrame(function () {
+        photoModalRevealRaf = 0;
+        if (!dom.photoModal || dom.photoModal.classList.contains("hidden")) return;
+        dom.photoModal.classList.add("photo-modal--visible");
+      });
+    });
+    return;
+  }
+
+  dom.photoModal.classList.remove("photo-modal--fade");
+  dom.photoModal.classList.add("photo-modal--visible");
+  if (dom.photoModalImage) {
+    dom.photoModalImage.classList.add("is-revealed");
+  }
+}
+
+function hidePhotoModal() {
+  if (!dom.photoModal) return;
+  if (photoModalRevealRaf) {
+    window.cancelAnimationFrame(photoModalRevealRaf);
+    photoModalRevealRaf = 0;
+  }
   dom.photoModal.classList.add("hidden");
-  lightboxMode = "gallery";
-  standaloneVideoId = "";
-  setLightboxMediaMode("image");
+  dom.photoModal.classList.remove("photo-modal--fade", "photo-modal--visible");
+  if (dom.photoModalImage) {
+    dom.photoModalImage.classList.remove("is-revealed");
+    dom.photoModalImage.onload = null;
+    dom.photoModalImage.onerror = null;
+  }
+}
+
+function closePhotoLightbox(opts) {
+  if (!dom.photoModal) return;
+  const options = opts || {};
+  const shouldRestore =
+    options.restoreCamera !== false && restoreCameraOnLightboxClose;
+  restoreCameraOnLightboxClose = false;
+
+  const finishClose = function () {
+    hidePhotoModal();
+    lightboxMode = "gallery";
+    standaloneVideoId = "";
+    memoryLightboxTitle = "";
+    memoryLightboxCaption = null;
+    memoryLightboxYear = "";
+    setMemoryLightboxYearElement("");
+    setLightboxMediaMode("image");
+    if (shouldRestore) {
+      restoreCameraView();
+    }
+  };
+
+  // 記憶モードのふわっと表示中なら、閉じるときもフェードアウト
+  if (
+    options.restoreCamera !== false
+    && dom.photoModal.classList.contains("photo-modal--fade")
+    && dom.photoModal.classList.contains("photo-modal--visible")
+    && !dom.photoModal.classList.contains("hidden")
+  ) {
+    if (dom.photoModalImage) {
+      dom.photoModalImage.classList.remove("is-revealed");
+    }
+    dom.photoModal.classList.remove("photo-modal--visible");
+    if (photoModalFadeTimer) window.clearTimeout(photoModalFadeTimer);
+    photoModalFadeTimer = window.setTimeout(finishClose, PHOTO_MODAL_FADE_MS);
+    return;
+  }
+
+  if (photoModalFadeTimer) {
+    window.clearTimeout(photoModalFadeTimer);
+    photoModalFadeTimer = null;
+  }
+  finishClose();
+}
+
+export function closePhotoLightboxIfOpen(opts) {
+  if (!dom.photoModal || dom.photoModal.classList.contains("hidden")) return;
+  closePhotoLightbox(opts);
 }
 
 function showGallery(images) {

@@ -6,7 +6,13 @@ export function mountCustomToolbarButtons() {
   const toolbar = state.viewer.container.querySelector(".cesium-viewer-toolbar");
   if (!toolbar) return;
 
-  const customButtons = [dom.aboutBtn, dom.archiveListBtn, dom.homeBtn].filter(Boolean);
+  const customButtons = [
+    dom.modeSwitcher,
+    dom.cameraCaptureBtn,
+    dom.aboutBtn,
+    dom.archiveListBtn,
+    dom.homeBtn
+  ].filter(Boolean);
   if (customButtons.length === 0) return;
 
   const customSet = new Set(customButtons);

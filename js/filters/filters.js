@@ -5,7 +5,8 @@ import { parseCommaList, parsePinYear } from "../utils/parse.js?v=73";
 import { renderPins, flyToPins, refreshPinsForMapMode } from "../pins/pins.js";
 import { setStatus, hideStatus } from "../ui/status.js";
 import { hidePinInfo } from "../info-panel.js";
-import { renderArchiveList } from "../ui/archive-list.js";
+import { renderArchiveList, refreshArchiveListIfOpen } from "../ui/archive-list.js";
+import { filterMemoryPhotosByQuery } from "../memory/memory-pins.js";
 import {
   applyHistoricalMapLayer,
   EARLIEST_MAPPED_DECADE,
@@ -76,8 +77,11 @@ function pinMatchesYearFilter(pin) {
   return range.start <= year && range.end >= year;
 }
 
-const YEAR_SLIDER_THUMB_PX = 18;
+/** CSS の ::-webkit-slider-thumb / ::-moz-range-thumb 幅（border-box）と一致させる */
+const YEAR_SLIDER_THUMB_PX = 16;
 const YEAR_LABEL_MIN_GAP_PX = 40;
+/** 詰めても必ず表示する年代ラベル */
+const YEAR_LABEL_ALWAYS_SHOW = [1950, 2020];
 
 function yearToSliderPercent(year, min, max) {
   if (max <= min) return 0;
@@ -111,19 +115,34 @@ function filterYearLabelsForDisplay(years, min, max, trackWidthPx) {
   const width = trackWidthPx || getYearSliderTrackWidth();
   if (!width) return years;
 
+  const alwaysShow = new Set(
+    YEAR_LABEL_ALWAYS_SHOW.filter(function (year) {
+      return year > min && year < max && years.indexOf(year) !== -1;
+    })
+  );
+
   const shown = [years[0]];
   for (let i = 1; i < years.length - 1; i++) {
     const year = years[i];
-    if (yearToThumbPx(year, min, max, width) - yearToThumbPx(shown[shown.length - 1], min, max, width) >= YEAR_LABEL_MIN_GAP_PX) {
+    const gapOk = yearToThumbPx(year, min, max, width) - yearToThumbPx(shown[shown.length - 1], min, max, width) >= YEAR_LABEL_MIN_GAP_PX;
+    if (gapOk || alwaysShow.has(year)) {
+      if (!gapOk && shown.length > 1 && !alwaysShow.has(shown[shown.length - 1])) {
+        shown.pop();
+      }
       shown.push(year);
     }
   }
 
   const last = years[years.length - 1];
   if (last !== shown[shown.length - 1]) {
-    if (shown.length > 1
-      && yearToThumbPx(last, min, max, width) - yearToThumbPx(shown[shown.length - 1], min, max, width) < YEAR_LABEL_MIN_GAP_PX) {
-      shown.pop();
+    const lastGap = yearToThumbPx(last, min, max, width) - yearToThumbPx(shown[shown.length - 1], min, max, width);
+    if (lastGap < YEAR_LABEL_MIN_GAP_PX) {
+      if (shown.length > 1 && !alwaysShow.has(shown[shown.length - 1])) {
+        shown.pop();
+      } else if (alwaysShow.has(shown[shown.length - 1])) {
+        // 1950/2020 を優先し、衝突する終端年ラベルは出さない
+        return shown;
+      }
     }
     if (shown[shown.length - 1] !== last) {
       shown.push(last);
@@ -281,7 +300,7 @@ function renderYearFilterTicks(min, max) {
   }
 
   const boundaries = [min];
-  const eraStarts = [2020, 2010, 2000, 1990, 1980, 1970, 1960, 1940, 1930];
+  const eraStarts = [2020, 2010, 2000, 1990, 1980, 1970, 1960, 1950, 1940, 1930];
   eraStarts.forEach(function (eraStart) {
     if (eraStart > min && eraStart < max) {
       boundaries.push(eraStart);
@@ -312,16 +331,21 @@ function renderYearFilterTicks(min, max) {
   });
 }
 
-function renderYearFilterBar() {
+export function renderYearFilterBar(opts) {
   if (!dom.yearFilterBar) return;
+  const options = opts || {};
+  // モード切替で syncMap:false のときは UI のみ更新（視点を動かさない）
+  const syncMap = options.syncMap !== false;
 
   const bounds = getYearSliderBounds(state.allPins);
   if (!bounds) {
     dom.yearFilterBar.classList.add("hidden");
     yearSliderPreviewYear = null;
     state.selectedYear = null;
-    activeHistoricalLayerId = null;
-    applyHistoricalMapLayer(null);
+    if (syncMap) {
+      activeHistoricalLayerId = null;
+      applyHistoricalMapLayer(null);
+    }
     return;
   }
 
@@ -350,7 +374,9 @@ function renderYearFilterBar() {
   updateYearFilterAllButton();
   updateYearFilterLabel(state.selectedYear);
   updateYearFilterSliderFill(state.selectedYear);
-  syncHistoricalMapForYear(state.selectedYear, true);
+  if (syncMap) {
+    syncHistoricalMapForYear(state.selectedYear, true);
+  }
 
   requestAnimationFrame(function () {
     renderYearFilterTicks(bounds.min, bounds.max);
@@ -467,9 +493,13 @@ function syncFilteredView() {
 }
 
 export function applyFilters() {
+  if (state.appMode === "memory") return;
+
   const filtered = syncFilteredView();
-  renderPins(filtered);
   renderArchiveList(filtered);
+
+  if (state.appMode !== "life") return;
+  renderPins(filtered);
 }
 
 function applyRoleTagColor(button, label) {
@@ -576,24 +606,47 @@ export function loadPinData(pins, options) {
   }
 
   renderYearFilterBar();
+  if (state.appMode !== "life" && dom.yearFilterBar) {
+    dom.yearFilterBar.classList.add("hidden");
+  }
   const filtered = syncFilteredView();
-  renderPins(filtered, function () {
-    renderArchiveList(filtered);
-    if (opts.flyTo !== false && filtered.length > 0) flyToPins();
-    if (opts.statusMessage) {
-      if (opts.statusType === "ok") {
-        setStatus(opts.statusMessage, "ok");
-        window.setTimeout(hideStatus, 1500);
-      } else {
-        setStatus(opts.statusMessage, opts.statusType || "");
-      }
+  renderArchiveList(filtered);
+
+  function finishStatus() {
+    if (!opts.statusMessage) return;
+    if (opts.statusType === "ok") {
+      setStatus(opts.statusMessage, "ok");
+      window.setTimeout(hideStatus, 1500);
+    } else {
+      setStatus(opts.statusMessage, opts.statusType || "");
     }
+  }
+
+  if (state.appMode !== "life") {
+    finishStatus();
+    return;
+  }
+
+  renderPins(filtered, function () {
+    if (opts.flyTo !== false && filtered.length > 0) flyToPins();
+    finishStatus();
   });
 }
 
 export function setupSearchBox() {
   if (!dom.searchInput) return;
   dom.searchInput.addEventListener("input", function () {
+    if (state.appMode === "memory") {
+      const filtered = filterMemoryPhotosByQuery(dom.searchInput.value);
+      if (dom.searchCount) {
+        const q = dom.searchInput.value.trim();
+        dom.searchCount.textContent = q
+          ? filtered.length + " / " + state.allMemoryPhotos.length + " 件"
+          : "";
+      }
+      refreshArchiveListIfOpen();
+      return;
+    }
     applyFilters();
   });
 }
@@ -612,7 +665,7 @@ function syncFilterPanelState(options) {
     return;
   }
   if (options && options.initial) {
-    dom.filterPanel.classList.add("filter-panel--open");
+    dom.filterPanel.classList.remove("filter-panel--open");
   }
   const isOpen = dom.filterPanel.classList.contains("filter-panel--open");
   dom.filterToggle.setAttribute("aria-expanded", isOpen ? "true" : "false");

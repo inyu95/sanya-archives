@@ -1,5 +1,10 @@
 export const state = {
   viewer: null,
+  /** @type {"life" | "memory" | null} */
+  appMode: null,
+  allMemoryPhotos: [],
+  filteredMemoryPhotos: [],
+  memoryDataSource: null,
   google3dTileset: null,
   fallbackBuildings: null,
   pointCloudViewer: null,

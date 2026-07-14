@@ -11,7 +11,8 @@ import {
 } from "../config/constants.js";
 import { isYouTubeUrl } from "../utils/youtube.js";
 import { parseCommaList } from "../utils/parse.js";
-import { loadPinData } from "../filters/filters.js?v=73";
+import { loadPinData } from "../filters/filters.js?v=99";
+import { loadMemoryData } from "../memory/memory-data.js";
 import { setStatus } from "../ui/status.js";
 
 function cellValue(cell) {
@@ -590,8 +591,12 @@ function sheetErrorMessage(err) {
 export function tryLoadSheet() {
   setStatus("スプレッドシートを読み込み中...");
 
-  fetchSheetData(SHEET_MAPPING)
-    .then(function (rows) {
+  return Promise.all([
+    fetchSheetData(SHEET_MAPPING),
+    loadMemoryData()
+  ])
+    .then(function (results) {
+      const rows = results[0];
       setStatus("フィルター情報を読み込み中...");
       return Promise.all([
         Promise.resolve(rows),
@@ -621,6 +626,7 @@ export function tryLoadSheet() {
         categories: data.categories,
         roles: data.roles,
         roleColors: data.roleColors,
+        flyTo: false,
         statusMessage: data.pins.length + " 件のピンを読み込みました",
         statusType: "ok"
       });

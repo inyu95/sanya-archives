@@ -10,9 +10,11 @@
     <meta name="robots" content="index, follow">
     <link rel="canonical" href="https://inyu95.github.io/sanya-archives/">
 
-    <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png?v=3">
-    <link rel="shortcut icon" href="favicon.ico?v=3">
-    <link rel="apple-touch-icon" sizes="180x180" href="assets/favicon-180.png?v=3">
+    <link rel="icon" href="https://inyu95.github.io/sanya-archives/assets/favicon-48.png" type="image/png" sizes="48x48">
+    <link rel="icon" href="https://inyu95.github.io/sanya-archives/assets/favicon-96.png" type="image/png" sizes="96x96">
+    <link rel="icon" href="https://inyu95.github.io/sanya-archives/assets/favicon-192.png" type="image/png" sizes="192x192">
+    <link rel="icon" href="https://inyu95.github.io/sanya-archives/favicon.ico" sizes="any">
+    <link rel="apple-touch-icon" sizes="180x180" href="https://inyu95.github.io/sanya-archives/assets/favicon-180.png">
 
     <meta property="og:type" content="website">
     <meta property="og:locale" content="ja_JP">
@@ -53,7 +55,7 @@
     <meta http-equiv="Expires" content="0">
 
     <link rel="stylesheet" href="node_modules/cesium/Build/Cesium/Widgets/widgets.css">
-    <link rel="stylesheet" href="stylesheet.css?v=11">
+    <link rel="stylesheet" href="stylesheet.css?v=19">
   </head>
 
   <body>
@@ -62,20 +64,38 @@
       <p>東京・台東区山谷エリアの歴史・文化・生活を地図上でたどるデジタルアーカイブです。老朽旅館、飲食店、商店街などの記録を写真・3Dスキャンとともに閲覧できます。</p>
     </noscript>
     <div id="cesium"></div>
-    <div id="startup-title" aria-hidden="true">
+    <div id="startup-title" aria-hidden="false">
       <span class="startup-title-main">山谷アーカイブ</span>
       <span class="startup-title-sub">San'ya Archives</span>
+      <div class="startup-mode-actions">
+        <button id="mode-select-life" type="button" class="startup-mode-btn">
+          <span class="startup-mode-btn-label">山谷の生活史</span>
+          <span class="startup-mode-btn-desc">山谷地域の生活の記録（都市機能）</span>
+        </button>
+        <button id="mode-select-memory" type="button" class="startup-mode-btn">
+          <span class="startup-mode-btn-label">山谷の記憶</span>
+          <span class="startup-mode-btn-desc">山谷地域の過去と現代の風景（過去写真）</span>
+        </button>
+      </div>
     </div>
 
-    <button id="about-btn" class="cesium-toolbar-btn cesium-toolbar-btn--text" type="button">本アーカイブについて</button>
+    <div id="mode-switcher" class="mode-switcher hidden" role="group" aria-label="モードの切替" title="モードの切替">
+      <span class="mode-switcher-label">モードの切替</span>
+      <button id="mode-switch-life" type="button" class="mode-switch-btn" aria-pressed="false" title="山谷地域の生活の記録（都市機能）">生活史</button>
+      <button id="mode-switch-memory" type="button" class="mode-switch-btn" aria-pressed="false" title="山谷地域の過去と現代の風景（過去写真）">記憶</button>
+    </div>
 
-    <button id="archive-list-btn" class="cesium-toolbar-btn" type="button" aria-label="アーカイブ一覧" title="アーカイブ一覧">
+    <button id="camera-capture-btn" class="cesium-toolbar-btn cesium-toolbar-btn--text hidden" type="button" title="現在の視点をコピー（Ctrl+Shift+C）">視点コピー</button>
+
+    <button id="about-btn" class="cesium-toolbar-btn cesium-toolbar-btn--text" type="button" title="本アーカイブの概要・使い方を表示">本アーカイブについて</button>
+
+    <button id="archive-list-btn" class="cesium-toolbar-btn" type="button" aria-label="アーカイブ一覧" title="登録された場所の一覧を表示">
       <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
         <path fill="currentColor" d="M3 5h18v2H3V5zm0 6h18v2H3v-2zm0 6h18v2H3v-2z"/>
       </svg>
     </button>
 
-    <button id="home-btn" class="cesium-toolbar-btn" type="button" aria-label="初期ビューに戻る" title="初期ビューに戻る">
+    <button id="home-btn" class="cesium-toolbar-btn" type="button" aria-label="初期ビューに戻る" title="全体が見える初期の視点に戻る">
       <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
         <path fill="currentColor" d="M12 3L2 12h3v8h6v-6h2v6h6v-8h3L12 3z"/>
       </svg>
@@ -91,7 +111,12 @@
 
     <div id="left-panel">
       <div id="search-panel">
-        <input type="search" id="pin-search" placeholder="検索..." autocomplete="off" spellcheck="false">
+        <div class="search-field">
+          <svg class="search-field-icon" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" focusable="false">
+            <path fill="currentColor" d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+          </svg>
+          <input type="search" id="pin-search" placeholder="キーワードで検索" autocomplete="off" spellcheck="false">
+        </div>
         <span id="search-count"></span>
       </div>
 
@@ -188,16 +213,21 @@
       <div id="photo-modal-backdrop"></div>
       <div id="photo-modal-dialog">
         <div id="photo-modal-header">
-          <h2 id="photo-modal-title">写真</h2>
+          <div class="photo-modal-heading">
+            <h2 id="photo-modal-title">写真</h2>
+            <p id="photo-modal-year" class="photo-modal-year hidden"></p>
+          </div>
           <span id="photo-modal-counter"></span>
           <button id="photo-modal-close" type="button" aria-label="閉じる">×</button>
         </div>
         <div id="photo-modal-body">
           <button id="photo-modal-prev" type="button" aria-label="前の写真">‹</button>
           <figure id="photo-modal-figure">
-            <img id="photo-modal-image" alt="">
-            <div id="photo-modal-embed-wrap" class="hidden">
-              <iframe id="photo-modal-embed" title="YouTube動画" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+            <div class="photo-modal-media">
+              <img id="photo-modal-image" alt="">
+              <div id="photo-modal-embed-wrap" class="hidden">
+                <iframe id="photo-modal-embed" title="YouTube動画" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+              </div>
             </div>
             <figcaption id="photo-modal-caption" class="image-caption hidden"></figcaption>
           </figure>
@@ -239,6 +269,6 @@
       window.CESIUM_BASE_URL = "node_modules/cesium/Build/Cesium/";
     </script>
     <script src="node_modules/cesium/Build/Cesium/Cesium.js"></script>
-    <script type="module" src="js/main.js?v=86"></script>
+    <script type="module" src="js/main.js?v=98"></script>
   </body>
 </html>
