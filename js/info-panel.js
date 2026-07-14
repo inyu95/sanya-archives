@@ -401,6 +401,50 @@ function stepGallery(delta) {
   }
 }
 
+/** スマホでピンタップ直後、同じ位置に出たパネルへのゴーストクリックを無視する */
+const INFO_PANEL_CLICK_GUARD_MS = 450;
+let infoPanelClickGuardUntil = 0;
+let infoPanelClickGuardAttached = false;
+
+function detachInfoPanelClickGuard() {
+  if (!infoPanelClickGuardAttached) return;
+  infoPanelClickGuardAttached = false;
+  document.removeEventListener("click", onInfoPanelClickGuard, true);
+  if (dom.infoPanel) {
+    dom.infoPanel.classList.remove("info-panel--click-guard");
+  }
+}
+
+function onInfoPanelClickGuard(event) {
+  if (Date.now() >= infoPanelClickGuardUntil) {
+    detachInfoPanelClickGuard();
+    return;
+  }
+  if (!dom.infoPanel || dom.infoPanel.classList.contains("hidden")) {
+    detachInfoPanelClickGuard();
+    return;
+  }
+  if (dom.infoPanel.contains(event.target)) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+}
+
+function armInfoPanelClickGuard() {
+  infoPanelClickGuardUntil = Date.now() + INFO_PANEL_CLICK_GUARD_MS;
+  if (dom.infoPanel) {
+    dom.infoPanel.classList.add("info-panel--click-guard");
+  }
+  if (infoPanelClickGuardAttached) return;
+  infoPanelClickGuardAttached = true;
+  document.addEventListener("click", onInfoPanelClickGuard, true);
+  window.setTimeout(function () {
+    if (Date.now() >= infoPanelClickGuardUntil) {
+      detachInfoPanelClickGuard();
+    }
+  }, INFO_PANEL_CLICK_GUARD_MS + 50);
+}
+
 export function showPinInfo(entity) {
   if (!dom.infoPanel || !entity || !entity.properties) return;
   const props = entity.properties;
@@ -446,6 +490,8 @@ export function showPinInfo(entity) {
   );
 
   dom.infoPanel.classList.remove("hidden");
+  // パネル表示と同時にタップが画像・リンクへ貫通するのを防ぐ
+  armInfoPanelClickGuard();
 }
 
 function saveCameraView() {
@@ -479,6 +525,7 @@ export function resetCameraZoomState() {
 }
 
 export function hidePinInfo() {
+  detachInfoPanelClickGuard();
   state.selectedPinEntity = null;
   galleryImages = [];
   galleryIndex = 0;

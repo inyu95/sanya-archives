@@ -719,6 +719,12 @@ body:has(#year-filter-bar:not(.hidden)) {
   display: none;
 }
 
+/* ピンタップ直後のゴーストクリック防止（JS が短時間付与） */
+#info-panel.info-panel--click-guard,
+#info-panel.info-panel--click-guard * {
+  pointer-events: none !important;
+}
+
 #info-card-header {
   display: flex;
   align-items: flex-start;
