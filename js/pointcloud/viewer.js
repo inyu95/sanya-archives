@@ -258,12 +258,15 @@ function configurePointCloudTileset(tileset) {
   }
   if (!tileset.pointCloudShading) return;
   tileset.pointCloudShading.attenuation = true;
-  tileset.pointCloudShading.geometricErrorScale = 0.5;
-  tileset.pointCloudShading.maximumAttenuation = 4;
-  tileset.pointCloudShading.baseResolution = 0.05;
+  // 近接時に点が疎になって背景（黒）だけ見えるのを抑える
+  tileset.pointCloudShading.geometricErrorScale = 1.0;
+  tileset.pointCloudShading.maximumAttenuation = 12;
+  tileset.pointCloudShading.baseResolution = 0.03;
   tileset.pointCloudShading.eyeDomeLighting = true;
-  tileset.pointCloudShading.eyeDomeLightingStrength = 1.0;
-  tileset.pointCloudShading.eyeDomeLightingRadius = 2.0;
+  tileset.pointCloudShading.eyeDomeLightingStrength = 0.35;
+  tileset.pointCloudShading.eyeDomeLightingRadius = 1.2;
+  // 光源なしだと normalShading が点群を黒く落とすことがある
+  tileset.pointCloudShading.normalShading = false;
 }
 
 function flyToPointCloudInViewer(targetViewer, tileset, isPreview) {

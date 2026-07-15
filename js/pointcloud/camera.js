@@ -92,9 +92,21 @@ function getPointCloudZoomLimits(tileset) {
     ? tileset.boundingSphere.radius
     : 10;
   return {
-    minRange: Math.max(radius * 0.05, 0.05),
-    maxRange: Math.max(radius * 20, 50)
+    // 近すぎると点群が疎になり背景色で真っ黒に見えやすい
+    minRange: Math.max(radius * 0.18, 0.8),
+    maxRange: Number.POSITIVE_INFINITY
   };
+}
+
+/** フォーカス距離上で、画面1pxの移動が世界空間で何メートルかを返す（指追従パン用） */
+function getPointCloudPanMetersPerPixel(viewer, range) {
+  const canvas = viewer.scene.canvas;
+  const height = Math.max(canvas.clientHeight || canvas.height || 1, 1);
+  const frustum = viewer.scene.camera.frustum;
+  if (frustum && typeof frustum.fovy === "number" && frustum.fovy > 0) {
+    return (2 * range * Math.tan(frustum.fovy * 0.5)) / height;
+  }
+  return Math.max(range * POINT_CLOUD_PAN_DRAG_FACTOR, 0.001);
 }
 
 function getPointCloudCameraRange(viewer, tileset) {
@@ -131,7 +143,7 @@ function applyPointCloudPanDelta(viewer, tileset, deltaX, deltaY) {
 
   const camera = viewer.scene.camera;
   const scratch = getPointCloudScratch();
-  const scale = Math.max(viewState.range * POINT_CLOUD_PAN_DRAG_FACTOR, 0.001);
+  const scale = getPointCloudPanMetersPerPixel(viewer, viewState.range);
   const center = tileset.boundingSphere.center;
   Cesium.Cartesian3.add(center, viewState.panWorld, scratch.b);
 
@@ -374,7 +386,12 @@ function setupPointCloudDragPointer(viewer) {
         if (dragState.lastPinchDist > 0) {
           const pinchDelta = pinchDist - dragState.lastPinchDist;
           if (pinchDelta !== 0) {
-            pendingMove.zoomAmount += pinchDelta * POINT_CLOUD_ZOOM_PINCH_FACTOR;
+            const viewState = viewer._pointCloudViewState;
+            const range = viewState && viewState.range > 0 ? viewState.range : 10;
+            pendingMove.zoomAmount += pinchDelta * Math.max(
+              range * POINT_CLOUD_ZOOM_PINCH_FACTOR,
+              0.01
+            );
           }
         }
         dragState.lastPinchDist = pinchDist;

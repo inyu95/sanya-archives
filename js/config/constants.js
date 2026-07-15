@@ -1,5 +1,5 @@
 /** デプロイ時に increment して ES モジュールのブラウザキャッシュを無効化 */
-export const APP_MODULE_VERSION = "103";
+export const APP_MODULE_VERSION = "105";
 
 export const PIN_CIRCLE_SIZE = 48;
 /** ピン画像の描画倍率（表示サイズは PIN_CIRCLE_SIZE のまま） */
@@ -52,7 +52,7 @@ export const LOCAL_TILESET_VIEW_LON = 139.6917;
 export const LOCAL_TILESET_VIEW_LAT = 35.6895;
 export const LOCAL_TILESET_VIEW_HEIGHT = 500;
 export const POINT_CLOUD_ZOOM_WHEEL_FACTOR = 0.003;
-export const POINT_CLOUD_ZOOM_PINCH_FACTOR = 0.08;
+export const POINT_CLOUD_ZOOM_PINCH_FACTOR = 0.0025;
 export const POINT_CLOUD_ZOOM_DRAG_FACTOR = 0.008;
 export const POINT_CLOUD_PAN_DRAG_FACTOR = 0.005;
 export const POINT_CLOUD_ROTATE_DRAG_FACTOR = 0.004;
