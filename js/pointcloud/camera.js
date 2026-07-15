@@ -107,8 +107,8 @@ function getPointCloudZoomLimits(tileset) {
     ? tileset.boundingSphere.radius
     : 10;
   return {
-    // 0.08*R だとカメラがメッシュ内部に入り、near クリップで真っ黒になる
-    minRange: Math.max(radius * 0.45, 1.0),
+    // 室内スキャン用に内部へ入れる。近接の黒塗りは frustum.near 側で防ぐ
+    minRange: Math.max(radius * 0.08, 0.25),
     maxRange: Number.POSITIVE_INFINITY
   };
 }
