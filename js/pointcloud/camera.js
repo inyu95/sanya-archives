@@ -85,6 +85,19 @@ export function applyPointCloudViewState(viewer, tileset) {
     destination: scratch.pos,
     orientation: { heading: heading, pitch: pitch, roll: roll }
   });
+  updatePointCloudCameraFrustum(viewer, tileset, viewState.range);
+}
+
+/** 近接ズーム時に default near(≈1m) でモデルがクリップされて真っ黒になるのを防ぐ */
+function updatePointCloudCameraFrustum(viewer, tileset, range) {
+  const frustum = viewer.scene.camera.frustum;
+  if (!frustum || typeof frustum.near !== "number") return;
+  const radius = tileset.boundingSphere && tileset.boundingSphere.radius > 0
+    ? tileset.boundingSphere.radius
+    : 10;
+  const safeRange = Math.max(range, 0.05);
+  frustum.near = Math.min(Math.max(safeRange * 0.005, 0.01), 0.5);
+  frustum.far = Math.max(safeRange + radius * 8, radius * 30, 500);
 }
 
 function getPointCloudZoomLimits(tileset) {
@@ -92,8 +105,7 @@ function getPointCloudZoomLimits(tileset) {
     ? tileset.boundingSphere.radius
     : 10;
   return {
-    // 近すぎると点群が疎になり背景色で真っ黒に見えやすい
-    minRange: Math.max(radius * 0.18, 0.8),
+    minRange: Math.max(radius * 0.08, 0.25),
     maxRange: Number.POSITIVE_INFINITY
   };
 }

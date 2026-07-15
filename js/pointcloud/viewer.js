@@ -106,7 +106,13 @@ function createPointCloudViewer(containerId, isPreview) {
   scene.globe.show = false;
   scene.fog.enabled = false;
   scene.backgroundColor = Cesium.Color.fromCssColorString("#2a2a2a");
+  scene.logarithmicDepthBuffer = true;
   scene.screenSpaceCameraController.enableCollisionDetection = false;
+  // 室内スキャン近接時、デフォルト near≈1m だと手前がクリップされて真っ黒になる
+  if (cloudViewer.camera.frustum && typeof cloudViewer.camera.frustum.near === "number") {
+    cloudViewer.camera.frustum.near = 0.01;
+    cloudViewer.camera.frustum.far = 5000;
+  }
   const controller = scene.screenSpaceCameraController;
   if (isPreview) {
     controller.enableRotate = false;
@@ -251,7 +257,7 @@ function applyLocalTilesetViewOffset(tileset) {
 
 function configurePointCloudTileset(tileset) {
   applyLocalTilesetViewOffset(tileset);
-  tileset.maximumScreenSpaceError = 8;
+  tileset.maximumScreenSpaceError = 4;
   tileset.backFaceCulling = false;
   if (tileset.imageBasedLighting) {
     tileset.imageBasedLighting.imageBasedLightingFactor = new Cesium.Cartesian2(0.0, 0.0);
@@ -259,12 +265,11 @@ function configurePointCloudTileset(tileset) {
   if (!tileset.pointCloudShading) return;
   tileset.pointCloudShading.attenuation = true;
   // 近接時に点が疎になって背景（黒）だけ見えるのを抑える
-  tileset.pointCloudShading.geometricErrorScale = 1.0;
-  tileset.pointCloudShading.maximumAttenuation = 12;
-  tileset.pointCloudShading.baseResolution = 0.03;
-  tileset.pointCloudShading.eyeDomeLighting = true;
-  tileset.pointCloudShading.eyeDomeLightingStrength = 0.35;
-  tileset.pointCloudShading.eyeDomeLightingRadius = 1.2;
+  tileset.pointCloudShading.geometricErrorScale = 1.25;
+  tileset.pointCloudShading.maximumAttenuation = 16;
+  tileset.pointCloudShading.baseResolution = 0.02;
+  // EDL は近接で過暗〜真っ黒に落ちやすいので無効化
+  tileset.pointCloudShading.eyeDomeLighting = false;
   // 光源なしだと normalShading が点群を黒く落とすことがある
   tileset.pointCloudShading.normalShading = false;
 }
@@ -302,6 +307,7 @@ function mountTilesetInViewer(tileset, targetViewer, isPreview, isLoadActive) {
   }
 
   assertLoadActive();
+  configurePointCloudTileset(tileset);
   if (isPreview) {
     removeTilesetFromViewer(state.pointCloudPreviewTileset, targetViewer);
   } else {
