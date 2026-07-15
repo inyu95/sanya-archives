@@ -10,7 +10,7 @@ import {
 const DEFAULT_PIN_BORDER_COLOR = "#ffffff";
 const PIN_WHITE_BORDER_WIDTH = 2;
 /** 描画方式変更時にキャッシュを無効化する */
-const PIN_ART_CACHE_VERSION = "dango-touch-v3";
+const PIN_ART_CACHE_VERSION = "dango-touch-v5";
 /** 白縁の内側とアイコンとの余白（px） */
 const PIN_ICON_PADDING = 10;
 const PIN_NO_COLOR_FILL = "#9a9a9a";

@@ -21,7 +21,7 @@ let pinRenderGeneration = 0;
  * 深度テストを有効にし、細い eyeOffset だけメッシュとの z-fight を和らげる。
  * Google 3D 未描画時のみ一時的に Infinity（タイル到着後に再配置）。
  */
-function getPinDepthTestDistance() {
+export function getPinDepthTestDistance() {
   if (state.mapGeometryMode === "2d") {
     return 0;
   }
@@ -32,7 +32,7 @@ function getPinDepthTestDistance() {
 }
 
 /** 正は奥、負はカメラ側。全ピン同値なので相対的な前後関係は維持 */
-function pinMeshClearanceEyeOffset() {
+export function pinMeshClearanceEyeOffset() {
   return new Cesium.Cartesian3(0, 0, -8);
 }
 

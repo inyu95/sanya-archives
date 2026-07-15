@@ -14,7 +14,11 @@ import {
   closePhotoLightboxIfOpen
 } from "../info-panel.js";
 import { resolveHeights } from "../pins/pin-heights.js";
-import { flyToSanyaDistrict } from "../pins/pins.js";
+import {
+  flyToSanyaDistrict,
+  getPinDepthTestDistance,
+  pinMeshClearanceEyeOffset
+} from "../pins/pins.js";
 import { dom } from "../config/dom.js";
 
 const MEMORY_WHITE_BORDER_WIDTH = 3;
@@ -168,8 +172,9 @@ function addMemoryScreenFlatPin(dataSource, photo, props, onDone, generation) {
         verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
         horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
         sizeInMeters: false,
-        disableDepthTestDistance: Number.POSITIVE_INFINITY,
-        heightReference: Cesium.HeightReference.CLAMP_TO_GROUND
+        disableDepthTestDistance: getPinDepthTestDistance(),
+        heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+        eyeOffset: pinMeshClearanceEyeOffset()
       },
       properties: props
     });
@@ -184,6 +189,8 @@ function addMemoryPolePin(dataSource, photo, groundH, props, onDone, generation)
     photo.lat,
     groundH + PIN_POLE_HEIGHT_METERS
   );
+
+  const depthTestDistance = getPinDepthTestDistance();
 
   createFramedPhotoDataUrl(photo.url, false, function (dataUrl, width, height) {
     if (generation !== memoryRenderGeneration) {
@@ -205,14 +212,15 @@ function addMemoryPolePin(dataSource, photo, groundH, props, onDone, generation)
         verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
         horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
         sizeInMeters: false,
-        disableDepthTestDistance: Number.POSITIVE_INFINITY
+        disableDepthTestDistance: depthTestDistance,
+        eyeOffset: pinMeshClearanceEyeOffset()
       },
       polyline: {
         positions: [groundPos, topPos],
         width: PIN_STEM_WIDTH,
         material: Cesium.Color.fromCssColorString(PIN_STEM_COLOR).withAlpha(PIN_STEM_ALPHA),
         arcType: Cesium.ArcType.NONE,
-        disableDepthTestDistance: Number.POSITIVE_INFINITY
+        disableDepthTestDistance: depthTestDistance
       },
       properties: props
     });

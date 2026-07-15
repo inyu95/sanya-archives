@@ -16,7 +16,7 @@ import { setupArchiveList } from "./ui/archive-list.js";
 import { setupAboutSheet } from "./ui/about.js";
 import { setupPointCloudModal, clearPointCloudModal } from "./pointcloud/viewer.js";
 import { mountCustomToolbarButtons } from "./ui/toolbar.js";
-import { initHistoricalMaps, syncMapDisplayMode, setupMapGeometrySwitcher } from "./imagery/historical-maps.js?v=133";
+import { initHistoricalMaps, syncMapDisplayMode, setupMapGeometrySwitcher } from "./imagery/historical-maps.js?v=135";
 import { refreshPinsForMapMode } from "./pins/pins.js";
 import { invalidatePinHeightCache } from "./pins/pin-heights.js";
 import {
@@ -283,15 +283,15 @@ function startGoogle3DPaintMonitor(tileset) {
 function applyMainViewerPerformanceTweaks(viewer) {
   const dpr = window.devicePixelRatio || 1;
   const cssPixels = (window.innerWidth || 0) * (window.innerHeight || 0);
-  // Google Earth 軽量表示向けに解像度を抑える（細部より応答性）
+  // ピンの見た目を優先しつつ、Google Earth では必要最小限に抑える
   if (needsExtraLightGoogleEarth()) {
-    viewer.resolutionScale = dpr >= 3 ? 0.5 : 0.65;
+    viewer.resolutionScale = dpr >= 3 ? 0.65 : 0.75;
   } else if (dpr >= 2 || cssPixels >= 2.2e6) {
-    viewer.resolutionScale = dpr >= 2.5 ? 0.6 : 0.7;
+    viewer.resolutionScale = dpr >= 2.5 ? 0.8 : 0.9;
   } else if (dpr >= 1.5) {
-    viewer.resolutionScale = 0.8;
+    viewer.resolutionScale = 0.95;
   } else {
-    viewer.resolutionScale = 0.85;
+    viewer.resolutionScale = 1;
   }
   const scene = viewer.scene;
   if (typeof scene.fxaa === "boolean") {
