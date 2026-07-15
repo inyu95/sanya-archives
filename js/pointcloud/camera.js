@@ -173,18 +173,56 @@ function isDragButtonHeld(event, button) {
   return false;
 }
 
+function isTouchLikePointer(event) {
+  return event.pointerType === "touch" || event.pointerType === "pen";
+}
+
+function getActiveTouchCentroid(activePointers) {
+  let sumX = 0;
+  let sumY = 0;
+  let count = 0;
+  activePointers.forEach(function (p) {
+    sumX += p.x;
+    sumY += p.y;
+    count++;
+  });
+  if (count === 0) return null;
+  return { x: sumX / count, y: sumY / count, count: count };
+}
+
+function getActiveTouchDistance(activePointers) {
+  if (activePointers.size < 2) return 0;
+  const points = [];
+  activePointers.forEach(function (p) {
+    points.push(p);
+  });
+  const dx = points[0].x - points[1].x;
+  const dy = points[0].y - points[1].y;
+  return Math.sqrt(dx * dx + dy * dy);
+}
+
 function setupPointCloudDragPointer(viewer) {
   teardownPointCloudDragPointer(viewer);
   const canvas = viewer.scene.canvas;
-  const dragState = { mode: null, button: -1, lastX: 0, lastY: 0, frameId: 0 };
-  const pendingMove = { deltaX: 0, deltaY: 0 };
+  const activePointers = new Map();
+  const dragState = {
+    mode: null,
+    button: -1,
+    lastX: 0,
+    lastY: 0,
+    lastPinchDist: 0,
+    touchSession: false,
+    frameId: 0
+  };
+  const pendingMove = { deltaX: 0, deltaY: 0, zoomAmount: 0 };
 
   const flushPendingMove = function () {
     const deltaX = pendingMove.deltaX;
     const deltaY = pendingMove.deltaY;
+    const zoomAmount = pendingMove.zoomAmount;
     pendingMove.deltaX = 0;
     pendingMove.deltaY = 0;
-    if (deltaX === 0 && deltaY === 0) return;
+    pendingMove.zoomAmount = 0;
 
     const activeTileset = viewer._pointCloudZoomTileset;
     if (!activeTileset || !dragState.mode) return;
@@ -200,6 +238,10 @@ function setupPointCloudDragPointer(viewer) {
         activeTileset,
         -deltaY * Math.max(range * POINT_CLOUD_ZOOM_DRAG_FACTOR, 0.005)
       );
+    }
+
+    if (zoomAmount !== 0 && (dragState.mode === "pan" || dragState.mode === "rotate")) {
+      applyPointCloudZoom(viewer, activeTileset, zoomAmount);
     }
   };
 
@@ -224,7 +266,49 @@ function setupPointCloudDragPointer(viewer) {
     dragState.frameId = requestAnimationFrame(dragLoopTick);
   };
 
+  const syncTouchGesture = function () {
+    const centroid = getActiveTouchCentroid(activePointers);
+    if (!centroid) {
+      stopDragLoop();
+      dragState.mode = null;
+      dragState.button = -1;
+      dragState.touchSession = false;
+      dragState.lastPinchDist = 0;
+      return;
+    }
+
+    // スマホ/タブレット: 1本指=回転、2本指=移動（ピンチ距離でズーム）
+    dragState.mode = centroid.count >= 2 ? "pan" : "rotate";
+    dragState.button = -1;
+    dragState.touchSession = true;
+    dragState.lastX = centroid.x;
+    dragState.lastY = centroid.y;
+    dragState.lastPinchDist = getActiveTouchDistance(activePointers);
+    pendingMove.deltaX = 0;
+    pendingMove.deltaY = 0;
+    pendingMove.zoomAmount = 0;
+    startDragLoop();
+  };
+
   const onPointerDown = function (event) {
+    if (isTouchLikePointer(event)) {
+      activePointers.set(event.pointerId, {
+        x: event.clientX,
+        y: event.clientY
+      });
+      event.preventDefault();
+      event.stopPropagation();
+      try {
+        canvas.setPointerCapture(event.pointerId);
+      } catch (err) {
+        // ignore
+      }
+      syncTouchGesture();
+      return;
+    }
+
+    if (dragState.touchSession) return;
+
     if (event.button === 0) {
       dragState.mode = event.ctrlKey ? "rotate" : "pan";
       dragState.button = 0;
@@ -237,10 +321,13 @@ function setupPointCloudDragPointer(viewer) {
     } else {
       return;
     }
+    dragState.touchSession = false;
     dragState.lastX = event.clientX;
     dragState.lastY = event.clientY;
+    dragState.lastPinchDist = 0;
     pendingMove.deltaX = 0;
     pendingMove.deltaY = 0;
+    pendingMove.zoomAmount = 0;
     event.preventDefault();
     event.stopPropagation();
     try {
@@ -252,7 +339,52 @@ function setupPointCloudDragPointer(viewer) {
   };
 
   const onPointerMove = function (event) {
-    if (!dragState.mode) return;
+    if (isTouchLikePointer(event)) {
+      if (!activePointers.has(event.pointerId)) return;
+      activePointers.set(event.pointerId, {
+        x: event.clientX,
+        y: event.clientY
+      });
+      if (!dragState.mode || !dragState.touchSession) return;
+
+      const centroid = getActiveTouchCentroid(activePointers);
+      if (!centroid) return;
+
+      const nextMode = centroid.count >= 2 ? "pan" : "rotate";
+      if (nextMode !== dragState.mode) {
+        dragState.mode = nextMode;
+        dragState.lastX = centroid.x;
+        dragState.lastY = centroid.y;
+        dragState.lastPinchDist = getActiveTouchDistance(activePointers);
+        event.preventDefault();
+        return;
+      }
+
+      const deltaX = centroid.x - dragState.lastX;
+      const deltaY = centroid.y - dragState.lastY;
+      if (deltaX !== 0 || deltaY !== 0) {
+        pendingMove.deltaX += deltaX;
+        pendingMove.deltaY += deltaY;
+        dragState.lastX = centroid.x;
+        dragState.lastY = centroid.y;
+      }
+
+      if (centroid.count >= 2) {
+        const pinchDist = getActiveTouchDistance(activePointers);
+        if (dragState.lastPinchDist > 0) {
+          const pinchDelta = pinchDist - dragState.lastPinchDist;
+          if (pinchDelta !== 0) {
+            pendingMove.zoomAmount += pinchDelta * POINT_CLOUD_ZOOM_PINCH_FACTOR;
+          }
+        }
+        dragState.lastPinchDist = pinchDist;
+      }
+
+      event.preventDefault();
+      return;
+    }
+
+    if (!dragState.mode || dragState.touchSession) return;
     if (!isDragButtonHeld(event, dragState.button)) return;
     const deltaX = event.clientX - dragState.lastX;
     const deltaY = event.clientY - dragState.lastY;
@@ -266,7 +398,20 @@ function setupPointCloudDragPointer(viewer) {
   };
 
   const endDrag = function (event) {
-    if (!dragState.mode) return;
+    if (isTouchLikePointer(event)) {
+      if (!activePointers.has(event.pointerId)) return;
+      activePointers.delete(event.pointerId);
+      try {
+        canvas.releasePointerCapture(event.pointerId);
+      } catch (err) {
+        // ignore
+      }
+      syncTouchGesture();
+      event.preventDefault();
+      return;
+    }
+
+    if (!dragState.mode || dragState.touchSession) return;
     if (event.button !== dragState.button) return;
     stopDragLoop();
     dragState.mode = null;
@@ -279,8 +424,13 @@ function setupPointCloudDragPointer(viewer) {
     event.preventDefault();
   };
 
-  const onLostPointerCapture = function () {
-    if (!dragState.mode) return;
+  const onLostPointerCapture = function (event) {
+    if (activePointers.has(event.pointerId)) {
+      activePointers.delete(event.pointerId);
+      syncTouchGesture();
+      return;
+    }
+    if (!dragState.mode || dragState.touchSession) return;
     stopDragLoop();
     dragState.mode = null;
     dragState.button = -1;
@@ -297,7 +447,8 @@ function setupPointCloudDragPointer(viewer) {
     endDrag: endDrag,
     onLostPointerCapture: onLostPointerCapture,
     dragState: dragState,
-    stopDragLoop: stopDragLoop
+    stopDragLoop: stopDragLoop,
+    activePointers: activePointers
   };
 }
 
@@ -306,6 +457,7 @@ function teardownPointCloudDragPointer(viewer) {
   const canvas = viewer.scene.canvas;
   const pointer = viewer._pointCloudDragPointer;
   pointer.stopDragLoop();
+  if (pointer.activePointers) pointer.activePointers.clear();
   canvas.removeEventListener("pointerdown", pointer.onPointerDown);
   canvas.removeEventListener("pointermove", pointer.onPointerMove);
   canvas.removeEventListener("pointerup", pointer.endDrag);
@@ -395,11 +547,4 @@ export function setupPointCloudModalZoom(viewer, tileset, heading, pitch, range)
       delta * Math.max(cameraRange * POINT_CLOUD_ZOOM_WHEEL_FACTOR, 0.005)
     );
   }, Cesium.ScreenSpaceEventType.WHEEL);
-
-  handler.setInputAction(function (movement) {
-    const activeTileset = viewer._pointCloudZoomTileset;
-    if (!activeTileset) return;
-    const pinchDelta = movement.distance.endPosition.y - movement.distance.startPosition.y;
-    applyPointCloudZoom(viewer, activeTileset, pinchDelta * POINT_CLOUD_ZOOM_PINCH_FACTOR);
-  }, Cesium.ScreenSpaceEventType.PINCH_MOVE);
 }
