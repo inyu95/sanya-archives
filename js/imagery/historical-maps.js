@@ -15,20 +15,26 @@ const GSI_TILE_BASE = "https://cyberjapandata.gsi.go.jp/xyz/";
 
 const MODERN_MAP_LAYER = { id: "modern3d", label: "3D地図（現在）" };
 
+/**
+ * 地理院タイルの実撮影期間（photoStart〜photoEnd）。
+ * 選択年と一致する写真がない場合は最寄りの期間を選ぶ。
+ * 例: 1955年 → 1951–1960 のタイルは無いので 1945–1950（ort_USA10）
+ */
 const DECADE_MAP_LAYERS = [
-  { from: 2020, id: "seamlessphoto", min: 14, max: 18, ext: "jpg", label: "最新空中写真" },
-  { from: 2010, id: "nendophoto", min: 14, max: 18, ext: "png", label: "2010年代", fallback: { id: "ort", min: 14, max: 18, ext: "jpg" } },
-  { from: 2000, id: "ort", min: 14, max: 18, ext: "jpg", label: "2000年代" },
-  { from: 1990, id: "gazo4", min: 10, max: 17, ext: "jpg", label: "1987–1990年" },
-  { from: 1980, id: "gazo3", min: 10, max: 17, ext: "jpg", label: "1984–1986年" },
-  { from: 1970, id: "gazo2", min: 10, max: 17, ext: "jpg", label: "1979–1983年" },
-  { from: 1960, id: "ort_old10", min: 10, max: 17, ext: "png", label: "1961–1969年" },
-  { from: 1940, id: "ort_USA10", min: 10, max: 17, ext: "png", label: "1945–1950年" },
-  { from: 1930, id: "ort_riku10", min: 13, max: 18, ext: "png", label: "1936–1942年頃" }
+  { photoStart: 2020, photoEnd: 2099, id: "seamlessphoto", min: 14, max: 18, ext: "jpg", label: "最新空中写真" },
+  { photoStart: 2007, photoEnd: 2019, id: "nendophoto", min: 14, max: 18, ext: "png", label: "2010年代", fallback: { id: "ort", min: 14, max: 18, ext: "jpg" } },
+  { photoStart: 1991, photoEnd: 2006, id: "ort", min: 14, max: 18, ext: "jpg", label: "2007年頃" },
+  { photoStart: 1987, photoEnd: 1990, id: "gazo4", min: 10, max: 17, ext: "jpg", label: "1987–1990年" },
+  { photoStart: 1984, photoEnd: 1986, id: "gazo3", min: 10, max: 17, ext: "jpg", label: "1984–1986年" },
+  { photoStart: 1979, photoEnd: 1983, id: "gazo2", min: 10, max: 17, ext: "jpg", label: "1979–1983年" },
+  { photoStart: 1974, photoEnd: 1978, id: "gazo1", min: 10, max: 17, ext: "jpg", label: "1974–1978年" },
+  { photoStart: 1961, photoEnd: 1969, id: "ort_old10", min: 10, max: 17, ext: "png", label: "1961–1969年" },
+  { photoStart: 1945, photoEnd: 1950, id: "ort_USA10", min: 10, max: 17, ext: "png", label: "1945–1950年" },
+  { photoStart: 1930, photoEnd: 1944, id: "ort_riku10", min: 13, max: 18, ext: "png", label: "1936–1942年頃" }
 ];
 
 /** 地理院タイルで利用できる最古の年代（これ未満は個別バーなし） */
-export const EARLIEST_MAPPED_DECADE = DECADE_MAP_LAYERS[DECADE_MAP_LAYERS.length - 1].from;
+export const EARLIEST_MAPPED_DECADE = DECADE_MAP_LAYERS[DECADE_MAP_LAYERS.length - 1].photoStart;
 
 export function decadeHasHistoricalMap(decadeStart) {
   return decadeStart >= EARLIEST_MAPPED_DECADE;
@@ -36,7 +42,7 @@ export function decadeHasHistoricalMap(decadeStart) {
 
 export function getAvailableMapDecades() {
   return DECADE_MAP_LAYERS
-    .map(function (layer) { return layer.from; })
+    .map(function (layer) { return layer.photoStart; })
     .sort(function (a, b) { return a - b; });
 }
 
@@ -52,25 +58,64 @@ export function isModernMapYear(year) {
   return year !== null && year >= getCurrentMapYear();
 }
 
+function yearDistanceToPhotoRange(year, start, end) {
+  if (year < start) return start - year;
+  if (year > end) return year - end;
+  return 0;
+}
+
+function photoRangeMidpoint(layer) {
+  return (layer.photoStart + layer.photoEnd) / 2;
+}
+
 export function resolveLayerForYear(year) {
   if (isModernMapYear(year)) {
     return MODERN_MAP_LAYER;
   }
+
+  let best = DECADE_MAP_LAYERS[DECADE_MAP_LAYERS.length - 1];
+  let bestDist = Infinity;
+
   for (let i = 0; i < DECADE_MAP_LAYERS.length; i++) {
-    if (year >= DECADE_MAP_LAYERS[i].from) {
-      return materializeLayerConfig(DECADE_MAP_LAYERS[i], year);
+    const layer = DECADE_MAP_LAYERS[i];
+    const dist = yearDistanceToPhotoRange(year, layer.photoStart, layer.photoEnd);
+    if (dist < bestDist) {
+      bestDist = dist;
+      best = layer;
+      continue;
+    }
+    if (dist !== bestDist) continue;
+
+    // 同距離なら撮影期間の中心が近い方。それも同じなら新しい写真を優先
+    const bestMidGap = Math.abs(year - photoRangeMidpoint(best));
+    const layerMidGap = Math.abs(year - photoRangeMidpoint(layer));
+    if (layerMidGap < bestMidGap || (layerMidGap === bestMidGap && layer.photoStart > best.photoStart)) {
+      best = layer;
     }
   }
-  return materializeLayerConfig(DECADE_MAP_LAYERS[DECADE_MAP_LAYERS.length - 1], year);
+
+  return materializeLayerConfig(best, year);
 }
 
 function materializeLayerConfig(layer, year) {
   if (layer.id !== "nendophoto") {
-    return layer;
+    return {
+      from: layer.photoStart,
+      photoStart: layer.photoStart,
+      photoEnd: layer.photoEnd,
+      id: layer.id,
+      min: layer.min,
+      max: layer.max,
+      ext: layer.ext,
+      label: layer.label,
+      fallback: layer.fallback
+    };
   }
   const photoYear = Math.max(2007, Math.min(2019, year));
   return {
-    from: layer.from,
+    from: layer.photoStart,
+    photoStart: layer.photoStart,
+    photoEnd: layer.photoEnd,
     id: "nendophoto" + photoYear,
     min: layer.min,
     max: layer.max,
@@ -98,12 +143,6 @@ function showDefaultImageryLayer() {
   if (!state.defaultImageryLayer || !state.viewer) return;
   state.defaultImageryLayer.show = true;
   state.viewer.imageryLayers.lowerToBottom(state.defaultImageryLayer);
-}
-
-function hideDefaultImageryLayer() {
-  ensureDefaultImageryLayer();
-  if (!state.defaultImageryLayer) return;
-  state.defaultImageryLayer.show = false;
 }
 
 function createGsiUrlTemplateProvider(config, rectangle) {
@@ -141,13 +180,21 @@ function createGsiProvider(config, rectangle) {
   return wrapImageryProviderWithFallback(primary, fallback);
 }
 
+function removeHistoricalImageryOnly() {
+  const viewer = state.viewer;
+  if (!viewer || !state.historicalImageryLayer) return;
+  viewer.imageryLayers.remove(state.historicalImageryLayer, true);
+  state.historicalImageryLayer = null;
+}
+
 function removeHistoricalLayers() {
   const viewer = state.viewer;
   if (!viewer) return;
 
-  if (state.historicalImageryLayer) {
-    viewer.imageryLayers.remove(state.historicalImageryLayer, true);
-    state.historicalImageryLayer = null;
+  removeHistoricalImageryOnly();
+  if (state.basePaleLayer) {
+    viewer.imageryLayers.remove(state.basePaleLayer, true);
+    state.basePaleLayer = null;
   }
 }
 
@@ -310,7 +357,8 @@ function showModernGeometry() {
 
 function mountHistoricalImageryLayer(viewer, config, options) {
   const rectangle = getHistoricalMapRectangle();
-  removeHistoricalLayers();
+  removeHistoricalImageryOnly();
+  // Cesium 標準地図を下敷きにし、空中写真の端ピクセルが伸びるのを防ぐ
   showDefaultImageryLayer();
   state.historicalImageryLayer = viewer.imageryLayers.addImageryProvider(createGsiProvider(config, rectangle));
   state.historicalImageryLayer.rectangle = rectangle;

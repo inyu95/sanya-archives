@@ -16,7 +16,7 @@ import { setupArchiveList } from "./ui/archive-list.js";
 import { setupAboutSheet } from "./ui/about.js";
 import { setupPointCloudModal, clearPointCloudModal } from "./pointcloud/viewer.js";
 import { mountCustomToolbarButtons } from "./ui/toolbar.js";
-import { initHistoricalMaps, syncMapDisplayMode, setupMapGeometrySwitcher } from "./imagery/historical-maps.js?v=88";
+import { initHistoricalMaps, syncMapDisplayMode, setupMapGeometrySwitcher } from "./imagery/historical-maps.js?v=133";
 import { refreshPinsForMapMode } from "./pins/pins.js";
 import { invalidatePinHeightCache } from "./pins/pin-heights.js";
 import {
