@@ -69,25 +69,24 @@
       <span class="startup-title-sub">San'ya Archives</span>
       <div class="startup-mode-actions">
         <button id="mode-select-life" type="button" class="startup-mode-btn">
-          <span class="startup-mode-btn-label">山谷の生活史</span>
-          <span class="startup-mode-btn-desc">山谷地域の生活の記録（都市機能）</span>
+          <span class="startup-mode-btn-label">生活史モード</span>
+          <span class="startup-mode-btn-desc">山谷地域の生活の記録<br>（生活行為、3Dスキャン、インタビュー他）</span>
         </button>
         <button id="mode-select-memory" type="button" class="startup-mode-btn">
-          <span class="startup-mode-btn-label">山谷の記憶</span>
-          <span class="startup-mode-btn-desc">山谷地域の過去と現代の風景（過去写真）</span>
+          <span class="startup-mode-btn-label">記憶モード</span>
+          <span class="startup-mode-btn-desc">山谷地域の過去と現代の風景<br>（過去写真）</span>
         </button>
       </div>
     </div>
 
-    <div id="mode-switcher" class="mode-switcher hidden" role="group" aria-label="モードの切替" title="モードの切替">
-      <span class="mode-switcher-label">モードの切替</span>
-      <button id="mode-switch-life" type="button" class="mode-switch-btn" aria-pressed="false" title="山谷地域の生活の記録（都市機能）">生活史</button>
-      <button id="mode-switch-memory" type="button" class="mode-switch-btn" aria-pressed="false" title="山谷地域の過去と現代の風景（過去写真）">記憶</button>
+    <div id="mode-switcher" class="mode-switcher hidden" role="group" aria-label="モードの切替">
+      <button id="mode-switch-life" type="button" class="mode-switch-btn" aria-pressed="false" title="山谷地域の生活の記録（生活行為、3Dスキャン、インタビュー他）">生活史モード</button>
+      <button id="mode-switch-memory" type="button" class="mode-switch-btn" aria-pressed="false" title="山谷地域の過去と現代の風景（過去写真）">記憶モード</button>
     </div>
 
     <button id="camera-capture-btn" class="cesium-toolbar-btn cesium-toolbar-btn--text hidden" type="button" title="現在の視点をコピー（Ctrl+Shift+C）">視点コピー</button>
 
-    <button id="about-btn" class="cesium-toolbar-btn cesium-toolbar-btn--text" type="button" title="本アーカイブの概要・使い方を表示">本アーカイブについて</button>
+    <button id="about-btn" class="cesium-toolbar-btn cesium-toolbar-btn--text" type="button" title="山谷アーカイブの概要・使い方を表示">山谷アーカイブについて</button>
 
     <button id="archive-list-btn" class="cesium-toolbar-btn" type="button" aria-label="アーカイブ一覧" title="登録された場所の一覧を表示">
       <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
@@ -240,7 +239,7 @@
       <div id="about-sheet-backdrop"></div>
       <div id="about-sheet-panel">
         <div id="about-sheet-header">
-          <h2>本アーカイブについて</h2>
+          <h2>山谷アーカイブについて</h2>
           <button id="about-sheet-close" type="button" aria-label="閉じる">×</button>
         </div>
         <div id="about-sheet-body"></div>
@@ -269,6 +268,6 @@
       window.CESIUM_BASE_URL = "node_modules/cesium/Build/Cesium/";
     </script>
     <script src="node_modules/cesium/Build/Cesium/Cesium.js"></script>
-    <script type="module" src="js/main.js?v=100"></script>
+    <script type="module" src="js/main.js?v=102"></script>
   </body>
 </html>

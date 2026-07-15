@@ -156,7 +156,7 @@ function applyPointCloudRotateDelta(viewer, tileset, deltaX, deltaY) {
   if (!viewState) return;
   if (deltaX === 0 && deltaY === 0) return;
 
-  viewState.heading -= deltaX * POINT_CLOUD_ROTATE_DRAG_FACTOR;
+  viewState.heading += deltaX * POINT_CLOUD_ROTATE_DRAG_FACTOR;
   viewState.pitch = Cesium.Math.clamp(
     viewState.pitch - deltaY * POINT_CLOUD_ROTATE_DRAG_FACTOR,
     -Cesium.Math.PI_OVER_TWO + 0.01,

@@ -13,6 +13,9 @@ import { isYouTubeUrl } from "../utils/youtube.js";
 import { parseCommaList } from "../utils/parse.js";
 import { loadPinData } from "../filters/filters.js?v=99";
 import { loadMemoryData } from "../memory/memory-data.js";
+import { refreshMemoryModeIfActive } from "../modes/mode-switcher.js";
+import { parseGvizRows } from "../utils/gviz.js";
+import { state } from "../state.js";
 import { setStatus } from "../ui/status.js";
 
 function cellValue(cell) {
@@ -408,16 +411,16 @@ function fetchSheetData(sheetName, retryCount) {
       return res.text();
     })
     .then(function (text) {
-      if (!text.startsWith("/*O_o*/\ngoogle.visualization.Query.setResponse(")) {
-        throw new Error("SHEET_PRIVATE");
-      }
-      const json = JSON.parse(text.substring(47, text.length - 2));
-      return json.table ? json.table.rows : [];
+      return parseGvizRows(text);
     })
     .catch(function (err) {
       clearTimeout(timer);
       const canRetry = attempt < SHEET_FETCH_MAX_RETRIES
-        && (err.name === "AbortError" || (err.message && err.message.indexOf("SHEET_HTTP_") === 0));
+        && (
+          err.name === "AbortError"
+          || (err.message && err.message.indexOf("SHEET_HTTP_") === 0)
+          || err instanceof SyntaxError
+        );
       if (canRetry) {
         console.warn("スプレッドシート再試行:", sheetName, "(" + (attempt + 1) + "/" + SHEET_FETCH_MAX_RETRIES + ")");
         return fetchSheetData(sheetName, attempt + 1);
@@ -596,8 +599,12 @@ export function tryLoadSheet() {
     loadMemoryData()
   ])
     .then(function (results) {
+      // 生活史ピンの画像解決を待たず、記憶モード表示を先に更新する
+      refreshMemoryModeIfActive();
       const rows = results[0];
-      setStatus("フィルター情報を読み込み中...");
+      if (state.appMode !== "memory") {
+        setStatus("フィルター情報を読み込み中...");
+      }
       return Promise.all([
         Promise.resolve(rows),
         fetchCategoryList(),
@@ -610,7 +617,9 @@ export function tryLoadSheet() {
       const roleData = results[2];
       const pins = parseRows(rows);
       if (pins.length === 0) throw new Error("データ0件");
-      setStatus("写真を読み込み中...");
+      if (state.appMode !== "memory") {
+        setStatus("写真を読み込み中...");
+      }
       return resolvePinImages(pins).then(function () {
         return {
           pins: pins,
@@ -627,7 +636,10 @@ export function tryLoadSheet() {
         roles: data.roles,
         roleColors: data.roleColors,
         flyTo: false,
-        statusMessage: data.pins.length + " 件のピンを読み込みました",
+        // 記憶モード中は件数表示を上書きしない（refreshMemoryModeIfActive 側に任せる）
+        statusMessage: state.appMode === "memory"
+          ? ""
+          : data.pins.length + " 件のピンを読み込みました",
         statusType: "ok"
       });
     })

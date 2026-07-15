@@ -111,8 +111,8 @@ function enterLifeMode(opts) {
 
   setStatus(
     state.allPins.length
-      ? state.allPins.length + " 件のピン（山谷の生活史）"
-      : "山谷の生活史",
+      ? state.allPins.length + " 件のピン（生活史モード）"
+      : "生活史モード",
     "ok"
   );
 }
@@ -157,12 +157,16 @@ function enterMemoryMode(opts) {
   }
 
   const count = state.filteredMemoryPhotos.length;
-  setStatus(
-    count
-      ? count + " 件の写真（山谷の記憶）"
-      : "山谷の記憶（シート「過去写真」に写真を追加してください）",
-    count ? "ok" : "error"
-  );
+  if (!state.memoryDataLoaded) {
+    setStatus("過去写真を読み込み中...");
+  } else if (count) {
+    setStatus(count + " 件の写真（記憶モード）", "ok");
+  } else {
+    setStatus(
+      "記憶モード（シート「過去写真」に写真を追加してください）",
+      "error"
+    );
+  }
 }
 
 export function setAppMode(mode, opts) {
@@ -219,6 +223,12 @@ export function setupModeSwitcher() {
       setAppMode("memory", { flyTo: false });
     });
   }
+}
+
+/** 過去写真の取得直後など、記憶モード表示だけ先に更新する */
+export function refreshMemoryModeIfActive() {
+  if (state.appMode !== "memory") return;
+  setAppMode("memory", { flyTo: false });
 }
 
 /** シート読込完了後、選択済みモードがあれば表示を再同期し山谷へフォーカス */

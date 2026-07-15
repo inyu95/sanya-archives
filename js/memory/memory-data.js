@@ -10,6 +10,7 @@ import {
   getAppBasePath
 } from "../config/constants.js";
 import { state } from "../state.js";
+import { parseGvizRows } from "../utils/gviz.js";
 
 function cellValue(cell) {
   if (!cell) return "";
@@ -187,16 +188,16 @@ function fetchMemorySheet(retryCount) {
       return res.text();
     })
     .then(function (text) {
-      if (!text.startsWith("/*O_o*/\ngoogle.visualization.Query.setResponse(")) {
-        throw new Error("SHEET_PRIVATE");
-      }
-      const json = JSON.parse(text.substring(47, text.length - 2));
-      return json.table ? json.table.rows : [];
+      return parseGvizRows(text);
     })
     .catch(function (err) {
       clearTimeout(timer);
       const canRetry = attempt < SHEET_FETCH_MAX_RETRIES
-        && (err.name === "AbortError" || (err.message && err.message.indexOf("SHEET_HTTP_") === 0));
+        && (
+          err.name === "AbortError"
+          || (err.message && err.message.indexOf("SHEET_HTTP_") === 0)
+          || err instanceof SyntaxError
+        );
       if (canRetry) {
         return fetchMemorySheet(attempt + 1);
       }
@@ -210,12 +211,14 @@ export function loadMemoryData() {
       const photos = parseMemoryRows(rows);
       state.allMemoryPhotos = photos;
       state.filteredMemoryPhotos = photos.slice();
+      state.memoryDataLoaded = true;
       return photos;
     })
     .catch(function (err) {
       console.warn("過去写真の読み込みに失敗:", err);
       state.allMemoryPhotos = [];
       state.filteredMemoryPhotos = [];
+      state.memoryDataLoaded = true;
       return [];
     });
 }

@@ -4,6 +4,8 @@ export const state = {
   appMode: null,
   allMemoryPhotos: [],
   filteredMemoryPhotos: [],
+  /** 過去写真シートの読込が完了したか（成功・失敗いずれでも true） */
+  memoryDataLoaded: false,
   memoryDataSource: null,
   google3dTileset: null,
   fallbackBuildings: null,

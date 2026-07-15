@@ -162,23 +162,21 @@ export function flyToSanyaDistrict(opts) {
   const b = HISTORICAL_MAP_FALLBACK_BOUNDS;
   const rectangle = Cesium.Rectangle.fromDegrees(b.west, b.south, b.east, b.north);
   const center = Cesium.Rectangle.center(rectangle);
+  // 注視点を地区中心にし、HeadingPitchRange で回り込む（destination+pitch だと視線が北へずれる）
+  const target = Cesium.Cartesian3.fromRadians(center.longitude, center.latitude, 0);
+  const sphere = new Cesium.BoundingSphere(target, 1);
   const controller = state.viewer.scene.screenSpaceCameraController;
   const previousCollision = controller.enableCollisionDetection;
   state.viewer.camera.cancelFlight();
   controller.enableCollisionDetection = false;
 
-  state.viewer.camera.flyTo({
-    destination: Cesium.Cartesian3.fromRadians(
-      center.longitude,
-      center.latitude,
+  state.viewer.camera.flyToBoundingSphere(sphere, {
+    duration: options.duration != null ? options.duration : 2.5,
+    offset: new Cesium.HeadingPitchRange(
+      0,
+      Cesium.Math.toRadians(-55),
       INITIAL_PIN_VIEW_RANGE
     ),
-    orientation: {
-      heading: 0,
-      pitch: Cesium.Math.toRadians(-55),
-      roll: 0
-    },
-    duration: options.duration != null ? options.duration : 2.5,
     complete: function () {
       controller.enableCollisionDetection = previousCollision;
       if (typeof options.complete === "function") options.complete();

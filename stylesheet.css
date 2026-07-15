@@ -142,6 +142,8 @@ body:has(#year-filter-bar:not(.hidden)) {
 .mode-switcher {
   display: inline-flex;
   align-items: stretch;
+  box-sizing: border-box;
+  height: 32px;
   margin: 2px 3px;
   vertical-align: middle;
   border: 1px solid rgba(255, 255, 255, 0.2);
@@ -156,28 +158,17 @@ body:has(#year-filter-bar:not(.hidden)) {
   display: none;
 }
 
-.mode-switcher-label {
-  display: inline-flex;
-  align-items: center;
-  padding: 0 10px;
-  border-right: 1px solid rgba(255, 255, 255, 0.12);
-  color: rgba(255, 255, 255, 0.45);
-  font-size: 11px;
-  font-weight: 400;
-  letter-spacing: 0.04em;
-  white-space: nowrap;
-  user-select: none;
-}
-
 .mode-switch-btn {
+  box-sizing: border-box;
   min-width: 52px;
-  height: 32px;
+  height: 100%;
   padding: 0 10px;
   border: none;
   border-right: 1px solid rgba(255, 255, 255, 0.12);
   background: transparent;
   color: #ccc;
   font-size: 12px;
+  line-height: 1;
   letter-spacing: 0.04em;
   cursor: pointer;
   transition: background 0.15s, color 0.15s;
@@ -1777,7 +1768,7 @@ span.cesium-sceneModePicker-wrapper {
   bottom: 8px;
 }
 
-/* ── 本アーカイブについて ── */
+/* ── 山谷アーカイブについて ── */
 
 #about-sheet {
   position: fixed;
