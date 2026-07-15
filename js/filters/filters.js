@@ -605,7 +605,8 @@ export function loadPinData(pins, options) {
     renderAllFilterTags();
   }
 
-  renderYearFilterBar();
+  // 生活史モード以外では地図レイヤー切替・ピン描画を起こさない（起動の地球ビューを維持）
+  renderYearFilterBar({ syncMap: state.appMode === "life" });
   if (state.appMode !== "life" && dom.yearFilterBar) {
     dom.yearFilterBar.classList.add("hidden");
   }

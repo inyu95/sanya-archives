@@ -77,7 +77,10 @@ function addPolePin(pin, groundH, props, layers, onDone, generation) {
         verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
         horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
         sizeInMeters: false,
-        disableDepthTestDistance: 0
+        // Google 3D 未描画時は深度で隠れやすいので手前表示
+        disableDepthTestDistance: state.usesGoogle3DTiles && !state.google3dTilesPainted
+          ? Number.POSITIVE_INFINITY
+          : 0
       },
       polyline: {
         positions: [groundPos, topPos],
@@ -118,7 +121,8 @@ function addPhotoPin(pin, groundH, onDone, generation, scene2D) {
 }
 
 export function refreshPinsForMapMode() {
-  if (!state.viewer || state.appMode === "memory") return;
+  // 起動画面（モード未選択）ではピンを出さない
+  if (!state.viewer || state.appMode !== "life") return;
   if (state.filteredPins.length === 0) return;
   renderPins(state.filteredPins);
 }
@@ -165,18 +169,27 @@ export function flyToSanyaDistrict(opts) {
   // 注視点を地区中心にし、HeadingPitchRange で回り込む（destination+pitch だと視線が北へずれる）
   const target = Cesium.Cartesian3.fromRadians(center.longitude, center.latitude, 0);
   const sphere = new Cesium.BoundingSphere(target, 1);
+  const offset = new Cesium.HeadingPitchRange(
+    0,
+    Cesium.Math.toRadians(-55),
+    INITIAL_PIN_VIEW_RANGE
+  );
   const controller = state.viewer.scene.screenSpaceCameraController;
   const previousCollision = controller.enableCollisionDetection;
   state.viewer.camera.cancelFlight();
   controller.enableCollisionDetection = false;
 
+  if (options.duration === 0) {
+    state.viewer.camera.viewBoundingSphere(sphere, offset);
+    state.viewer.camera.lookAtTransform(Cesium.Matrix4.IDENTITY);
+    controller.enableCollisionDetection = previousCollision;
+    if (typeof options.complete === "function") options.complete();
+    return;
+  }
+
   state.viewer.camera.flyToBoundingSphere(sphere, {
     duration: options.duration != null ? options.duration : 2.5,
-    offset: new Cesium.HeadingPitchRange(
-      0,
-      Cesium.Math.toRadians(-55),
-      INITIAL_PIN_VIEW_RANGE
-    ),
+    offset: offset,
     complete: function () {
       controller.enableCollisionDetection = previousCollision;
       if (typeof options.complete === "function") options.complete();

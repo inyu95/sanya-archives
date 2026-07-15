@@ -9,6 +9,10 @@ export function isFlatMapHeightMode() {
 
 /** 基準オフセットからこの値以上外れた高さは外れ値とみなす（m） */
 const MAX_HEIGHT_OUTLIER_FROM_BASELINE = 25;
+/** sampleHeight がタイル待ちで固まるのを防ぐ */
+const SAMPLE_HEIGHT_TIMEOUT_MS = 2500;
+/** 山谷エリアの仮の地表高（楕円体上・m）。タイル未準備時の即時配置用 */
+const SANYA_APPROX_GROUND_HEIGHT_METERS = 30;
 
 /** 路面付近の高さオフセット（下位25%の中央値） */
 function computeStreetBaselineOffset(offsets) {
@@ -62,9 +66,53 @@ function sampleTerrainHeights(pinDataList) {
     });
 }
 
+function approximateGroundHeights(pinDataList) {
+  return pinDataList.map(function () {
+    return SANYA_APPROX_GROUND_HEIGHT_METERS;
+  });
+}
+
+function refineSampledHeights(pinDataList, sampledHeights) {
+  return sampleTerrainHeights(pinDataList).then(function (terrainHeights) {
+    const offsets = sampledHeights
+      .map(function (height, index) {
+        if (height == null || isNaN(height)) return null;
+        const terrainHeight = terrainHeights[index];
+        if (terrainHeight == null || isNaN(terrainHeight)) return null;
+        return height - terrainHeight;
+      })
+      .filter(function (offset) { return offset != null && !isNaN(offset); })
+      .sort(function (a, b) { return a - b; });
+
+    const baselineOffset = computeStreetBaselineOffset(offsets);
+
+    return sampledHeights.map(function (height, index) {
+      const terrainHeight = terrainHeights[index];
+      if (height == null || isNaN(height)) {
+        const fallback = (terrainHeight || 0) + baselineOffset;
+        return fallback || SANYA_APPROX_GROUND_HEIGHT_METERS;
+      }
+      const offset = height - terrainHeight;
+      if (Math.abs(offset - baselineOffset) > MAX_HEIGHT_OUTLIER_FROM_BASELINE) {
+        return terrainHeight + baselineOffset;
+      }
+      // 屋上など路面より高いサンプルは基準高さにそろえ、茎が地面から生える見た目にする
+      if (offset > baselineOffset + 3) {
+        return terrainHeight + baselineOffset;
+      }
+      return height;
+    });
+  });
+}
+
 function sampleGroundHeights(pinDataList) {
   if (isFlatMapHeightMode()) {
     return sampleTerrainHeights(pinDataList);
+  }
+
+  // 3Dタイル未着時は仮高さで即返し、後で mapGeometryReady 時に再サンプリング
+  if (!state.mapGeometryReady) {
+    return Promise.resolve(approximateGroundHeights(pinDataList));
   }
 
   const cartographics = pinDataList.map(function (pin) {
@@ -72,14 +120,18 @@ function sampleGroundHeights(pinDataList) {
   });
 
   function terrainFallback() {
-    return sampleTerrainHeights(pinDataList);
+    return sampleTerrainHeights(pinDataList).then(function (heights) {
+      return heights.map(function (height) {
+        return height && !isNaN(height) ? height : SANYA_APPROX_GROUND_HEIGHT_METERS;
+      });
+    });
   }
 
   if (!state.viewer.scene.sampleHeightSupported) {
     return terrainFallback();
   }
 
-  return state.viewer.scene.sampleHeightMostDetailed(cartographics, undefined, 2.0)
+  const samplePromise = state.viewer.scene.sampleHeightMostDetailed(cartographics, undefined, 2.0)
     .then(function () {
       return Promise.all(cartographics.map(function (carto, index) {
         if (carto.height != null && !isNaN(carto.height)) {
@@ -87,39 +139,32 @@ function sampleGroundHeights(pinDataList) {
         }
         return sampleTerrainHeight(pinDataList[index].lon, pinDataList[index].lat);
       })).then(function (sampledHeights) {
-        return sampleTerrainHeights(pinDataList).then(function (terrainHeights) {
-          const offsets = sampledHeights
-            .map(function (height, index) {
-              if (height == null || isNaN(height)) return null;
-              const terrainHeight = terrainHeights[index];
-              if (terrainHeight == null || isNaN(terrainHeight)) return null;
-              return height - terrainHeight;
-            })
-            .filter(function (offset) { return offset != null && !isNaN(offset); })
-            .sort(function (a, b) { return a - b; });
-
-          const baselineOffset = computeStreetBaselineOffset(offsets);
-
-          return sampledHeights.map(function (height, index) {
-            const terrainHeight = terrainHeights[index];
-            if (height == null || isNaN(height)) return terrainHeight + baselineOffset;
-            const offset = height - terrainHeight;
-            if (Math.abs(offset - baselineOffset) > MAX_HEIGHT_OUTLIER_FROM_BASELINE) {
-              return terrainHeight + baselineOffset;
-            }
-            // 屋上など路面より高いサンプルは基準高さにそろえ、茎が地面から生える見た目にする
-            if (offset > baselineOffset + 3) {
-              return terrainHeight + baselineOffset;
-            }
-            return height;
-          });
-        });
+        return refineSampledHeights(pinDataList, sampledHeights);
       });
-    })
-    .catch(function (err) {
-      console.warn("3Dタイルの高さ取得に失敗:", err);
-      return terrainFallback();
     });
+
+  return new Promise(function (resolve) {
+    let settled = false;
+    const timer = setTimeout(function () {
+      if (settled) return;
+      settled = true;
+      console.warn("3Dタイルの高さ取得がタイムアウトしたため仮高さを使います");
+      resolve(approximateGroundHeights(pinDataList));
+    }, SAMPLE_HEIGHT_TIMEOUT_MS);
+
+    samplePromise.then(function (heights) {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      resolve(heights);
+    }).catch(function (err) {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      console.warn("3Dタイルの高さ取得に失敗:", err);
+      terrainFallback().then(resolve);
+    });
+  });
 }
 
 function pinCacheKey(pin) {

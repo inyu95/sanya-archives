@@ -106,12 +106,14 @@ function createPointCloudViewer(containerId, isPreview) {
   scene.globe.show = false;
   scene.fog.enabled = false;
   scene.backgroundColor = Cesium.Color.fromCssColorString("#2a2a2a");
-  scene.logarithmicDepthBuffer = true;
+  // iPad Safari では log depth + 極端な far/near で近接時に黒塗りになりやすい
+  scene.logarithmicDepthBuffer = false;
+  scene.highDynamicRange = false;
   scene.screenSpaceCameraController.enableCollisionDetection = false;
   // 室内スキャン近接時、デフォルト near≈1m だと手前がクリップされて真っ黒になる
   if (cloudViewer.camera.frustum && typeof cloudViewer.camera.frustum.near === "number") {
-    cloudViewer.camera.frustum.near = 0.01;
-    cloudViewer.camera.frustum.far = 5000;
+    cloudViewer.camera.frustum.near = 0.001;
+    cloudViewer.camera.frustum.far = 500;
   }
   const controller = scene.screenSpaceCameraController;
   if (isPreview) {

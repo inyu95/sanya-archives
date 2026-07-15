@@ -37,6 +37,8 @@ export const state = {
   yearSliderMin: 1930,
   yearSliderMax: new Date().getFullYear(),
   usesGoogle3DTiles: true,
+  /** Google 3D Tiles が視点上に1枚でも描画されたか（地球を隠してよいか） */
+  google3dTilesPainted: false,
   defaultImageryLayer: null,
   basePaleLayer: null,
   mapGeometryReady: false,

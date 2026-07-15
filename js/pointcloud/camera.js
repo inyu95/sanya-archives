@@ -96,8 +96,10 @@ function updatePointCloudCameraFrustum(viewer, tileset, range) {
     ? tileset.boundingSphere.radius
     : 10;
   const safeRange = Math.max(range, 0.05);
-  frustum.near = Math.min(Math.max(safeRange * 0.005, 0.01), 0.5);
-  frustum.far = Math.max(safeRange + radius * 8, radius * 30, 500);
+  // iPad 等の近接表示: near が 1cm 前後だと壁面が断面黒塗りになる
+  frustum.near = Cesium.Math.clamp(safeRange * 0.0008, 0.0004, 0.05);
+  // far/near 比を抑えつつ、モデル全体が視野に入る距離を確保
+  frustum.far = Math.max(safeRange + radius * 10, radius * 40, safeRange * 80, 200);
 }
 
 function getPointCloudZoomLimits(tileset) {
@@ -105,7 +107,8 @@ function getPointCloudZoomLimits(tileset) {
     ? tileset.boundingSphere.radius
     : 10;
   return {
-    minRange: Math.max(radius * 0.08, 0.25),
+    // 0.08*R だとカメラがメッシュ内部に入り、near クリップで真っ黒になる
+    minRange: Math.max(radius * 0.45, 1.0),
     maxRange: Number.POSITIVE_INFINITY
   };
 }
@@ -533,6 +536,27 @@ function teardownPointCloudCanvasBlockers(viewer) {
   viewer._pointCloudCanvasBlockers = null;
 }
 
+function teardownPointCloudFrustumGuard(viewer) {
+  if (!viewer || !viewer._pointCloudFrustumGuard) return;
+  if (isViewerUsable(viewer)) {
+    viewer.scene.preRender.removeEventListener(viewer._pointCloudFrustumGuard);
+  }
+  viewer._pointCloudFrustumGuard = null;
+}
+
+function setupPointCloudFrustumGuard(viewer) {
+  teardownPointCloudFrustumGuard(viewer);
+  // Cesium / WebKit が near を戻すことがあるため、毎フレーム再適用する
+  const onPreRender = function () {
+    const activeTileset = viewer._pointCloudZoomTileset;
+    const viewState = viewer._pointCloudViewState;
+    if (!activeTileset || activeTileset.isDestroyed() || !viewState) return;
+    updatePointCloudCameraFrustum(viewer, activeTileset, viewState.range);
+  };
+  viewer.scene.preRender.addEventListener(onPreRender);
+  viewer._pointCloudFrustumGuard = onPreRender;
+}
+
 export function teardownPointCloudModalZoom(viewer) {
   if (!viewer) return;
   if (viewer._pointCloudZoomHandler) {
@@ -541,6 +565,7 @@ export function teardownPointCloudModalZoom(viewer) {
   }
   viewer._pointCloudZoomTileset = null;
   viewer._pointCloudViewState = null;
+  teardownPointCloudFrustumGuard(viewer);
   teardownPointCloudDragPointer(viewer);
   teardownPointCloudCanvasBlockers(viewer);
   if (isViewerUsable(viewer)) {
@@ -560,6 +585,7 @@ export function setupPointCloudModalZoom(viewer, tileset, heading, pitch, range)
   viewer._pointCloudZoomTileset = tileset;
   initPointCloudViewState(viewer, tileset, heading, pitch, range);
   applyPointCloudViewState(viewer, tileset);
+  setupPointCloudFrustumGuard(viewer);
   setupPointCloudCanvasBlockers(viewer);
   setupPointCloudDragPointer(viewer);
 

@@ -51,7 +51,8 @@ body:has(#year-filter-bar:not(.hidden)) {
   text-shadow: 0 4px 20px rgba(0, 0, 0, 0.45);
   opacity: 0;
   transition: opacity 0.4s ease;
-  background: transparent;
+  /* 地球上でもタイトルが読みやすいよう薄い暗幕 */
+  background: rgba(8, 12, 16, 0.28);
 }
 
 #startup-title .startup-title-main {
@@ -484,6 +485,7 @@ body:has(#year-filter-bar:not(.hidden)) {
   color: var(--jdr-text);
 }
 
+#left-panel.hidden,
 #filter-panel.hidden,
 #archive-list-btn.hidden {
   display: none !important;

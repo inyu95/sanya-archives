@@ -68,6 +68,8 @@ function updateModeSwitcherUI() {
 }
 
 function updateLifeChrome(visible) {
+  // 起動画面では検索・フィルターを隠す（タイトル／モード選択と重ねない）
+  setElementHidden(dom.leftPanel, !state.appMode);
   setElementHidden(dom.filterPanel, !visible);
   // 一覧はモード選択後に生活史・記憶の両方で表示
   setElementHidden(dom.archiveListBtn, !state.appMode);

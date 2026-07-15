@@ -254,8 +254,13 @@ function setModernView() {
   viewer.scene.globe.baseColor = Cesium.Color.BLACK;
   showDefaultImageryLayer();
 
-  if (state.usesGoogle3DTiles && state.google3dTileset) {
+  if (state.usesGoogle3DTiles && state.google3dTileset && state.google3dTilesPainted) {
     viewer.scene.globe.show = false;
+    viewer.scene.globe.depthTestAgainstTerrain = false;
+    showModernGeometry();
+  } else if (state.usesGoogle3DTiles && state.google3dTileset) {
+    // タイル未描画のうちは標準地図を残して空白を防ぐ
+    viewer.scene.globe.show = true;
     viewer.scene.globe.depthTestAgainstTerrain = false;
     showModernGeometry();
   } else if (state.fallbackBuildings) {
