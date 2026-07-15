@@ -28,6 +28,33 @@ export function isViewerUsable(targetViewer) {
   return !!(targetViewer && typeof targetViewer.isDestroyed === "function" && !targetViewer.isDestroyed());
 }
 
+/** iPad / 大型タッチ端末。画面が大きく高LODを読みやすく、近接時に黒テクスチャ化しがち */
+export function isLargeTouchDisplay() {
+  const ua = navigator.userAgent || "";
+  if (/iPad/i.test(ua)) return true;
+  if (navigator.platform === "MacIntel" && (navigator.maxTouchPoints || 0) > 1) {
+    return true;
+  }
+  const minSide = Math.min(window.innerWidth || 0, window.innerHeight || 0);
+  const maxSide = Math.max(window.innerWidth || 0, window.innerHeight || 0);
+  return minSide >= 768 && maxSide >= 1024 && ("ontouchstart" in window || (navigator.maxTouchPoints || 0) > 1);
+}
+
+/** 描画解像度。drawingBuffer ≈ CSSサイズ × DPR × resolutionScale */
+export function getPointCloudResolutionScale() {
+  const dpr = window.devicePixelRatio || 1;
+  if (isLargeTouchDisplay()) {
+    return dpr >= 2 ? 0.45 : 0.65;
+  }
+  if (dpr >= 3) return 0.65;
+  return 1;
+}
+
+export function getPointCloudBaseScreenSpaceError() {
+  if (isLargeTouchDisplay()) return 20;
+  return 4;
+}
+
 export function configurePointCloudCameraFeel(controller) {
   controller.inertiaSpin = 0;
   controller.inertiaTranslate = 0;
@@ -88,7 +115,12 @@ export function applyPointCloudViewState(viewer, tileset) {
   updatePointCloudCameraFrustum(viewer, tileset, viewState.range);
 }
 
-/** 近接ズーム時に default near(≈1m) でモデルがクリップされて真っ黒になるのを防ぐ */
+/**
+ * 近接時の黒塗り対策:
+ * - near クリップ（断面が真っ黒）
+ * - far/near 比過大による深度潰れ（log depth 無しで特に悪化）
+ * - iPad で高LODテクスチャが黒くなる既知問題 → 近接ほど SSE を上げて回避
+ */
 function updatePointCloudCameraFrustum(viewer, tileset, range) {
   const frustum = viewer.scene.camera.frustum;
   if (!frustum || typeof frustum.near !== "number") return;
@@ -96,10 +128,36 @@ function updatePointCloudCameraFrustum(viewer, tileset, range) {
     ? tileset.boundingSphere.radius
     : 10;
   const safeRange = Math.max(range, 0.05);
-  // iPad 等の近接表示: near が 1cm 前後だと壁面が断面黒塗りになる
-  frustum.near = Cesium.Math.clamp(safeRange * 0.0008, 0.0004, 0.05);
-  // far/near 比を抑えつつ、モデル全体が視野に入る距離を確保
-  frustum.far = Math.max(safeRange + radius * 10, radius * 40, safeRange * 80, 200);
+  const useLogDepth = !!viewer.scene.logarithmicDepthBuffer;
+
+  if (useLogDepth) {
+    frustum.near = Cesium.Math.clamp(safeRange * 0.001, 0.0008, 0.05);
+    frustum.far = Math.max(safeRange + radius * 12, radius * 20, safeRange * 40, 80);
+  } else {
+    // 線形深度: 比が大きいと iPad でポリゴンが黒く潰れる
+    const near = Cesium.Math.clamp(safeRange * 0.004, 0.004, 0.15);
+    let far = Math.max(safeRange * 18, radius * 3.5, 30);
+    const maxRatio = 4000;
+    if (far / near > maxRatio) far = near * maxRatio;
+    frustum.near = near;
+    frustum.far = far;
+  }
+
+  if (isLargeTouchDisplay() && tileset && !tileset.isDestroyed()) {
+    const closeness = radius / safeRange;
+    // 近づくほど高詳細タイルを避ける（黒テクスチャ LOD を踏まない）
+    tileset.maximumScreenSpaceError = Cesium.Math.clamp(
+      getPointCloudBaseScreenSpaceError() + closeness * 4,
+      getPointCloudBaseScreenSpaceError(),
+      72
+    );
+    // 近接時はさらに描画解像度を落として GPU メモリを確保
+    if (closeness > 2) {
+      viewer.resolutionScale = Math.min(viewer.resolutionScale || 1, 0.4);
+    } else {
+      viewer.resolutionScale = getPointCloudResolutionScale();
+    }
+  }
 }
 
 function getPointCloudZoomLimits(tileset) {
@@ -107,8 +165,8 @@ function getPointCloudZoomLimits(tileset) {
     ? tileset.boundingSphere.radius
     : 10;
   return {
-    // 室内スキャン用に内部へ入れる。近接の黒塗りは frustum.near 側で防ぐ
-    minRange: Math.max(radius * 0.08, 0.25),
+    // 狭い通路・室内コーナーにも入れるよう、中心からの最短距離をかなり小さくする
+    minRange: Math.max(radius * 0.015, 0.05),
     maxRange: Number.POSITIVE_INFINITY
   };
 }

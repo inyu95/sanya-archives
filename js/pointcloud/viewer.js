@@ -8,6 +8,9 @@ import { state } from "../state.js";
 import { setStatus, hideStatus } from "../ui/status.js";
 import {
   isViewerUsable,
+  isLargeTouchDisplay,
+  getPointCloudResolutionScale,
+  getPointCloudBaseScreenSpaceError,
   configurePointCloudCameraFeel,
   getPointCloudDefaultRange,
   initPointCloudViewState,
@@ -82,37 +85,6 @@ function destroyPointCloudPreviewViewer() {
   if (container) container.innerHTML = "";
 }
 
-/** iPad / 大型タッチ端末。画面が大きく高LODを読みやすく、近接時に黒テクスチャ化しがち */
-function isLargeTouchDisplay() {
-  const ua = navigator.userAgent || "";
-  if (/iPad/i.test(ua)) return true;
-  // iPadOS 13+ は MacIntel + タッチと名乗る
-  if (navigator.platform === "MacIntel" && (navigator.maxTouchPoints || 0) > 1) {
-    return true;
-  }
-  const minSide = Math.min(window.innerWidth || 0, window.innerHeight || 0);
-  const maxSide = Math.max(window.innerWidth || 0, window.innerHeight || 0);
-  return minSide >= 768 && maxSide >= 1024 && ("ontouchstart" in window || (navigator.maxTouchPoints || 0) > 1);
-}
-
-/** 描画解像度。drawingBuffer ≈ CSSサイズ × DPR × resolutionScale */
-function getPointCloudResolutionScale() {
-  const dpr = window.devicePixelRatio || 1;
-  if (isLargeTouchDisplay()) {
-    // iPad Pro 等でフレームバッファが巨大になり GPU メモリ不足→黒塗りになるのを抑える
-    return dpr >= 2 ? 0.5 : 0.7;
-  }
-  if (dpr >= 3) return 0.65;
-  return 1;
-}
-
-function getPointCloudScreenSpaceError() {
-  // 値が大きいほど低LOD。スマホは画面が小さく自然と低LOD寄りなので据え置き、
-  // iPad は近接で高LODテクスチャが黒くなる既知問題を避けるため緩める。
-  if (isLargeTouchDisplay()) return 14;
-  return 4;
-}
-
 function createPointCloudViewer(containerId, isPreview) {
   const largeTouch = isLargeTouchDisplay();
   const cloudViewer = new Cesium.Viewer(containerId, {
@@ -148,8 +120,8 @@ function createPointCloudViewer(containerId, isPreview) {
   scene.globe.show = false;
   scene.fog.enabled = false;
   scene.backgroundColor = Cesium.Color.fromCssColorString("#2a2a2a");
-  // iPad Safari では log depth + 極端な far/near で近接時に黒塗りになりやすい
-  scene.logarithmicDepthBuffer = false;
+  // 近接室内表示では log depth が深度精度を保つ（far/near は frustum 更新側で抑制）
+  scene.logarithmicDepthBuffer = true;
   scene.highDynamicRange = false;
   scene.fxaa = false;
   if (typeof scene.msaaSamples === "number") {
@@ -160,7 +132,7 @@ function createPointCloudViewer(containerId, isPreview) {
   // 室内スキャン近接時、デフォルト near≈1m だと手前がクリップされて真っ黒になる
   if (cloudViewer.camera.frustum && typeof cloudViewer.camera.frustum.near === "number") {
     cloudViewer.camera.frustum.near = 0.001;
-    cloudViewer.camera.frustum.far = 500;
+    cloudViewer.camera.frustum.far = 200;
   }
   const controller = scene.screenSpaceCameraController;
   if (isPreview) {
@@ -306,17 +278,23 @@ function applyLocalTilesetViewOffset(tileset) {
 
 function configurePointCloudTileset(tileset) {
   applyLocalTilesetViewOffset(tileset);
-  tileset.maximumScreenSpaceError = getPointCloudScreenSpaceError();
+  tileset.maximumScreenSpaceError = getPointCloudBaseScreenSpaceError();
   tileset.backFaceCulling = false;
   // 高詳細タイルを一気に積まず、段階的に差し替える（iPad の GPU メモリ枯渇対策）
   if ("skipLevelOfDetail" in tileset) {
     tileset.skipLevelOfDetail = true;
   }
+  if ("skipScreenSpaceErrorFactor" in tileset && isLargeTouchDisplay()) {
+    tileset.skipScreenSpaceErrorFactor = 24;
+  }
+  if ("skipLevels" in tileset && isLargeTouchDisplay()) {
+    tileset.skipLevels = 1;
+  }
   if ("immediatelyLoadDesiredLevelOfDetail" in tileset) {
     tileset.immediatelyLoadDesiredLevelOfDetail = false;
   }
   if ("cacheBytes" in tileset && isLargeTouchDisplay()) {
-    tileset.cacheBytes = 96 * 1024 * 1024;
+    tileset.cacheBytes = 64 * 1024 * 1024;
   }
   if (tileset.imageBasedLighting) {
     tileset.imageBasedLighting.imageBasedLightingFactor = new Cesium.Cartesian2(0.0, 0.0);
