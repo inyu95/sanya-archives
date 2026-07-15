@@ -1,6 +1,8 @@
 import { state } from "../state.js";
 import { refreshPinsForMapMode } from "../pins/pins.js";
 import { invalidatePinHeightCache } from "../pins/pin-heights.js";
+import { dom } from "../config/dom.js";
+import { renderMemoryPins } from "../memory/memory-pins.js";
 import {
   HISTORICAL_MAP_BRIGHTNESS,
   HISTORICAL_MAP_FALLBACK_BOUNDS,
@@ -236,7 +238,8 @@ function restoreCameraConstraints(viewer) {
   if (state.historicalCameraSaved) {
     controller.maximumZoomDistance = state.historicalCameraSaved.maximumZoomDistance;
     controller.minimumZoomDistance = state.historicalCameraSaved.minimumZoomDistance;
-    controller.enableCollisionDetection = state.historicalCameraSaved.enableCollisionDetection;
+    // Photorealistic 3D では衝突オンだとチルトが押し戻されるため、常にオフへ戻す
+    controller.enableCollisionDetection = false;
     state.historicalCameraSaved = null;
   }
 }
@@ -254,7 +257,9 @@ function setModernView() {
   viewer.scene.globe.baseColor = Cesium.Color.BLACK;
   showDefaultImageryLayer();
 
-  if (state.usesGoogle3DTiles && state.google3dTileset && state.google3dTilesPainted) {
+  if (state.mapGeometryMode === "2d") {
+    applyModernFlatGeometry(viewer);
+  } else if (state.usesGoogle3DTiles && state.google3dTileset && state.google3dTilesPainted) {
     viewer.scene.globe.show = false;
     viewer.scene.globe.depthTestAgainstTerrain = false;
     showModernGeometry();
@@ -270,10 +275,19 @@ function setModernView() {
   } else {
     viewer.scene.globe.show = true;
     viewer.scene.globe.depthTestAgainstTerrain = false;
+    hideModernGeometry();
   }
 
   refreshPinsForMapMode();
   viewer.scene.requestRender();
+}
+
+/** 現代地図を平面表示（Google 3D は残して非表示にし、切替を速くする） */
+function applyModernFlatGeometry(viewer) {
+  hideModernGeometry();
+  viewer.scene.globe.show = true;
+  viewer.scene.globe.depthTestAgainstTerrain = Boolean(state.fallbackBuildings)
+    || !(state.usesGoogle3DTiles && state.google3dTileset);
 }
 
 function hideModernGeometry() {
@@ -385,6 +399,68 @@ export function applyHistoricalMapLayer(year) {
     setModernView();
   } else {
     setHistoricalView(year);
+  }
+  updateMapGeometrySwitcherUI();
+}
+
+/** 現代地図の 3D / 2D 切替。過去年代地図のときは変更不可 */
+export function setMapGeometryMode(mode) {
+  if (isMapGeometrySwitcherLocked()) return;
+
+  const next = mode === "2d" ? "2d" : "3d";
+  if (state.mapGeometryMode === next) {
+    updateMapGeometrySwitcherUI();
+    return;
+  }
+  state.mapGeometryMode = next;
+  updateMapGeometrySwitcherUI();
+  applyHistoricalMapLayer(state.selectedYear);
+  if (state.appMode === "memory") {
+    renderMemoryPins(state.filteredMemoryPhotos);
+  }
+}
+
+/** 過去年代の歴史地図表示中は 3D/2D を切り替えられない */
+export function isMapGeometrySwitcherLocked() {
+  return Boolean(state.historicalMapActive);
+}
+
+export function updateMapGeometrySwitcherUI() {
+  const locked = isMapGeometrySwitcherLocked();
+  // 歴史地図中は見た目として 2D を強調（設定値 mapGeometryMode は保持）
+  const is3d = !locked && state.mapGeometryMode !== "2d";
+
+  if (dom.mapGeometrySwitcher) {
+    dom.mapGeometrySwitcher.classList.toggle("is-disabled", locked);
+    dom.mapGeometrySwitcher.setAttribute("aria-disabled", locked ? "true" : "false");
+    dom.mapGeometrySwitcher.title = locked
+      ? "過去の年代地図では 3D / 2D を切り替えられません"
+      : "";
+  }
+
+  if (dom.mapGeometry3d) {
+    dom.mapGeometry3d.classList.toggle("active", is3d);
+    dom.mapGeometry3d.setAttribute("aria-pressed", is3d ? "true" : "false");
+    dom.mapGeometry3d.disabled = locked;
+  }
+  if (dom.mapGeometry2d) {
+    dom.mapGeometry2d.classList.toggle("active", !is3d);
+    dom.mapGeometry2d.setAttribute("aria-pressed", !is3d ? "true" : "false");
+    dom.mapGeometry2d.disabled = locked;
+  }
+}
+
+export function setupMapGeometrySwitcher() {
+  updateMapGeometrySwitcherUI();
+  if (dom.mapGeometry3d) {
+    dom.mapGeometry3d.addEventListener("click", function () {
+      setMapGeometryMode("3d");
+    });
+  }
+  if (dom.mapGeometry2d) {
+    dom.mapGeometry2d.addEventListener("click", function () {
+      setMapGeometryMode("2d");
+    });
   }
 }
 

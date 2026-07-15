@@ -159,6 +159,31 @@ body:has(#year-filter-bar:not(.hidden)) {
   display: none;
 }
 
+.map-geometry-switcher .mode-switch-btn {
+  min-width: 40px;
+  letter-spacing: 0.02em;
+}
+
+.map-geometry-switcher.is-disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.map-geometry-switcher.is-disabled .mode-switch-btn {
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.map-geometry-switcher.is-disabled .mode-switch-btn:hover {
+  background: transparent;
+  color: #ccc;
+}
+
+.map-geometry-switcher.is-disabled .mode-switch-btn.active {
+  background: rgba(74, 124, 114, 0.55);
+  color: #fff;
+}
+
 .mode-switch-btn {
   box-sizing: border-box;
   min-width: 52px;

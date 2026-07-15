@@ -1,11 +1,14 @@
 /** デプロイ時に increment して ES モジュールのブラウザキャッシュを無効化 */
-export const APP_MODULE_VERSION = "118";
+export const APP_MODULE_VERSION = "128";
 
 export const PIN_CIRCLE_SIZE = 48;
 /** ピン画像の描画倍率（表示サイズは PIN_CIRCLE_SIZE のまま） */
 export const PIN_RENDER_SCALE = 4;
-/** 複数生活行為時の団子間隔（円の直径＝重ならない） */
-export const PIN_DANGO_SPACING = PIN_CIRCLE_SIZE;
+/**
+ * 複数生活行為時の団子間隔。
+ * pin-art の outerR = size/2 - 1 に合わせ、円が重ならず外縁で接する距離。
+ */
+export const PIN_DANGO_SPACING = PIN_CIRCLE_SIZE - 2;
 export const INITIAL_PIN_VIEW_RANGE = 3500;
 export const HISTORICAL_MAP_PADDING_DEGREES = 0.012;
 /** ピン未取得時の山谷エリア周辺（西・南・東・北） */
@@ -24,6 +27,8 @@ export const HISTORICAL_MAP_GLOBE_BASE_COLOR = "#e0d8cc";
 export const HISTORICAL_MAP_BRIGHTNESS = 1.3;
 export const HISTORICAL_MAP_GAMMA = 0.9;
 export const PIN_POLE_HEIGHT_METERS = 48;
+/** 地形から見て異常なサンプル高さの上限（m）。これ以上はクランプ */
+export const PIN_MAX_HEIGHT_ABOVE_TERRAIN_METERS = 120;
 /** Cesium 2D モード専用の茎（画面上のピクセル） */
 export const PIN_STEM_PIXEL_HEIGHT = 22;
 export const PIN_STEM_WIDTH = 1;

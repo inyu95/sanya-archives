@@ -241,7 +241,7 @@ export function renderMemoryPins(photos, opts) {
   }
 
   const scene2D = state.viewer.scene.mode === Cesium.SceneMode.SCENE2D;
-  const historicalFlat = state.historicalMapActive;
+  const historicalFlat = state.historicalMapActive || state.mapGeometryMode === "2d";
   const flatHeights = scene2D || historicalFlat;
 
   function placePins(heights) {
@@ -358,9 +358,11 @@ export function flyToMemoryPhotos() {
     duration: 2,
     offset: new Cesium.HeadingPitchRange(0, Cesium.Math.toRadians(-55), INITIAL_MEMORY_VIEW_RANGE),
     complete: function () {
+      state.viewer.camera.lookAtTransform(Cesium.Matrix4.IDENTITY);
       controller.enableCollisionDetection = previousCollision;
     },
     cancel: function () {
+      state.viewer.camera.lookAtTransform(Cesium.Matrix4.IDENTITY);
       controller.enableCollisionDetection = previousCollision;
     }
   });

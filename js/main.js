@@ -16,7 +16,7 @@ import { setupArchiveList } from "./ui/archive-list.js";
 import { setupAboutSheet } from "./ui/about.js";
 import { setupPointCloudModal, clearPointCloudModal } from "./pointcloud/viewer.js";
 import { mountCustomToolbarButtons } from "./ui/toolbar.js";
-import { initHistoricalMaps, syncMapDisplayMode } from "./imagery/historical-maps.js?v=86";
+import { initHistoricalMaps, syncMapDisplayMode, setupMapGeometrySwitcher } from "./imagery/historical-maps.js?v=88";
 import { refreshPinsForMapMode } from "./pins/pins.js";
 import { invalidatePinHeightCache } from "./pins/pin-heights.js";
 import {
@@ -195,7 +195,7 @@ function removeGoogle3DTileset() {
 function markGoogle3DTilesPainted() {
   if (!state.google3dTileset || state.google3dTilesPainted) return;
   state.google3dTilesPainted = true;
-  if (!state.historicalMapActive) {
+  if (!state.historicalMapActive && state.mapGeometryMode !== "2d") {
     configureGlobeForGoogle3DTiles(state.viewer);
   }
   syncMapDisplayMode();
@@ -230,7 +230,7 @@ function startGoogle3DPaintMonitor(tileset) {
 
   function tryFallbackIfStalled() {
     if (!isActive() || state.google3dTilesPainted || fallbackStarted) return;
-    if (!state.appMode || state.historicalMapActive) return;
+    if (!state.appMode || state.historicalMapActive || state.mapGeometryMode === "2d") return;
     if (!isCameraNearDistrictView(state.viewer)) {
       districtSince = null;
       return;
@@ -463,9 +463,12 @@ function init() {
   // 起動カメラは地球俯瞰のまま（山谷への飛行はモード選択後）
   state.viewer.scene.globe.show = true;
   state.viewer.scene.globe.depthTestAgainstTerrain = false;
-  state.viewer.scene.screenSpaceCameraController.enableCollisionDetection = true;
+  // Google Photorealistic 3D では衝突検知が建物メッシュでカメラを押し戻し、
+  // 水平寄りのチルトがドラッグ終了後に浅い俯瞰へ戻ることがあるためオフにする
+  state.viewer.scene.screenSpaceCameraController.enableCollisionDetection = false;
   mountCustomToolbarButtons();
   setupModeSwitcher();
+  setupMapGeometrySwitcher();
   setupCameraCapture();
   setupClickHandler();
   setupSearchBox();

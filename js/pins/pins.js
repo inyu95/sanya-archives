@@ -15,6 +15,27 @@ import { resolveHeights } from "./pin-heights.js";
 /** 非同期の高さ解決が重なったとき、古い renderPins 結果を捨てる */
 let pinRenderGeneration = 0;
 
+/**
+ * disableDepthTestDistance: Infinity は VS で深度を near 平面に潰すため、
+ * ピン同士の前後が追加順になり崩れる（Cesium #6838）。
+ * 深度テストを有効にし、細い eyeOffset だけメッシュとの z-fight を和らげる。
+ * Google 3D 未描画時のみ一時的に Infinity（タイル到着後に再配置）。
+ */
+function getPinDepthTestDistance() {
+  if (state.mapGeometryMode === "2d") {
+    return 0;
+  }
+  if (state.usesGoogle3DTiles && !state.google3dTilesPainted) {
+    return Number.POSITIVE_INFINITY;
+  }
+  return 0;
+}
+
+/** 正は奥、負はカメラ側。全ピン同値なので相対的な前後関係は維持 */
+function pinMeshClearanceEyeOffset() {
+  return new Cesium.Cartesian3(0, 0, -8);
+}
+
 function buildPinLayers(pin) {
   const roles = pin.role || [];
   if (roles.length === 0) {
@@ -48,8 +69,9 @@ function addScreenFlatPin(pin, props, layers, onDone, generation) {
         verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
         horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
         sizeInMeters: false,
-        disableDepthTestDistance: Number.POSITIVE_INFINITY,
-        heightReference: Cesium.HeightReference.CLAMP_TO_GROUND
+        disableDepthTestDistance: getPinDepthTestDistance(),
+        heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+        eyeOffset: pinMeshClearanceEyeOffset()
       },
       properties: props
     });
@@ -61,6 +83,7 @@ function addScreenFlatPin(pin, props, layers, onDone, generation) {
 function addPolePin(pin, groundH, props, layers, onDone, generation) {
   const groundPos = Cesium.Cartesian3.fromDegrees(pin.lon, pin.lat, groundH);
   const topPos = Cesium.Cartesian3.fromDegrees(pin.lon, pin.lat, groundH + PIN_POLE_HEIGHT_METERS);
+  const depthTestDistance = getPinDepthTestDistance();
 
   createPinCircleImageDataUrl(pin.name, layers, function (dataUrl, totalHeight) {
     if (generation !== pinRenderGeneration) {
@@ -77,15 +100,15 @@ function addPolePin(pin, groundH, props, layers, onDone, generation) {
         verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
         horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
         sizeInMeters: false,
-        // 重い 3D タイル／未確定な高さでもピンがメッシュに隠れないようにする
-        disableDepthTestDistance: Number.POSITIVE_INFINITY
+        disableDepthTestDistance: depthTestDistance,
+        eyeOffset: pinMeshClearanceEyeOffset()
       },
       polyline: {
         positions: [groundPos, topPos],
         width: PIN_STEM_WIDTH,
         material: Cesium.Color.fromCssColorString(PIN_STEM_COLOR).withAlpha(PIN_STEM_ALPHA),
         arcType: Cesium.ArcType.NONE,
-        disableDepthTestDistance: Number.POSITIVE_INFINITY
+        disableDepthTestDistance: depthTestDistance
       },
       properties: props
     });
@@ -129,7 +152,7 @@ export function refreshPinsForMapMode() {
 export function renderPins(pinDataList, onComplete) {
   const generation = ++pinRenderGeneration;
   const scene2D = state.viewer.scene.mode === Cesium.SceneMode.SCENE2D;
-  const historicalFlat = state.historicalMapActive;
+  const historicalFlat = state.historicalMapActive || state.mapGeometryMode === "2d";
   const flatHeights = scene2D || historicalFlat;
   state.viewer.entities.removeAll();
   if (pinDataList.length === 0) {
@@ -190,10 +213,13 @@ export function flyToSanyaDistrict(opts) {
     duration: options.duration != null ? options.duration : 2.5,
     offset: offset,
     complete: function () {
+      // lookAt ロックが残るとチルトが効かず／解放時にアングルが跳ねる
+      state.viewer.camera.lookAtTransform(Cesium.Matrix4.IDENTITY);
       controller.enableCollisionDetection = previousCollision;
       if (typeof options.complete === "function") options.complete();
     },
     cancel: function () {
+      state.viewer.camera.lookAtTransform(Cesium.Matrix4.IDENTITY);
       controller.enableCollisionDetection = previousCollision;
       if (typeof options.cancel === "function") options.cancel();
     }
@@ -213,9 +239,11 @@ export function flyToPins() {
     duration: 2,
     offset: new Cesium.HeadingPitchRange(0, Cesium.Math.toRadians(-55), INITIAL_PIN_VIEW_RANGE),
     complete: function () {
+      state.viewer.camera.lookAtTransform(Cesium.Matrix4.IDENTITY);
       controller.enableCollisionDetection = previousCollision;
     },
     cancel: function () {
+      state.viewer.camera.lookAtTransform(Cesium.Matrix4.IDENTITY);
       controller.enableCollisionDetection = previousCollision;
     }
   });
@@ -231,9 +259,11 @@ export function flyToPin(entity) {
     duration: 1.5,
     offset: new Cesium.HeadingPitchRange(0, Cesium.Math.toRadians(-50), 120),
     complete: function () {
+      state.viewer.camera.lookAtTransform(Cesium.Matrix4.IDENTITY);
       controller.enableCollisionDetection = previousCollision;
     },
     cancel: function () {
+      state.viewer.camera.lookAtTransform(Cesium.Matrix4.IDENTITY);
       controller.enableCollisionDetection = previousCollision;
     }
   });

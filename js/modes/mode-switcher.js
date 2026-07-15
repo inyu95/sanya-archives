@@ -180,6 +180,7 @@ export function setAppMode(mode, opts) {
 
   document.body.dataset.appMode = state.appMode || "";
   setElementHidden(dom.modeSwitcher, false);
+  setElementHidden(dom.mapGeometrySwitcher, false);
   hideStartupOverlay();
 }
 
@@ -200,6 +201,7 @@ function showStartupOverlay() {
 export function setupModeSwitcher() {
   showStartupOverlay();
   setElementHidden(dom.modeSwitcher, true);
+  setElementHidden(dom.mapGeometrySwitcher, true);
   updateLifeChrome(false);
 
   if (dom.modeSelectLife) {

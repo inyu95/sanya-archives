@@ -84,6 +84,11 @@
       <button id="mode-switch-memory" type="button" class="mode-switch-btn" aria-pressed="false" title="山谷地域の過去と現代の風景（過去写真）">記憶モード</button>
     </div>
 
+    <div id="map-geometry-switcher" class="mode-switcher map-geometry-switcher hidden" role="group" aria-label="地図表示の切替">
+      <button id="map-geometry-3d" type="button" class="mode-switch-btn active" aria-pressed="true" title="立体の現在地図（Google 3D）">3D</button>
+      <button id="map-geometry-2d" type="button" class="mode-switch-btn" aria-pressed="false" title="2D地図（軽量）">2D</button>
+    </div>
+
     <button id="camera-capture-btn" class="cesium-toolbar-btn cesium-toolbar-btn--text hidden" type="button" title="現在の視点をコピー（Ctrl+Shift+C）">視点コピー</button>
 
     <button id="about-btn" class="cesium-toolbar-btn cesium-toolbar-btn--text" type="button" title="山谷アーカイブの概要・使い方を表示">山谷アーカイブについて</button>
@@ -268,6 +273,6 @@
       window.CESIUM_BASE_URL = "node_modules/cesium/Build/Cesium/";
     </script>
     <script src="node_modules/cesium/Build/Cesium/Cesium.js"></script>
-    <script type="module" src="js/main.js?v=118"></script>
+    <script type="module" src="js/main.js?v=128"></script>
   </body>
 </html>

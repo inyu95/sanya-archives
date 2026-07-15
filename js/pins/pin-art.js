@@ -10,7 +10,7 @@ import {
 const DEFAULT_PIN_BORDER_COLOR = "#ffffff";
 const PIN_WHITE_BORDER_WIDTH = 2;
 /** 描画方式変更時にキャッシュを無効化する */
-const PIN_ART_CACHE_VERSION = "ring-border-v1";
+const PIN_ART_CACHE_VERSION = "dango-touch-v3";
 /** 白縁の内側とアイコンとの余白（px） */
 const PIN_ICON_PADDING = 10;
 const PIN_NO_COLOR_FILL = "#9a9a9a";
@@ -128,6 +128,7 @@ function loadLayerImages(layers, callback) {
 function drawDangoLayers(ctx, clusterHeight, name, normalized, images) {
   const positions = getDangoPositions(normalized.length, clusterHeight);
 
+  // 下の丸から描き、塗り＋白縁を一体にする。手前の丸の白縁が奥の塗りを切る
   for (let i = 0; i < normalized.length; i++) {
     const layer = normalized[i];
     const pos = positions[i];
@@ -141,10 +142,6 @@ function drawDangoLayers(ctx, clusterHeight, name, normalized, images) {
         drawInitialContent(c, drawCx, drawCy, innerR, fallbackLabel);
       }
     }, layer.borderColor);
-  }
-
-  for (let i = 0; i < normalized.length; i++) {
-    const pos = positions[i];
     drawPinWhiteRing(ctx, pos.x, pos.y, PIN_CIRCLE_SIZE);
   }
 }

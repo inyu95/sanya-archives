@@ -8,6 +8,7 @@ export function mountCustomToolbarButtons() {
 
   const customButtons = [
     dom.modeSwitcher,
+    dom.mapGeometrySwitcher,
     dom.cameraCaptureBtn,
     dom.aboutBtn,
     dom.archiveListBtn,

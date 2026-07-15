@@ -1,27 +1,18 @@
 import { state } from "../state.js";
+import { PIN_MAX_HEIGHT_ABOVE_TERRAIN_METERS } from "../config/constants.js";
 
-/** 2D/歴史地図では 3D タイルの屋根高ではなく地形（楕円体）基準にする */
+/** 2D/歴史地図/平面モードでは 3D タイルの屋根高ではなく地形（楕円体）基準にする */
 export function isFlatMapHeightMode() {
   if (state.historicalMapActive) return true;
+  if (state.mapGeometryMode === "2d") return true;
   if (!state.viewer) return false;
   return state.viewer.scene.mode === Cesium.SceneMode.SCENE2D;
 }
 
-/** 基準オフセットからこの値以上外れた高さは外れ値とみなす（m） */
-const MAX_HEIGHT_OUTLIER_FROM_BASELINE = 25;
 /** sampleHeight がタイル待ちで固まるのを防ぐ */
 const SAMPLE_HEIGHT_TIMEOUT_MS = 2500;
 /** 山谷エリアの仮の地表高（楕円体上・m）。タイル未準備時の即時配置用 */
 const SANYA_APPROX_GROUND_HEIGHT_METERS = 30;
-
-/** 路面付近の高さオフセット（下位25%の中央値） */
-function computeStreetBaselineOffset(offsets) {
-  if (offsets.length === 0) return 0;
-  const sorted = offsets.slice().sort(function (a, b) { return a - b; });
-  const count = Math.max(1, Math.ceil(sorted.length * 0.25));
-  const lower = sorted.slice(0, count);
-  return lower[Math.floor(lower.length / 2)];
-}
 
 function sampleTerrainHeight(lon, lat) {
   return new Promise(function (resolve) {
@@ -72,34 +63,31 @@ function approximateGroundHeights(pinDataList) {
   });
 }
 
+/**
+ * 3Dメッシュのサンプリング結果を採用し、建物表面（屋根含む）に載せる。
+ * （以前は屋上ヒットを路面へ押し下げていたが、建物に埋もれる原因になっていた）
+ */
 function refineSampledHeights(pinDataList, sampledHeights) {
   return sampleTerrainHeights(pinDataList).then(function (terrainHeights) {
-    const offsets = sampledHeights
-      .map(function (height, index) {
-        if (height == null || isNaN(height)) return null;
-        const terrainHeight = terrainHeights[index];
-        if (terrainHeight == null || isNaN(terrainHeight)) return null;
-        return height - terrainHeight;
-      })
-      .filter(function (offset) { return offset != null && !isNaN(offset); })
-      .sort(function (a, b) { return a - b; });
-
-    const baselineOffset = computeStreetBaselineOffset(offsets);
-
     return sampledHeights.map(function (height, index) {
-      const terrainHeight = terrainHeights[index];
+      const terrainHeight = terrainHeights[index] || 0;
+      const terrainFallback = terrainHeight || SANYA_APPROX_GROUND_HEIGHT_METERS;
+
       if (height == null || isNaN(height)) {
-        const fallback = (terrainHeight || 0) + baselineOffset;
-        return fallback || SANYA_APPROX_GROUND_HEIGHT_METERS;
+        return terrainFallback;
       }
-      const offset = height - terrainHeight;
-      if (Math.abs(offset - baselineOffset) > MAX_HEIGHT_OUTLIER_FROM_BASELINE) {
-        return terrainHeight + baselineOffset;
+
+      // メッシュが地形より明らかに下＝欠測扱いで地形基準
+      if (height < terrainHeight - 2) {
+        return terrainFallback;
       }
-      // 屋上など路面より高いサンプルは基準高さにそろえ、茎が地面から生える見た目にする
-      if (offset > baselineOffset + 3) {
-        return terrainHeight + baselineOffset;
+
+      // 異常に高いサンプルをクランプ
+      const aboveTerrain = height - terrainHeight;
+      if (aboveTerrain > PIN_MAX_HEIGHT_ABOVE_TERRAIN_METERS) {
+        return terrainHeight + PIN_MAX_HEIGHT_ABOVE_TERRAIN_METERS;
       }
+
       return height;
     });
   });
@@ -168,7 +156,7 @@ function sampleGroundHeights(pinDataList) {
 }
 
 function pinCacheKey(pin) {
-  return pin.lon + "," + pin.lat + ":" + (isFlatMapHeightMode() ? "flat-v4" : "3d-v4");
+  return pin.lon + "," + pin.lat + ":" + (isFlatMapHeightMode() ? "flat-v4" : "3d-v6-mesh");
 }
 
 export function invalidatePinHeightCache() {

@@ -37,6 +37,8 @@ export const state = {
   yearSliderMin: 1930,
   yearSliderMax: new Date().getFullYear(),
   usesGoogle3DTiles: true,
+  /** 現代地図の立体 / 2D（"3d" | "2d"）。デフォルトは 3D。歴史地図中は切替不可 */
+  mapGeometryMode: "3d",
   /** Google 3D Tiles が視点上に1枚でも描画されたか（地球を隠してよいか） */
   google3dTilesPainted: false,
   defaultImageryLayer: null,
