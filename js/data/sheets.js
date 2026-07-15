@@ -252,21 +252,30 @@ function photosFromIndex(index, folder, base) {
 
 function probeNumberedImages(base) {
   const maxCount = 99;
+  const extensions = [".jpg", ".jpeg", ".png", ".webp", ".gif"];
+
+  function probeExtensions(index, extIndex) {
+    if (extIndex >= extensions.length) return Promise.resolve("");
+    const url = base + index + extensions[extIndex];
+    return fetch(url, { method: "HEAD" })
+      .then(function (res) {
+        if (res.ok) return url;
+        return probeExtensions(index, extIndex + 1);
+      })
+      .catch(function () {
+        return probeExtensions(index, extIndex + 1);
+      });
+  }
 
   function probe(index, found) {
     if (index > maxCount) return Promise.resolve(found);
-    const url = base + index + ".jpg";
-    return fetch(url, { method: "HEAD" })
-      .then(function (res) {
-        if (res.ok) {
-          found.push({ url: url, title: "" });
-          return probe(index + 1, found);
-        }
-        return found;
-      })
-      .catch(function () {
-        return found;
-      });
+    return probeExtensions(index, 0).then(function (url) {
+      if (url) {
+        found.push({ url: url, title: "" });
+        return probe(index + 1, found);
+      }
+      return found;
+    });
   }
 
   return probe(1, []);
