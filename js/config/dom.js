@@ -58,6 +58,7 @@ export const dom = {
   photoModalEmbedWrap: document.getElementById("photo-modal-embed-wrap"),
   photoModalEmbed: document.getElementById("photo-modal-embed"),
   photoModalYear: document.getElementById("photo-modal-year"),
+  photoModalProvider: document.getElementById("photo-modal-provider"),
   photoModalCaption: document.getElementById("photo-modal-caption"),
   textView: document.getElementById("text-view"),
   categoryView: document.getElementById("category-view"),

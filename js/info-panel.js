@@ -24,6 +24,8 @@ let memoryLightboxTitle = "";
 let memoryLightboxCaption = null;
 /** 記憶モード時の撮影年代（D列）。空なら非表示 */
 let memoryLightboxYear = "";
+/** 記憶モード時の提供者（E列）。空なら非表示 */
+let memoryLightboxProvider = "";
 
 function formatActiveYears(openingYear, closingYear) {
   const open = String(openingYear || "").trim();
@@ -65,6 +67,18 @@ function setMemoryLightboxYearElement(year) {
   } else {
     dom.photoModalYear.textContent = "";
     dom.photoModalYear.classList.add("hidden");
+  }
+}
+
+function setMemoryLightboxProviderElement(provider) {
+  if (!dom.photoModalProvider) return;
+  const text = String(provider || "").trim();
+  if (text) {
+    dom.photoModalProvider.textContent = "提供者：" + text;
+    dom.photoModalProvider.classList.remove("hidden");
+  } else {
+    dom.photoModalProvider.textContent = "";
+    dom.photoModalProvider.classList.add("hidden");
   }
 }
 
@@ -179,6 +193,7 @@ function updatePhotoLightboxView() {
     setCaptionElement(dom.photoModalCaption, photoTitle);
   }
   setMemoryLightboxYearElement(memoryLightboxYear);
+  setMemoryLightboxProviderElement(memoryLightboxProvider);
 
   const hasMultiple = galleryImages.length > 1;
   if (dom.photoModalPrev) {
@@ -212,6 +227,7 @@ function openPhotoLightbox() {
   memoryLightboxTitle = "";
   memoryLightboxCaption = null;
   memoryLightboxYear = "";
+  memoryLightboxProvider = "";
   updatePhotoLightboxView();
   showPhotoModal({ fadeIn: false });
 }
@@ -225,7 +241,7 @@ export function openMemoryPhotoLightbox(photo, spotTitle, opts) {
   lightboxMode = "gallery";
   standaloneVideoId = "";
   restoreCameraOnLightboxClose = Boolean(options.restoreCameraOnClose);
-  // ヘッダー: 写真タイトル + 撮影年代（D列） / 下: C列の説明（あれば）
+  // ヘッダー: 写真タイトル + 撮影年代（D列）+ 提供者（E列） / 下: C列の説明（あれば）
   memoryLightboxTitle = String(spotTitle || "").trim() || "写真";
   memoryLightboxCaption = Object.prototype.hasOwnProperty.call(options, "caption")
     ? String(options.caption || "").trim()
@@ -233,6 +249,9 @@ export function openMemoryPhotoLightbox(photo, spotTitle, opts) {
   memoryLightboxYear = Object.prototype.hasOwnProperty.call(options, "year")
     ? String(options.year || "").trim()
     : String(photo.year || "").trim();
+  memoryLightboxProvider = Object.prototype.hasOwnProperty.call(options, "provider")
+    ? String(options.provider || "").trim()
+    : String(photo.provider || "").trim();
   updatePhotoLightboxView();
   showPhotoModal({ fadeIn: options.fadeIn !== false });
 }
@@ -245,11 +264,13 @@ export function openVideoLightbox(videoId, title) {
   memoryLightboxTitle = "";
   memoryLightboxCaption = null;
   memoryLightboxYear = "";
+  memoryLightboxProvider = "";
   if (dom.photoModalTitle) {
     dom.photoModalTitle.textContent = title || "動画";
   }
   setCaptionElement(dom.photoModalCaption, "");
   setMemoryLightboxYearElement("");
+  setMemoryLightboxProviderElement("");
   updateStandaloneVideoLightboxView();
   showPhotoModal({ fadeIn: false });
 }
@@ -341,7 +362,9 @@ function closePhotoLightbox(opts) {
     memoryLightboxTitle = "";
     memoryLightboxCaption = null;
     memoryLightboxYear = "";
+    memoryLightboxProvider = "";
     setMemoryLightboxYearElement("");
+    setMemoryLightboxProviderElement("");
     setLightboxMediaMode("image");
     if (shouldRestore) {
       restoreCameraView();

@@ -1188,7 +1188,7 @@ body:has(#year-filter-bar:not(.hidden)) {
   display: none;
 }
 
-.photo-modal-year {
+.photo-modal-meta {
   margin: 0;
   font-size: 12px;
   line-height: 1.4;
@@ -1199,7 +1199,7 @@ body:has(#year-filter-bar:not(.hidden)) {
   text-overflow: ellipsis;
 }
 
-.photo-modal-year.hidden {
+.photo-modal-meta.hidden {
   display: none;
 }
 
