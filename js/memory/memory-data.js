@@ -54,17 +54,18 @@ function resolveMemoryPhotoUrl(path) {
 }
 
 function getMemoryColumnIndexes(rows) {
-  // シート実カラム: A写真タイトル / B写真パス / C説明 / D撮影年代 / E経度 / F緯度 / G高さ / H heading / I pitch
+  // シート実カラム: A写真タイトル / B写真パス / C説明 / D撮影年代 / E提供者 / F経度 / G緯度 / H高さ / I heading / J pitch
   const defaults = {
     title: 0,
     photoPath: 1,
     caption: 2,
     year: 3,
-    lon: 4,
-    lat: 5,
-    height: 6,
-    heading: 7,
-    pitch: 8
+    provider: 4,
+    lon: 5,
+    lat: 6,
+    height: 7,
+    heading: 8,
+    pitch: 9
   };
   if (!rows || rows.length === 0) return defaults;
 
@@ -97,6 +98,13 @@ function getMemoryColumnIndexes(rows) {
       || header === "撮影年"
     ) {
       headerMap.year = i;
+    } else if (
+      header === "provider"
+      || header === "提供者"
+      || header === "提供"
+      || header === "提供元"
+    ) {
+      headerMap.provider = i;
     } else if (header === "lon" || header === "lng" || header === "経度" || header === "longitude") {
       headerMap.lon = i;
     } else if (header === "lat" || header === "緯度" || header === "latitude") {
@@ -154,6 +162,9 @@ function parseMemoryRows(rows) {
     const year = col.year >= 0
       ? String(cellValue(c[col.year]) || "").trim()
       : "";
+    const provider = col.provider >= 0
+      ? String(cellValue(c[col.provider]) || "").trim()
+      : "";
     const url = resolveMemoryPhotoUrl(photoPath);
 
     list.push({
@@ -167,6 +178,7 @@ function parseMemoryRows(rows) {
       heading: parseNumber(cellValue(c[col.heading]), MEMORY_DEFAULT_HEADING),
       pitch: parseNumber(cellValue(c[col.pitch]), MEMORY_DEFAULT_PITCH),
       year: year,
+      provider: provider,
       caption: caption
     });
   }

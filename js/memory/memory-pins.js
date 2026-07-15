@@ -141,6 +141,7 @@ function buildMemoryProps(photo) {
     url: photo.url,
     caption: photo.caption || "",
     year: photo.year || "",
+    provider: photo.provider || "",
     lon: photo.lon,
     lat: photo.lat,
     height: photo.height,
@@ -390,6 +391,7 @@ export function openMemoryPhoto(photoOrEntity) {
   let url;
   let caption;
   let year;
+  let provider;
   let flyTarget = photoOrEntity;
 
   if (photoOrEntity.properties) {
@@ -399,11 +401,13 @@ export function openMemoryPhoto(photoOrEntity) {
     url = props.url ? props.url.getValue() : "";
     caption = props.caption ? props.caption.getValue() : "";
     year = props.year ? props.year.getValue() : "";
+    provider = props.provider ? props.provider.getValue() : "";
   } else {
     title = photoOrEntity.title || "写真";
     url = photoOrEntity.url || "";
     caption = photoOrEntity.caption || "";
     year = photoOrEntity.year || "";
+    provider = photoOrEntity.provider || "";
   }
 
   const lightboxOpen = Boolean(dom.photoModal && !dom.photoModal.classList.contains("hidden"));
@@ -430,7 +434,8 @@ export function openMemoryPhoto(photoOrEntity) {
             restoreCameraOnClose: true,
             fadeIn: true,
             caption: caption,
-            year: year
+            year: year,
+            provider: provider
           }
         );
       }, 220);
@@ -449,7 +454,7 @@ export function filterMemoryPhotosByQuery(query) {
     state.filteredMemoryPhotos = state.allMemoryPhotos.slice();
   } else {
     state.filteredMemoryPhotos = state.allMemoryPhotos.filter(function (photo) {
-      return [photo.title, photo.caption, photo.year, photo.photoPath]
+      return [photo.title, photo.caption, photo.year, photo.provider, photo.photoPath]
         .join(" ")
         .toLowerCase()
         .indexOf(q) !== -1;
