@@ -1,5 +1,5 @@
 /** デプロイ時に increment して ES モジュールのブラウザキャッシュを無効化 */
-export const APP_MODULE_VERSION = "138";
+export const APP_MODULE_VERSION = "139";
 
 export const PIN_CIRCLE_SIZE = 48;
 /** ピン画像の描画倍率（表示サイズは PIN_CIRCLE_SIZE のまま） */
@@ -73,4 +73,5 @@ export function getAppBasePath() {
 }
 
 export const ASSETS_PHOTOS_BASE = getAppBasePath() + "assets/photos/";
+export const ASSETS_MEMORIES_BASE = getAppBasePath() + "assets/memories/";
 export const ASSETS_ICONS_BASE = getAppBasePath() + "assets/icons/";

@@ -3,7 +3,7 @@ import {
   SHEET_MEMORY,
   SHEET_FETCH_TIMEOUT_MS,
   SHEET_FETCH_MAX_RETRIES,
-  ASSETS_PHOTOS_BASE,
+  ASSETS_MEMORIES_BASE,
   MEMORY_DEFAULT_HEIGHT,
   MEMORY_DEFAULT_HEADING,
   MEMORY_DEFAULT_PITCH,
@@ -11,6 +11,8 @@ import {
 } from "../config/constants.js";
 import { state } from "../state.js";
 import { parseGvizRows } from "../utils/gviz.js";
+
+const MEMORY_IMAGE_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp"];
 
 function cellValue(cell) {
   if (!cell) return "";
@@ -30,16 +32,12 @@ function parseNumber(value, fallback) {
   return Number.isFinite(n) ? n : fallback;
 }
 
-function withDefaultImageExtension(path) {
-  const text = String(path || "").trim();
-  if (!text) return "";
-  if (/^https?:\/\//i.test(text)) return text;
-  if (/\.(jpe?g|png|gif|webp|svg|bmp)$/i.test(text)) return text;
-  return text + ".jpg";
+function hasImageExtension(path) {
+  return /\.(jpe?g|png|gif|webp|svg|bmp)$/i.test(String(path || "").trim());
 }
 
-function resolveMemoryPhotoUrl(path) {
-  const text = withDefaultImageExtension(path);
+function buildMemoryAssetUrl(relativePath) {
+  const text = String(relativePath || "").trim();
   if (!text) return "";
   if (/^https?:\/\//i.test(text)) return text;
 
@@ -50,7 +48,60 @@ function resolveMemoryPhotoUrl(path) {
     return base + normalized.split("/").filter(Boolean).map(encodeURIComponent).join("/");
   }
 
-  return ASSETS_PHOTOS_BASE + normalized.split("/").filter(Boolean).map(encodeURIComponent).join("/");
+  return ASSETS_MEMORIES_BASE + normalized.split("/").filter(Boolean).map(encodeURIComponent).join("/");
+}
+
+function memoryPhotoUrlCandidates(path) {
+  const text = String(path || "").trim();
+  if (!text) return [];
+  if (/^https?:\/\//i.test(text)) return [text];
+  if (hasImageExtension(text)) return [buildMemoryAssetUrl(text)];
+  return MEMORY_IMAGE_EXTENSIONS.map(function (ext) {
+    return buildMemoryAssetUrl(text + ext);
+  });
+}
+
+function probeImageUrl(url) {
+  return new Promise(function (resolve) {
+    if (!url) {
+      resolve("");
+      return;
+    }
+    const img = new Image();
+    img.onload = function () { resolve(url); };
+    img.onerror = function () { resolve(""); };
+    img.src = url;
+  });
+}
+
+function resolveFirstExistingUrl(candidates) {
+  function next(index) {
+    if (index >= candidates.length) return Promise.resolve("");
+    return probeImageUrl(candidates[index]).then(function (found) {
+      if (found) return found;
+      return next(index + 1);
+    });
+  }
+  return next(0);
+}
+
+function resolveMemoryPhotoUrl(path) {
+  const candidates = memoryPhotoUrlCandidates(path);
+  return candidates[0] || "";
+}
+
+function resolveMemoryPhotoUrls(photos) {
+  return Promise.all(photos.map(function (photo) {
+    const candidates = memoryPhotoUrlCandidates(photo.photoPath);
+    if (candidates.length <= 1) {
+      photo.url = candidates[0] || "";
+      return photo;
+    }
+    return resolveFirstExistingUrl(candidates).then(function (url) {
+      photo.url = url || candidates[0] || "";
+      return photo;
+    });
+  }));
 }
 
 function getMemoryColumnIndexes(rows) {
@@ -220,7 +271,9 @@ function fetchMemorySheet(retryCount) {
 export function loadMemoryData() {
   return fetchMemorySheet()
     .then(function (rows) {
-      const photos = parseMemoryRows(rows);
+      return resolveMemoryPhotoUrls(parseMemoryRows(rows));
+    })
+    .then(function (photos) {
       state.allMemoryPhotos = photos;
       state.filteredMemoryPhotos = photos.slice();
       state.memoryDataLoaded = true;
