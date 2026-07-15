@@ -82,7 +82,39 @@ function destroyPointCloudPreviewViewer() {
   if (container) container.innerHTML = "";
 }
 
+/** iPad / 大型タッチ端末。画面が大きく高LODを読みやすく、近接時に黒テクスチャ化しがち */
+function isLargeTouchDisplay() {
+  const ua = navigator.userAgent || "";
+  if (/iPad/i.test(ua)) return true;
+  // iPadOS 13+ は MacIntel + タッチと名乗る
+  if (navigator.platform === "MacIntel" && (navigator.maxTouchPoints || 0) > 1) {
+    return true;
+  }
+  const minSide = Math.min(window.innerWidth || 0, window.innerHeight || 0);
+  const maxSide = Math.max(window.innerWidth || 0, window.innerHeight || 0);
+  return minSide >= 768 && maxSide >= 1024 && ("ontouchstart" in window || (navigator.maxTouchPoints || 0) > 1);
+}
+
+/** 描画解像度。drawingBuffer ≈ CSSサイズ × DPR × resolutionScale */
+function getPointCloudResolutionScale() {
+  const dpr = window.devicePixelRatio || 1;
+  if (isLargeTouchDisplay()) {
+    // iPad Pro 等でフレームバッファが巨大になり GPU メモリ不足→黒塗りになるのを抑える
+    return dpr >= 2 ? 0.5 : 0.7;
+  }
+  if (dpr >= 3) return 0.65;
+  return 1;
+}
+
+function getPointCloudScreenSpaceError() {
+  // 値が大きいほど低LOD。スマホは画面が小さく自然と低LOD寄りなので据え置き、
+  // iPad は近接で高LODテクスチャが黒くなる既知問題を避けるため緩める。
+  if (isLargeTouchDisplay()) return 14;
+  return 4;
+}
+
 function createPointCloudViewer(containerId, isPreview) {
+  const largeTouch = isLargeTouchDisplay();
   const cloudViewer = new Cesium.Viewer(containerId, {
     baseLayer: false,
     baseLayerPicker: false,
@@ -95,7 +127,17 @@ function createPointCloudViewer(containerId, isPreview) {
     infoBox: false,
     selectionIndicator: false,
     requestRenderMode: isPreview,
-    useDefaultRenderLoop: true
+    useDefaultRenderLoop: true,
+    // iOS Metal WebGL で半透明パスが黒くなる事例がある
+    orderIndependentTranslucency: false,
+    contextOptions: {
+      webgl: {
+        alpha: false,
+        antialias: !largeTouch,
+        powerPreference: "default",
+        failIfMajorPerformanceCaveat: false
+      }
+    }
   });
 
   const scene = cloudViewer.scene;
@@ -109,6 +151,11 @@ function createPointCloudViewer(containerId, isPreview) {
   // iPad Safari では log depth + 極端な far/near で近接時に黒塗りになりやすい
   scene.logarithmicDepthBuffer = false;
   scene.highDynamicRange = false;
+  scene.fxaa = false;
+  if (typeof scene.msaaSamples === "number") {
+    scene.msaaSamples = 1;
+  }
+  cloudViewer.resolutionScale = getPointCloudResolutionScale();
   scene.screenSpaceCameraController.enableCollisionDetection = false;
   // 室内スキャン近接時、デフォルト near≈1m だと手前がクリップされて真っ黒になる
   if (cloudViewer.camera.frustum && typeof cloudViewer.camera.frustum.near === "number") {
@@ -259,8 +306,18 @@ function applyLocalTilesetViewOffset(tileset) {
 
 function configurePointCloudTileset(tileset) {
   applyLocalTilesetViewOffset(tileset);
-  tileset.maximumScreenSpaceError = 4;
+  tileset.maximumScreenSpaceError = getPointCloudScreenSpaceError();
   tileset.backFaceCulling = false;
+  // 高詳細タイルを一気に積まず、段階的に差し替える（iPad の GPU メモリ枯渇対策）
+  if ("skipLevelOfDetail" in tileset) {
+    tileset.skipLevelOfDetail = true;
+  }
+  if ("immediatelyLoadDesiredLevelOfDetail" in tileset) {
+    tileset.immediatelyLoadDesiredLevelOfDetail = false;
+  }
+  if ("cacheBytes" in tileset && isLargeTouchDisplay()) {
+    tileset.cacheBytes = 96 * 1024 * 1024;
+  }
   if (tileset.imageBasedLighting) {
     tileset.imageBasedLighting.imageBasedLightingFactor = new Cesium.Cartesian2(0.0, 0.0);
   }
@@ -538,9 +595,11 @@ export function setupPointCloudModal() {
 
   window.addEventListener("resize", function () {
     if (isViewerUsable(state.pointCloudPreviewViewer) && dom.pointcloudPreviewSection && !dom.pointcloudPreviewSection.classList.contains("hidden")) {
+      state.pointCloudPreviewViewer.resolutionScale = getPointCloudResolutionScale();
       state.pointCloudPreviewViewer.resize();
     }
     if (isViewerUsable(state.pointCloudViewer) && dom.pointcloudModal && !dom.pointcloudModal.classList.contains("hidden")) {
+      state.pointCloudViewer.resolutionScale = getPointCloudResolutionScale();
       state.pointCloudViewer.resize();
     }
   });

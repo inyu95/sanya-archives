@@ -205,13 +205,14 @@ function addMemoryPolePin(dataSource, photo, groundH, props, onDone, generation)
         verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
         horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
         sizeInMeters: false,
-        disableDepthTestDistance: 0
+        disableDepthTestDistance: Number.POSITIVE_INFINITY
       },
       polyline: {
         positions: [groundPos, topPos],
         width: PIN_STEM_WIDTH,
         material: Cesium.Color.fromCssColorString(PIN_STEM_COLOR).withAlpha(PIN_STEM_ALPHA),
-        arcType: Cesium.ArcType.NONE
+        arcType: Cesium.ArcType.NONE,
+        disableDepthTestDistance: Number.POSITIVE_INFINITY
       },
       properties: props
     });

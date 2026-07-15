@@ -1460,6 +1460,14 @@ body:has(#year-filter-bar:not(.hidden)) {
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
 }
 
+/* iPad など大型タッチ: WebGL キャンバス过大→高LODで黒塗りになりやすいのでサイズを抑える */
+@media (min-width: 769px) and (hover: none) and (pointer: coarse) {
+  #pointcloud-modal-dialog {
+    width: min(720px, 88vw);
+    height: min(500px, 68vh);
+  }
+}
+
 #pointcloud-modal-header {
   display: flex;
   align-items: center;
