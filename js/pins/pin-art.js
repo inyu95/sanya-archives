@@ -7,8 +7,10 @@ import {
   PIN_STEM_ALPHA
 } from "../config/constants.js";
 
-const DEFAULT_PIN_BORDER_COLOR = "rgba(255,255,255,0.95)";
+const DEFAULT_PIN_BORDER_COLOR = "#ffffff";
 const PIN_WHITE_BORDER_WIDTH = 2;
+/** 描画方式変更時にキャッシュを無効化する */
+const PIN_ART_CACHE_VERSION = "ring-border-v1";
 /** 白縁の内側とアイコンとの余白（px） */
 const PIN_ICON_PADDING = 10;
 const PIN_NO_COLOR_FILL = "#9a9a9a";
@@ -30,11 +32,10 @@ function getDangoPositions(layerCount, clusterHeight) {
   return positions;
 }
 
-function drawPinCircleAt(ctx, cx, cy, size, drawCircleContent, fillColor) {
+function drawPinCircleContent(ctx, cx, cy, size, drawCircleContent, fillColor) {
   const outerR = size / 2 - 1;
   const borderW = PIN_WHITE_BORDER_WIDTH;
-  // stroke はパス中心に描かれるため、塗りは内縁（outerR - borderW/2）まで伸ばす
-  const fillR = outerR - borderW / 2;
+  const fillR = outerR - borderW;
   const contentR = fillR - PIN_ICON_PADDING;
   const color = fillColor || PIN_NO_COLOR_FILL;
 
@@ -49,12 +50,19 @@ function drawPinCircleAt(ctx, cx, cy, size, drawCircleContent, fillColor) {
   ctx.clip();
   drawCircleContent(ctx, cx, cy, contentR);
   ctx.restore();
+}
+
+/** stroke だと重なりで白縁がつながるため、リング状の塗りで描く */
+function drawPinWhiteRing(ctx, cx, cy, size) {
+  const outerR = size / 2 - 1;
+  const borderW = PIN_WHITE_BORDER_WIDTH;
+  const innerR = outerR - borderW;
 
   ctx.beginPath();
   ctx.arc(cx, cy, outerR, 0, Math.PI * 2);
-  ctx.strokeStyle = DEFAULT_PIN_BORDER_COLOR;
-  ctx.lineWidth = borderW;
-  ctx.stroke();
+  ctx.arc(cx, cy, innerR, 0, Math.PI * 2, true);
+  ctx.fillStyle = DEFAULT_PIN_BORDER_COLOR;
+  ctx.fill("evenodd");
 }
 
 function drawInitialContent(c, cx, cy, innerR, text) {
@@ -125,7 +133,7 @@ function drawDangoLayers(ctx, clusterHeight, name, normalized, images) {
     const pos = positions[i];
     const fallbackLabel = layer.label || name;
 
-    drawPinCircleAt(ctx, pos.x, pos.y, PIN_CIRCLE_SIZE, function (c, drawCx, drawCy, innerR) {
+    drawPinCircleContent(ctx, pos.x, pos.y, PIN_CIRCLE_SIZE, function (c, drawCx, drawCy, innerR) {
       const img = images[i];
       if (img) {
         drawImageContent(c, drawCx, drawCy, innerR, img);
@@ -133,6 +141,11 @@ function drawDangoLayers(ctx, clusterHeight, name, normalized, images) {
         drawInitialContent(c, drawCx, drawCy, innerR, fallbackLabel);
       }
     }, layer.borderColor);
+  }
+
+  for (let i = 0; i < normalized.length; i++) {
+    const pos = positions[i];
+    drawPinWhiteRing(ctx, pos.x, pos.y, PIN_CIRCLE_SIZE);
   }
 }
 
@@ -158,7 +171,7 @@ const circleImageCache = new Map();
 const stemImageCache = new Map();
 
 export function createPinCircleImageDataUrl(name, layers, callback) {
-  const key = name + "::" + layersCacheKey(layers);
+  const key = name + "::" + PIN_ART_CACHE_VERSION + "::" + layersCacheKey(layers);
   const cached = circleImageCache.get(key);
   if (cached) {
     callback(cached.dataUrl, cached.totalHeight);
@@ -181,7 +194,7 @@ export function createPinCircleImageDataUrl(name, layers, callback) {
 
 /** 2D モード用: 団子アイコン + 下方向の棒を 1 枚の画像にまとめる */
 export function createPinWithStemImageDataUrl(name, layers, callback) {
-  const key = name + "::" + layersCacheKey(layers) + "::stem" + PIN_STEM_PIXEL_HEIGHT;
+  const key = name + "::" + PIN_ART_CACHE_VERSION + "::" + layersCacheKey(layers) + "::stem" + PIN_STEM_PIXEL_HEIGHT;
   const cached = stemImageCache.get(key);
   if (cached) {
     callback(cached.dataUrl, cached.totalHeight);

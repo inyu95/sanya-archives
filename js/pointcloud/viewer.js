@@ -154,6 +154,10 @@ function createPointCloudViewer(containerId, isPreview) {
 function attachTilesetDiagnostics(tileset) {
   tileset.tileFailed.addEventListener(function (error) {
     console.error("3D Tiles tile failed:", error.url, error.message);
+    // iPad: 失敗した高LODを避けるため SSE を段階的に上げる
+    if (isLargeTouchDisplay()) {
+      tileset._ipadSseBoost = (tileset._ipadSseBoost || 0) + 48;
+    }
   });
 }
 
@@ -285,16 +289,26 @@ function configurePointCloudTileset(tileset) {
     tileset.skipLevelOfDetail = true;
   }
   if ("skipScreenSpaceErrorFactor" in tileset && isLargeTouchDisplay()) {
-    tileset.skipScreenSpaceErrorFactor = 24;
+    tileset.skipScreenSpaceErrorFactor = 32;
   }
   if ("skipLevels" in tileset && isLargeTouchDisplay()) {
-    tileset.skipLevels = 1;
+    tileset.skipLevels = 2;
+  }
+  if ("preferLeaves" in tileset) {
+    tileset.preferLeaves = false;
+  }
+  if ("loadSiblings" in tileset) {
+    tileset.loadSiblings = false;
   }
   if ("immediatelyLoadDesiredLevelOfDetail" in tileset) {
     tileset.immediatelyLoadDesiredLevelOfDetail = false;
   }
+  // cacheBytes を下げすぎると memoryAdjustedScreenSpaceError で黒テクスチャになる
   if ("cacheBytes" in tileset && isLargeTouchDisplay()) {
-    tileset.cacheBytes = 64 * 1024 * 1024;
+    tileset.cacheBytes = 256 * 1024 * 1024;
+  }
+  if ("maximumCacheOverflowBytes" in tileset && isLargeTouchDisplay()) {
+    tileset.maximumCacheOverflowBytes = 128 * 1024 * 1024;
   }
   if (tileset.imageBasedLighting) {
     tileset.imageBasedLighting.imageBasedLightingFactor = new Cesium.Cartesian2(0.0, 0.0);

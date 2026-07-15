@@ -44,14 +44,15 @@ export function isLargeTouchDisplay() {
 export function getPointCloudResolutionScale() {
   const dpr = window.devicePixelRatio || 1;
   if (isLargeTouchDisplay()) {
-    return dpr >= 2 ? 0.45 : 0.65;
+    return dpr >= 2 ? 0.35 : 0.5;
   }
   if (dpr >= 3) return 0.65;
   return 1;
 }
 
 export function getPointCloudBaseScreenSpaceError() {
-  if (isLargeTouchDisplay()) return 20;
+  // iPad はスマホより画面が大きく高LODを踏みやすい。最初から粗めにして黒テクスチャ LOD を避ける
+  if (isLargeTouchDisplay()) return 48;
   return 4;
 }
 
@@ -145,15 +146,15 @@ function updatePointCloudCameraFrustum(viewer, tileset, range) {
 
   if (isLargeTouchDisplay() && tileset && !tileset.isDestroyed()) {
     const closeness = radius / safeRange;
-    // 近づくほど高詳細タイルを避ける（黒テクスチャ LOD を踏まない）
-    tileset.maximumScreenSpaceError = Cesium.Math.clamp(
-      getPointCloudBaseScreenSpaceError() + closeness * 4,
-      getPointCloudBaseScreenSpaceError(),
-      72
+    const boost = tileset._ipadSseBoost || 0;
+    // 近づくほど高詳細タイルを強く避ける（上限を高めに取り、黒くなる LOD を踏ませない）
+    tileset.maximumScreenSpaceError = Math.min(
+      getPointCloudBaseScreenSpaceError() * Math.max(closeness, 1) + boost,
+      640
     );
     // 近接時はさらに描画解像度を落として GPU メモリを確保
-    if (closeness > 2) {
-      viewer.resolutionScale = Math.min(viewer.resolutionScale || 1, 0.4);
+    if (closeness > 1.5) {
+      viewer.resolutionScale = Math.min(getPointCloudResolutionScale(), 0.3);
     } else {
       viewer.resolutionScale = getPointCloudResolutionScale();
     }
