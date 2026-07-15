@@ -218,6 +218,14 @@ body:has(#year-filter-bar:not(.hidden)) {
   display: none;
 }
 
+/* Cesium ツールバーへ移す前は body 直下で一瞬見えるため隠す */
+body > #about-btn,
+body > #home-btn,
+body > #archive-list-btn,
+body > #camera-capture-btn {
+  display: none !important;
+}
+
 #home-btn,
 .cesium-toolbar-btn {
   display: inline-flex;

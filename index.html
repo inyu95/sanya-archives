@@ -55,7 +55,7 @@
     <meta http-equiv="Expires" content="0">
 
     <link rel="stylesheet" href="node_modules/cesium/Build/Cesium/Widgets/widgets.css">
-    <link rel="stylesheet" href="stylesheet.css?v=23">
+    <link rel="stylesheet" href="stylesheet.css?v=24">
   </head>
 
   <body>
@@ -93,7 +93,7 @@
 
     <button id="about-btn" class="cesium-toolbar-btn cesium-toolbar-btn--text" type="button" title="山谷アーカイブの概要・使い方を表示">山谷アーカイブについて</button>
 
-    <button id="archive-list-btn" class="cesium-toolbar-btn" type="button" aria-label="アーカイブ一覧" title="登録された場所の一覧を表示">
+    <button id="archive-list-btn" class="cesium-toolbar-btn hidden" type="button" aria-label="アーカイブ一覧" title="登録された場所の一覧を表示">
       <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
         <path fill="currentColor" d="M3 5h18v2H3V5zm0 6h18v2H3v-2zm0 6h18v2H3v-2z"/>
       </svg>
@@ -113,7 +113,7 @@
       <div id="archive-list"></div>
     </div>
 
-    <div id="left-panel">
+    <div id="left-panel" class="hidden">
       <div id="search-panel">
         <div class="search-field">
           <svg class="search-field-icon" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" focusable="false">
@@ -124,7 +124,7 @@
         <span id="search-count"></span>
       </div>
 
-      <div id="filter-panel">
+      <div id="filter-panel" class="hidden">
         <button type="button" id="filter-toggle" class="filter-panel-header" aria-expanded="false" aria-controls="filter-panel-body">
           フィルター
           <span class="filter-toggle-icon" aria-hidden="true"></span>
