@@ -4,10 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "photos:index": "node scripts/generate-photos-index.js",
-    "prestart": "npm run photos:index",
     "start": "npx --yes http-server -p 8080 -c-1",
-    "predev": "npm run photos:index",
     "dev": "npx --yes live-server --port=8080 --no-browser",
     "test": "echo \"Error: no test specified\" && exit 1"
   },

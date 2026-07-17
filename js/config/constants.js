@@ -1,5 +1,5 @@
 /** デプロイ時に increment して ES モジュールのブラウザキャッシュを無効化 */
-export const APP_MODULE_VERSION = "139";
+export const APP_MODULE_VERSION = "140";
 
 export const PIN_CIRCLE_SIZE = 48;
 /** ピン画像の描画倍率（表示サイズは PIN_CIRCLE_SIZE のまま） */
@@ -52,6 +52,8 @@ export const MEMORY_TOWN_BRIGHTNESS = 0.62;
 export const SHEET_FETCH_TIMEOUT_MS = 30000;
 export const SHEET_FETCH_MAX_RETRIES = 2;
 export const GOOGLE_SHEETS_API_KEY = "AIzaSyAj3HmCQbFFqq1G7L9OhLMW2yT8cTJckJc";
+export const GITHUB_REPOSITORY = "inyu95/sanya-archives";
+export const GITHUB_BRANCH = "main";
 
 export const LOCAL_TILESET_VIEW_LON = 139.6917;
 export const LOCAL_TILESET_VIEW_LAT = 35.6895;

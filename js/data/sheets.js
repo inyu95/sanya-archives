@@ -7,6 +7,8 @@ import {
   SHEET_FETCH_MAX_RETRIES,
   GOOGLE_SHEETS_API_KEY,
   ASSETS_PHOTOS_BASE,
+  GITHUB_REPOSITORY,
+  GITHUB_BRANCH,
   getAppBasePath
 } from "../config/constants.js";
 import { isYouTubeUrl } from "../utils/youtube.js";
@@ -196,58 +198,54 @@ function buildPhotoEntry(base, file) {
   return { url: base + encodePhotoFileName(name), title: "" };
 }
 
-let photosIndexPromise = null;
-
-function fetchPhotosIndex() {
-  if (!photosIndexPromise) {
-    photosIndexPromise = fetch(ASSETS_PHOTOS_BASE + "index.json")
-      .then(function (res) {
-        if (!res.ok) return {};
-        return res.json();
-      })
-      .catch(function () {
-        return {};
-      });
-  }
-  return photosIndexPromise;
-}
-
 function normalizeFolderKey(value) {
   const folder = normalizeImageFolder(value);
   return folder ? folder.normalize("NFC") : "";
 }
 
-function lookupFilesInPhotosIndex(index, folder) {
-  const normalized = normalizeFolderKey(folder);
-  if (!normalized) return null;
+const PHOTO_FILE_PATTERN = /\.(jpe?g|png|gif|webp|svg|bmp)$/i;
+let repositoryTreePromise = null;
 
-  const keys = Object.keys(index);
-  for (let i = 0; i < keys.length; i++) {
-    const key = keys[i];
-    if (key.normalize("NFC") !== normalized) continue;
-    const files = index[key];
-    if (Array.isArray(files) && files.length > 0) return files;
+function fetchRepositoryTree() {
+  if (!repositoryTreePromise) {
+    const url = "https://api.github.com/repos/" + GITHUB_REPOSITORY
+      + "/git/trees/" + encodeURIComponent(GITHUB_BRANCH) + "?recursive=1";
+    repositoryTreePromise = fetch(url, {
+      headers: { Accept: "application/vnd.github+json" }
+    })
+      .then(function (res) {
+        if (!res.ok) throw new Error("GITHUB_TREE_HTTP_" + res.status);
+        return res.json();
+      })
+      .then(function (data) {
+        return Array.isArray(data.tree) ? data.tree : [];
+      })
+      .catch(function (err) {
+        console.warn("GitHubから写真一覧を取得できませんでした:", err);
+        return [];
+      });
   }
-
-  const leaf = normalized.split("/").filter(Boolean).pop();
-  if (!leaf || leaf === normalized) return null;
-  for (let j = 0; j < keys.length; j++) {
-    const key = keys[j];
-    if (key.normalize("NFC") !== leaf.normalize("NFC")) continue;
-    const files = index[key];
-    if (Array.isArray(files) && files.length > 0) return files;
-  }
-
-  return null;
+  return repositoryTreePromise;
 }
 
-function photosFromIndex(index, folder, base) {
-  const files = lookupFilesInPhotosIndex(index, folder);
-  if (!files) return null;
-  const photos = files
+function photosFromRepositoryTree(tree, folder, base) {
+  const directory = ("assets/photos/" + folder).normalize("NFC") + "/";
+  const files = tree
+    .filter(function (entry) {
+      if (!entry || entry.type !== "blob") return false;
+      const path = String(entry.path || "").normalize("NFC");
+      if (!path.startsWith(directory)) return false;
+      const relative = path.slice(directory.length);
+      return relative.indexOf("/") === -1 && PHOTO_FILE_PATTERN.test(relative);
+    })
+    .map(function (entry) {
+      const path = String(entry.path || "").normalize("NFC");
+      return path.slice(directory.length);
+    })
+    .sort(function (a, b) { return a.localeCompare(b, "ja"); })
     .map(function (file) { return buildPhotoEntry(base, file); })
     .filter(Boolean);
-  return photos.length > 0 ? photos : null;
+  return files;
 }
 
 function probeNumberedImages(base) {
@@ -286,9 +284,9 @@ function resolveImagesFromFolder(folderName) {
   if (!folder) return Promise.resolve([]);
 
   const base = buildPhotoBaseUrl(folder);
-  return fetchPhotosIndex().then(function (index) {
-    const indexed = photosFromIndex(index, folder, base);
-    if (indexed) return indexed;
+  return fetchRepositoryTree().then(function (tree) {
+    const photos = photosFromRepositoryTree(tree, folder, base);
+    if (photos.length > 0) return photos;
     return probeNumberedImages(base);
   });
 }

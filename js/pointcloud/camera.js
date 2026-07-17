@@ -42,18 +42,13 @@ export function isLargeTouchDisplay() {
 
 /** 描画解像度。drawingBuffer ≈ CSSサイズ × DPR × resolutionScale */
 export function getPointCloudResolutionScale() {
-  const dpr = window.devicePixelRatio || 1;
-  if (isLargeTouchDisplay()) {
-    return dpr >= 2 ? 0.35 : 0.5;
-  }
-  if (dpr >= 3) return 0.65;
+  // 端末による縮小を行わず、ディスプレイのネイティブ解像度で描画する
   return 1;
 }
 
 export function getPointCloudBaseScreenSpaceError() {
-  // iPad はスマホより画面が大きく高LODを踏みやすい。最初から粗めにして黒テクスチャ LOD を避ける
-  if (isLargeTouchDisplay()) return 48;
-  return 4;
+  // 元データに含まれる最も細かいタイルまで選択する
+  return 1;
 }
 
 export function configurePointCloudCameraFeel(controller) {
@@ -120,7 +115,7 @@ export function applyPointCloudViewState(viewer, tileset) {
  * 近接時の黒塗り対策:
  * - near クリップ（断面が真っ黒）
  * - far/near 比過大による深度潰れ（log depth 無しで特に悪化）
- * - iPad で高LODテクスチャが黒くなる既知問題 → 近接ほど SSE を上げて回避
+ * - iPad でタイル取得に失敗した場合のみ SSE を上げて回避
  */
 function updatePointCloudCameraFrustum(viewer, tileset, range) {
   const frustum = viewer.scene.camera.frustum;
@@ -145,19 +140,10 @@ function updatePointCloudCameraFrustum(viewer, tileset, range) {
   }
 
   if (isLargeTouchDisplay() && tileset && !tileset.isDestroyed()) {
-    const closeness = radius / safeRange;
     const boost = tileset._ipadSseBoost || 0;
-    // 近づくほど高詳細タイルを強く避ける（上限を高めに取り、黒くなる LOD を踏ませない）
-    tileset.maximumScreenSpaceError = Math.min(
-      getPointCloudBaseScreenSpaceError() * Math.max(closeness, 1) + boost,
-      640
-    );
-    // 近接時はさらに描画解像度を落として GPU メモリを確保
-    if (closeness > 1.5) {
-      viewer.resolutionScale = Math.min(getPointCloudResolutionScale(), 0.3);
-    } else {
-      viewer.resolutionScale = getPointCloudResolutionScale();
-    }
+    // 通常時は元データの詳細度を維持し、実際にタイル取得に失敗した場合のみ負荷を下げる
+    tileset.maximumScreenSpaceError = getPointCloudBaseScreenSpaceError() + boost;
+    viewer.resolutionScale = getPointCloudResolutionScale();
   }
 }
 
