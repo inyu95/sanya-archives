@@ -12,6 +12,7 @@ import {
   filterMemoryPhotosByQuery
 } from "../memory/memory-pins.js";
 import { applyFilters, renderYearFilterBar } from "../filters/filters.js?v=99";
+import { applyHistoricalMapLayer, getCurrentMapYear } from "../imagery/historical-maps.js";
 
 function setElementHidden(el, hidden) {
   if (!el) return;
@@ -113,8 +114,8 @@ function enterLifeMode(opts) {
 
   setStatus(
     state.allPins.length
-      ? state.allPins.length + " 件のピン（生活史モード）"
-      : "生活史モード",
+      ? state.allPins.length + " 件のピン（生活史偏）"
+      : "生活史偏",
     "ok"
   );
 }
@@ -130,6 +131,10 @@ function enterMemoryMode(opts) {
   state.appMode = "memory";
   updateModeSwitcherUI();
   updateLifeChrome(false);
+
+  state.mapGeometryMode = "3d";
+  applyHistoricalMapLayer(getCurrentMapYear());
+
   syncMemoryTownAppearance();
 
   if (state.viewer) {
@@ -162,10 +167,10 @@ function enterMemoryMode(opts) {
   if (!state.memoryDataLoaded) {
     setStatus("過去写真を読み込み中...");
   } else if (count) {
-    setStatus(count + " 件の写真（記憶モード）", "ok");
+    setStatus(count + " 件の写真（記憶偏）", "ok");
   } else {
     setStatus(
-      "記憶モード（シート「過去写真」に写真を追加してください）",
+      "記憶偏（シート「過去写真」に写真を追加してください）",
       "error"
     );
   }
