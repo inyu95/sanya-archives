@@ -3,7 +3,7 @@ import { ABOUT_SECTIONS } from "../content/about.js";
 
 function renderAboutContent() {
   if (!dom.aboutSheetBody) return;
-  dom.aboutSheetBody.replaceChildren();
+  if (dom.aboutSheetBody.children.length > 0) return;
   ABOUT_SECTIONS.forEach(function (section) {
     const heading = document.createElement("h3");
     heading.textContent = section.title;

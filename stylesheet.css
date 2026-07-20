@@ -60,12 +60,24 @@ body:has(#year-filter-bar:not(.hidden)) {
   font-weight: 700;
   letter-spacing: 0.08em;
   font-family: "Yu Mincho", "Hiragino Mincho ProN", "Noto Serif JP", serif;
+  margin: 0;
 }
 
 #startup-title .startup-title-sub {
   font-size: clamp(12px, 1.5vw, 18px);
   letter-spacing: 0.12em;
   font-family: "Times New Roman", Georgia, serif;
+  margin: 0;
+}
+
+#startup-title .startup-title-desc {
+  max-width: min(520px, 90vw);
+  margin: 4px 0 0;
+  font-size: clamp(11px, 1.3vw, 15px);
+  line-height: 1.6;
+  letter-spacing: 0.04em;
+  text-align: center;
+  opacity: 0.92;
 }
 
 #startup-title.visible {
