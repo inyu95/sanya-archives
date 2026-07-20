@@ -70,16 +70,6 @@ body:has(#year-filter-bar:not(.hidden)) {
   margin: 0;
 }
 
-#startup-title .startup-title-desc {
-  max-width: min(520px, 90vw);
-  margin: 4px 0 0;
-  font-size: clamp(11px, 1.3vw, 15px);
-  line-height: 1.6;
-  letter-spacing: 0.04em;
-  text-align: center;
-  opacity: 0.92;
-}
-
 #startup-title.visible {
   opacity: 1;
   pointer-events: auto;
@@ -1960,7 +1950,16 @@ span.cesium-sceneModePicker-wrapper {
     right: max(8px, env(safe-area-inset-right, 0px));
     width: auto;
     max-width: none;
+    gap: 3px;
     z-index: 150;
+  }
+
+  #search-panel {
+    gap: 2px;
+  }
+
+  #search-count:empty {
+    display: none;
   }
 
   #pin-search {
@@ -1976,6 +1975,7 @@ span.cesium-sceneModePicker-wrapper {
 
   #filter-panel .filter-panel-header {
     cursor: pointer;
+    padding: 8px 12px;
   }
 
   #filter-panel:not(.filter-panel--open) .filter-panel-header {
@@ -2072,13 +2072,40 @@ span.cesium-sceneModePicker-wrapper {
     display: none;
   }
 
-  .cesium-toolbar-btn--text {
-    max-width: 88px;
-    padding: 0 6px;
+  .cesium-viewer-toolbar {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0;
+    top: max(5px, env(safe-area-inset-top, 0px));
+    right: max(5px, env(safe-area-inset-right, 0px));
+    max-width: calc(100vw - max(10px, env(safe-area-inset-left, 0px)) - max(10px, env(safe-area-inset-right, 0px)));
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .cesium-viewer-toolbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .cesium-viewer-toolbar > * {
+    flex-shrink: 0;
+  }
+
+  .mode-switch-btn {
+    min-width: 44px;
+    padding: 0 7px;
     font-size: 10px;
-    white-space: normal;
-    line-height: 1.2;
-    height: auto;
+  }
+
+  .cesium-toolbar-btn--text {
+    padding: 0 6px;
+    font-size: 9px;
+    white-space: nowrap;
+    line-height: 1;
+    height: 32px;
     min-height: 32px;
   }
 
@@ -2088,9 +2115,37 @@ span.cesium-sceneModePicker-wrapper {
     padding: 12px;
   }
 
+  /* 記憶モード等：検索ボックス・年代バーと被らないようモーダル高さを調整 */
+  body:has(#photo-modal:not(.hidden)) #photo-modal {
+    z-index: 160;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: calc(max(44px, env(safe-area-inset-top, 0px) + 8px) + 44px + 6px);
+    padding-bottom: max(12px, env(safe-area-inset-bottom, 0px) + 12px);
+  }
+
+  body:has(#photo-modal:not(.hidden)):has(#filter-panel:not(.hidden)) #photo-modal {
+    padding-top: calc(max(44px, env(safe-area-inset-top, 0px) + 8px) + 44px + 3px + 36px + 6px);
+  }
+
+  body:has(#photo-modal:not(.hidden)):has(#search-count:not(:empty)) #photo-modal {
+    padding-top: calc(max(44px, env(safe-area-inset-top, 0px) + 8px) + 44px + 16px + 6px);
+  }
+
+  body:has(#photo-modal:not(.hidden)):has(#filter-panel:not(.hidden)):has(#search-count:not(:empty)) #photo-modal {
+    padding-top: calc(max(44px, env(safe-area-inset-top, 0px) + 8px) + 44px + 16px + 3px + 36px + 6px);
+  }
+
+  body:has(#photo-modal:not(.hidden)):has(#year-filter-bar:not(.hidden)) #photo-modal {
+    padding-bottom: calc(max(12px, env(safe-area-inset-bottom, 0px)) + 56px);
+  }
+
   #photo-modal-dialog {
     width: 100%;
-    height: min(82vh, 720px);
+    height: 100%;
+    max-height: none;
+    flex: 1;
+    min-height: 0;
   }
 
   #photo-modal-prev {
