@@ -1,5 +1,5 @@
 import { dom } from "../config/dom.js";
-import { ABOUT_SECTIONS } from "../content/about.js";
+import { ABOUT_SECTIONS } from "../content/about.js?v=1";
 import { ARCHIVE_CREATOR_NAME, ARCHIVE_CREATOR_URL } from "../config/constants.js";
 
 function renderAboutContent() {
