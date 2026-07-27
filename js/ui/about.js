@@ -1,6 +1,6 @@
 import { dom } from "../config/dom.js";
 import { ABOUT_SECTIONS } from "../content/about.js";
-import { ARCHIVE_CREATOR_URL } from "../config/constants.js";
+import { ARCHIVE_CREATOR_NAME, ARCHIVE_CREATOR_URL } from "../config/constants.js";
 
 function renderAboutContent() {
   if (!dom.aboutSheetBody) return;
@@ -31,11 +31,12 @@ function ensureCreatorFooter() {
 
   const footer = document.createElement("p");
   footer.className = "about-sheet-creator-link";
+  footer.appendChild(document.createTextNode("制作者 : "));
   const link = document.createElement("a");
   link.href = ARCHIVE_CREATOR_URL;
   link.target = "_blank";
   link.rel = "noopener noreferrer";
-  link.textContent = "制作者ホームページ";
+  link.textContent = ARCHIVE_CREATOR_NAME;
   footer.appendChild(link);
   dom.aboutSheetBody.appendChild(footer);
 }
