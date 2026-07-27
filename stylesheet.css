@@ -1818,6 +1818,11 @@ body > #camera-capture-btn {
   z-index: 200;
 }
 
+/* モード未選択（初期画面）では右上ツールバーを隠す */
+body:not([data-app-mode="life"]):not([data-app-mode="memory"]) .cesium-viewer-toolbar {
+  display: none !important;
+}
+
 .cesium-navigation-help.cesium-navigation-help-visible {
   position: fixed;
   top: 43px;

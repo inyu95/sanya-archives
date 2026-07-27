@@ -205,6 +205,7 @@ function showStartupOverlay() {
 
 export function setupModeSwitcher() {
   showStartupOverlay();
+  document.body.dataset.appMode = "";
   setElementHidden(dom.modeSwitcher, true);
   setElementHidden(dom.mapGeometrySwitcher, true);
   updateLifeChrome(false);
