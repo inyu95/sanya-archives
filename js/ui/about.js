@@ -33,6 +33,9 @@ export function setupAboutSheet() {
   if (dom.aboutBtn) {
     dom.aboutBtn.addEventListener("click", openAboutSheet);
   }
+  if (dom.startupAboutBtn) {
+    dom.startupAboutBtn.addEventListener("click", openAboutSheet);
+  }
   if (dom.aboutSheetClose) {
     dom.aboutSheetClose.addEventListener("click", closeAboutSheet);
   }

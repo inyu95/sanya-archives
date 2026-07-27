@@ -142,6 +142,29 @@ body:has(#year-filter-bar:not(.hidden)) {
   outline-offset: 3px;
 }
 
+.startup-about-btn {
+  margin-top: 20px;
+  padding: 8px 16px;
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.startup-about-btn:hover {
+  color: #fff;
+}
+
+.startup-about-btn:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 3px;
+}
+
 .mode-switcher {
   display: inline-flex;
   align-items: stretch;
@@ -1818,7 +1841,7 @@ span.cesium-sceneModePicker-wrapper {
 #about-sheet {
   position: fixed;
   inset: 0;
-  z-index: 310;
+  z-index: 520;
   display: flex;
   align-items: center;
   justify-content: center;

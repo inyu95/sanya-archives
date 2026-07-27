@@ -1,5 +1,6 @@
 export const dom = {
   startupTitle: document.getElementById("startup-title"),
+  startupAboutBtn: document.getElementById("startup-about-btn"),
   modeSelectLife: document.getElementById("mode-select-life"),
   modeSelectMemory: document.getElementById("mode-select-memory"),
   modeSwitcher: document.getElementById("mode-switcher"),
