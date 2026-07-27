@@ -1,3 +1,5 @@
+import { ARCHIVE_CONTACT_EMAIL } from "../config/constants.js";
+
 export const ABOUT_SECTIONS = [
   {
     title: "山谷アーカイブについて",
@@ -13,6 +15,6 @@ export const ABOUT_SECTIONS = [
   },
   {
     title: "お問い合わせ",
-    body: "内容の修正・追加のご希望やご質問がある場合は、運営者までご連絡ください。（連絡先は後日掲載予定）"
+    body: `内容の修正・追加のご希望やご質問がある場合は、${ARCHIVE_CONTACT_EMAIL} までご連絡ください。`
   }
 ];

@@ -54,6 +54,8 @@ export const SHEET_FETCH_MAX_RETRIES = 2;
 export const GOOGLE_SHEETS_API_KEY = "AIzaSyAj3HmCQbFFqq1G7L9OhLMW2yT8cTJckJc";
 export const GITHUB_REPOSITORY = "inyu95/sanya-archives";
 export const GITHUB_BRANCH = "main";
+/** アーカイブのお問い合わせ先 */
+export const ARCHIVE_CONTACT_EMAIL = "office@studio-sputnik.com";
 
 export const LOCAL_TILESET_VIEW_LON = 139.6917;
 export const LOCAL_TILESET_VIEW_LAT = 35.6895;
