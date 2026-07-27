@@ -114,8 +114,8 @@ function enterLifeMode(opts) {
 
   setStatus(
     state.allPins.length
-      ? state.allPins.length + " 件のピン（生活史偏）"
-      : "生活史偏",
+      ? state.allPins.length + " 件のピン（生活史編）"
+      : "生活史編",
     "ok"
   );
 }
@@ -167,10 +167,10 @@ function enterMemoryMode(opts) {
   if (!state.memoryDataLoaded) {
     setStatus("過去写真を読み込み中...");
   } else if (count) {
-    setStatus(count + " 件の写真（記憶偏）", "ok");
+    setStatus(count + " 件の写真（記憶編）", "ok");
   } else {
     setStatus(
-      "記憶偏（シート「過去写真」に写真を追加してください）",
+      "記憶編（シート「過去写真」に写真を追加してください）",
       "error"
     );
   }
