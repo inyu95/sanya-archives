@@ -1942,6 +1942,25 @@ span.cesium-sceneModePicker-wrapper {
   color: var(--jdr-text-secondary);
 }
 
+.about-sheet-creator-link {
+  margin: 16px 0 0;
+  padding-top: 8px;
+  text-align: right;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.about-sheet-creator-link a {
+  color: var(--jdr-text-muted);
+  text-decoration: none;
+  letter-spacing: 0.02em;
+}
+
+.about-sheet-creator-link a:hover {
+  color: var(--jdr-text-secondary);
+  text-decoration: underline;
+}
+
 /* ── デスクトップ: フィルターは常に展開 ── */
 
 @media (min-width: 769px) {

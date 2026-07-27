@@ -1,5 +1,6 @@
 import { dom } from "../config/dom.js";
 import { ABOUT_SECTIONS } from "../content/about.js";
+import { ARCHIVE_CREATOR_URL } from "../config/constants.js";
 
 function renderAboutContent() {
   if (!dom.aboutSheetBody) return;
@@ -9,10 +10,34 @@ function renderAboutContent() {
     heading.textContent = section.title;
     dom.aboutSheetBody.appendChild(heading);
 
-    const paragraph = document.createElement("p");
-    paragraph.textContent = section.body;
-    dom.aboutSheetBody.appendChild(paragraph);
+    if (section.html) {
+      const paragraph = document.createElement("p");
+      paragraph.innerHTML = section.html;
+      dom.aboutSheetBody.appendChild(paragraph);
+      return;
+    }
+
+    section.body.split(/\n\n+/).forEach(function (part) {
+      const paragraph = document.createElement("p");
+      paragraph.textContent = part;
+      dom.aboutSheetBody.appendChild(paragraph);
+    });
   });
+}
+
+function ensureCreatorFooter() {
+  if (!dom.aboutSheetBody) return;
+  if (dom.aboutSheetBody.querySelector(".about-sheet-creator-link")) return;
+
+  const footer = document.createElement("p");
+  footer.className = "about-sheet-creator-link";
+  const link = document.createElement("a");
+  link.href = ARCHIVE_CREATOR_URL;
+  link.target = "_blank";
+  link.rel = "noopener noreferrer";
+  link.textContent = "制作者ホームページ";
+  footer.appendChild(link);
+  dom.aboutSheetBody.appendChild(footer);
 }
 
 function openAboutSheet() {
@@ -29,6 +54,7 @@ function closeAboutSheet() {
 
 export function setupAboutSheet() {
   renderAboutContent();
+  ensureCreatorFooter();
 
   if (dom.aboutBtn) {
     dom.aboutBtn.addEventListener("click", openAboutSheet);

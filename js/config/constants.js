@@ -56,6 +56,8 @@ export const GITHUB_REPOSITORY = "inyu95/sanya-archives";
 export const GITHUB_BRANCH = "main";
 /** アーカイブのお問い合わせ先 */
 export const ARCHIVE_CONTACT_EMAIL = "office@studio-sputnik.com";
+/** 制作者ホームページ */
+export const ARCHIVE_CREATOR_URL = "https://studio-sputnik.com/";
 
 export const LOCAL_TILESET_VIEW_LON = 139.6917;
 export const LOCAL_TILESET_VIEW_LAT = 35.6895;
