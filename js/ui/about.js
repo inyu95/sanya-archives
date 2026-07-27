@@ -4,7 +4,7 @@ import { ARCHIVE_CREATOR_NAME, ARCHIVE_CREATOR_URL } from "../config/constants.j
 
 function renderAboutContent() {
   if (!dom.aboutSheetBody) return;
-  if (dom.aboutSheetBody.children.length > 0) return;
+  dom.aboutSheetBody.replaceChildren();
   ABOUT_SECTIONS.forEach(function (section) {
     const heading = document.createElement("h3");
     heading.textContent = section.title;
