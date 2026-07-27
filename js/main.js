@@ -13,7 +13,7 @@ import {
 import { setupInfoPanel, showPinInfo, hidePinInfo, resetCameraZoomState, closePhotoLightboxIfOpen } from "./info-panel.js";
 import { setupHomeButton } from "./ui/home.js";
 import { setupArchiveList } from "./ui/archive-list.js";
-import { setupAboutSheet } from "./ui/about.js?v=1";
+import { setupAboutSheet } from "./ui/about.js?v=2";
 import { setupPointCloudModal, clearPointCloudModal } from "./pointcloud/viewer.js";
 import { mountCustomToolbarButtons } from "./ui/toolbar.js";
 import { initHistoricalMaps, syncMapDisplayMode, setupMapGeometrySwitcher } from "./imagery/historical-maps.js?v=135";
