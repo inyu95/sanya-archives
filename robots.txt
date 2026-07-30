@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://inyu95.github.io/sanya-archives/sitemap.xml
+Sitemap: https://sanya-archives.studio-sputnik.com/sitemap.xml
