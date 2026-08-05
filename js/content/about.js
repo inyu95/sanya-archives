@@ -1,9 +1,10 @@
 import { ARCHIVE_CONTACT_EMAIL } from "../config/constants.js";
+import { SITE_DESCRIPTION } from "./site-meta.js";
 
 export const ABOUT_SECTIONS = [
   {
     title: "山谷アーカイブとは",
-    body: "山谷アーカイブ（San'ya Archives）は、山谷地域（現台東区北部地域）の記憶や生活の痕跡を、地図上でたどることができるデジタルアーカイブです。簡易宿泊所、酒場、商店街など、この場所での生活に結びついた記録を、様々な視点で閲覧することができます。"
+    body: SITE_DESCRIPTION
   },
   {
     title: "目的",

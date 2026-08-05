@@ -6,6 +6,7 @@
   "scripts": {
     "start": "npx --yes http-server -p 8080 -c-1",
     "dev": "npx --yes live-server --port=8080 --no-browser",
+    "sync-seo": "node scripts/sync-seo.cjs",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
