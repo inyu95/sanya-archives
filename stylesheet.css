@@ -2112,10 +2112,24 @@ span.cesium-sceneModePicker-wrapper {
   border: 1px solid var(--jdr-border);
   background: #f5f3ef;
   cursor: grab;
+  user-select: none;
 }
 
-#timeline-scroll:active {
+#timeline-scroll.is-dragging {
   cursor: grabbing;
+}
+
+#timeline-scroll-stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 100%;
+  min-height: 100%;
+  box-sizing: border-box;
+}
+
+#timeline-scroll.is-dragging #timeline-image {
+  pointer-events: none;
 }
 
 #timeline-image {
@@ -2124,6 +2138,8 @@ span.cesium-sceneModePicker-wrapper {
   height: auto;
   max-width: none;
   max-height: none;
+  -webkit-user-drag: none;
+  user-select: none;
 }
 
 .timeline-scroll-hint {

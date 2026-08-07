@@ -1,22 +1,41 @@
 import { dom } from "../config/dom.js";
 import { TIMELINE_IMAGE_URL } from "../config/constants.js";
 
-const MIN_ZOOM = 0.25;
-const MAX_ZOOM = 8;
-const ZOOM_STEP = 0.25;
+const MIN_DISPLAY_RATIO = 1;
+const MAX_DISPLAY_RATIO = 8;
+const ZOOM_STEP_RATIO = 0.25;
 
 let zoomLevel = 1;
+let fitZoom = 1;
 let pinchStartDistance = 0;
 let pinchStartZoom = 1;
+let dragState = null;
 
-function scrollTimelineToStart() {
-  if (!dom.timelineScroll) return;
-  dom.timelineScroll.scrollLeft = dom.timelineScroll.scrollWidth;
+function centerTimelineScroll() {
+  const scroll = dom.timelineScroll;
+  if (!scroll) return;
+  scroll.scrollLeft = Math.max(0, (scroll.scrollWidth - scroll.clientWidth) / 2);
+  scroll.scrollTop = Math.max(0, (scroll.scrollHeight - scroll.clientHeight) / 2);
+}
+
+function getFitZoom() {
+  const scroll = dom.timelineScroll;
+  const img = dom.timelineImage;
+  if (!scroll || !img || !img.naturalWidth) return 1;
+  return Math.min(
+    scroll.clientWidth / img.naturalWidth,
+    scroll.clientHeight / img.naturalHeight
+  );
+}
+
+function getDisplayZoomRatio() {
+  if (fitZoom <= 0) return 1;
+  return zoomLevel / fitZoom;
 }
 
 function updateZoomLabel() {
   if (!dom.timelineZoomLabel) return;
-  dom.timelineZoomLabel.textContent = `${Math.round(zoomLevel * 100)}%`;
+  dom.timelineZoomLabel.textContent = `${Math.round(getDisplayZoomRatio() * 100)}%`;
 }
 
 function applyTimelineZoom() {
@@ -31,7 +50,9 @@ function applyTimelineZoom() {
 function setTimelineZoom(newZoom, anchorX, anchorY) {
   const scroll = dom.timelineScroll;
   const prevZoom = zoomLevel;
-  zoomLevel = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, newZoom));
+  const minZoom = fitZoom * MIN_DISPLAY_RATIO;
+  const maxZoom = fitZoom * MAX_DISPLAY_RATIO;
+  zoomLevel = Math.min(maxZoom, Math.max(minZoom, newZoom));
 
   if (scroll && prevZoom !== zoomLevel && anchorX != null && anchorY != null) {
     const ratio = zoomLevel / prevZoom;
@@ -43,22 +64,10 @@ function setTimelineZoom(newZoom, anchorX, anchorY) {
 }
 
 function fitTimelineToView() {
-  const scroll = dom.timelineScroll;
-  const img = dom.timelineImage;
-  if (!scroll || !img || !img.naturalWidth) return;
-
-  zoomLevel = Math.min(
-    scroll.clientWidth / img.naturalWidth,
-    scroll.clientHeight / img.naturalHeight
-  );
+  fitZoom = getFitZoom();
+  zoomLevel = fitZoom;
   applyTimelineZoom();
-  scrollTimelineToStart();
-}
-
-function resetTimelineZoom() {
-  zoomLevel = 1;
-  applyTimelineZoom();
-  scrollTimelineToStart();
+  requestAnimationFrame(centerTimelineScroll);
 }
 
 function ensureTimelineImage() {
@@ -74,7 +83,7 @@ function openTimelineModal() {
   dom.timelineModal.classList.remove("hidden");
   dom.timelineModal.setAttribute("aria-hidden", "false");
   if (dom.timelineImage && dom.timelineImage.complete && dom.timelineImage.naturalWidth > 0) {
-    requestAnimationFrame(resetTimelineZoom);
+    requestAnimationFrame(fitTimelineToView);
   }
 }
 
@@ -82,12 +91,49 @@ function closeTimelineModal() {
   if (!dom.timelineModal) return;
   dom.timelineModal.classList.add("hidden");
   dom.timelineModal.setAttribute("aria-hidden", "true");
+  dragState = null;
+  if (dom.timelineScroll) dom.timelineScroll.classList.remove("is-dragging");
 }
 
 function getTouchDistance(touches) {
   const dx = touches[0].clientX - touches[1].clientX;
   const dy = touches[0].clientY - touches[1].clientY;
   return Math.hypot(dx, dy);
+}
+
+function setupTimelineDragPan() {
+  const scroll = dom.timelineScroll;
+  if (!scroll) return;
+
+  if (dom.timelineImage) {
+    dom.timelineImage.draggable = false;
+  }
+
+  scroll.addEventListener("mousedown", function (event) {
+    if (event.button !== 0) return;
+    dragState = {
+      startX: event.clientX,
+      startY: event.clientY,
+      scrollLeft: scroll.scrollLeft,
+      scrollTop: scroll.scrollTop
+    };
+    scroll.classList.add("is-dragging");
+    event.preventDefault();
+  });
+
+  document.addEventListener("mousemove", function (event) {
+    if (!dragState || !dom.timelineScroll) return;
+    if (!dom.timelineModal || dom.timelineModal.classList.contains("hidden")) return;
+
+    scroll.scrollLeft = dragState.scrollLeft - (event.clientX - dragState.startX);
+    scroll.scrollTop = dragState.scrollTop - (event.clientY - dragState.startY);
+  });
+
+  document.addEventListener("mouseup", function () {
+    if (!dragState) return;
+    dragState = null;
+    if (dom.timelineScroll) dom.timelineScroll.classList.remove("is-dragging");
+  });
 }
 
 function setupTimelineZoom() {
@@ -97,7 +143,7 @@ function setupTimelineZoom() {
     dom.timelineZoomIn.addEventListener("click", function () {
       const rect = dom.timelineScroll.getBoundingClientRect();
       setTimelineZoom(
-        zoomLevel + ZOOM_STEP,
+        zoomLevel + fitZoom * ZOOM_STEP_RATIO,
         rect.width / 2,
         rect.height / 2
       );
@@ -108,7 +154,7 @@ function setupTimelineZoom() {
     dom.timelineZoomOut.addEventListener("click", function () {
       const rect = dom.timelineScroll.getBoundingClientRect();
       setTimelineZoom(
-        zoomLevel - ZOOM_STEP,
+        zoomLevel - fitZoom * ZOOM_STEP_RATIO,
         rect.width / 2,
         rect.height / 2
       );
@@ -126,7 +172,7 @@ function setupTimelineZoom() {
     const rect = dom.timelineScroll.getBoundingClientRect();
     const anchorX = event.clientX - rect.left;
     const anchorY = event.clientY - rect.top;
-    const delta = event.deltaY > 0 ? -ZOOM_STEP : ZOOM_STEP;
+    const delta = event.deltaY > 0 ? -fitZoom * ZOOM_STEP_RATIO : fitZoom * ZOOM_STEP_RATIO;
     setTimelineZoom(zoomLevel + delta, anchorX, anchorY);
   }, { passive: false });
 
@@ -157,10 +203,11 @@ export function setupTimeline() {
   if (dom.timelineImage) {
     dom.timelineImage.addEventListener("load", function () {
       if (!dom.timelineModal || dom.timelineModal.classList.contains("hidden")) return;
-      requestAnimationFrame(resetTimelineZoom);
+      requestAnimationFrame(fitTimelineToView);
     });
   }
 
+  setupTimelineDragPan();
   setupTimelineZoom();
 
   [dom.timelineBtn, dom.startupTimelineBtn].forEach(function (btn) {
