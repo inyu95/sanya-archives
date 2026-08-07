@@ -7,13 +7,11 @@ export function mountCustomToolbarButtons() {
   if (!toolbar) return;
 
   const customButtons = [
+    dom.toolbarNavActions,
     dom.modeSwitcher,
     dom.mapGeometrySwitcher,
     dom.cameraCaptureBtn,
-    dom.aboutBtn,
-    dom.timelineBtn,
-    dom.archiveListBtn,
-    dom.homeBtn
+    dom.toolbarMetaActions
   ].filter(Boolean);
   if (customButtons.length === 0) return;
 
@@ -25,4 +23,9 @@ export function mountCustomToolbarButtons() {
   customButtons.slice().reverse().forEach(function (btn) {
     toolbar.insertBefore(btn, firstCesiumButton || null);
   });
+}
+
+export function syncToolbarMetaActionsVisibility() {
+  if (!dom.toolbarMetaActions) return;
+  dom.toolbarMetaActions.classList.toggle("hidden", !state.appMode);
 }

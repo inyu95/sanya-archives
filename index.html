@@ -93,21 +93,25 @@
 
     <button id="camera-capture-btn" class="cesium-toolbar-btn cesium-toolbar-btn--text hidden" type="button" title="現在の視点をコピー（Ctrl+Shift+C）">視点コピー</button>
 
-    <button id="about-btn" class="cesium-toolbar-btn cesium-toolbar-btn--text" type="button" title="山谷アーカイブの概要を表示">山谷アーカイブについて</button>
+    <div id="toolbar-meta-actions" class="toolbar-meta-actions hidden">
+      <button id="about-btn" class="cesium-toolbar-btn" type="button" aria-label="山谷アーカイブについて" title="山谷アーカイブの概要を表示">
+        <img class="toolbar-about-icon" src="assets/favicon-48.png" width="20" height="20" alt="" aria-hidden="true">
+      </button>
+      <button id="timeline-btn" class="cesium-toolbar-btn cesium-toolbar-btn--text" type="button" title="山谷地域の年表を表示">年表</button>
+    </div>
 
-    <button id="timeline-btn" class="cesium-toolbar-btn cesium-toolbar-btn--text" type="button" title="山谷地域の年表を表示">年表</button>
-
-    <button id="archive-list-btn" class="cesium-toolbar-btn hidden" type="button" aria-label="アーカイブ一覧" title="登録された場所の一覧を表示">
-      <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
-        <path fill="currentColor" d="M3 5h18v2H3V5zm0 6h18v2H3v-2zm0 6h18v2H3v-2z"/>
-      </svg>
-    </button>
-
-    <button id="home-btn" class="cesium-toolbar-btn" type="button" aria-label="初期ビューに戻る" title="全体が見える初期の視点に戻る">
-      <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
-        <path fill="currentColor" d="M12 3L2 12h3v8h6v-6h2v6h6v-8h3L12 3z"/>
-      </svg>
-    </button>
+    <div id="toolbar-nav-actions" class="toolbar-nav-actions">
+      <button id="home-btn" class="cesium-toolbar-btn" type="button" aria-label="初期ビューに戻る" title="全体が見える初期の視点に戻る">
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+          <path fill="currentColor" d="M12 3L2 12h3v8h6v-6h2v6h6v-8h3L12 3z"/>
+        </svg>
+      </button>
+      <button id="archive-list-btn" class="cesium-toolbar-btn hidden" type="button" aria-label="アーカイブ一覧" title="登録された場所の一覧を表示">
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+          <path fill="currentColor" d="M3 5h18v2H3V5zm0 6h18v2H3v-2zm0 6h18v2H3v-2z"/>
+        </svg>
+      </button>
+    </div>
 
     <div id="archive-list-panel" class="hidden">
       <div id="archive-list-header">

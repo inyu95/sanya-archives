@@ -12,7 +12,7 @@ import {
   filterMemoryPhotosByQuery
 } from "../memory/memory-pins.js";
 import { applyFilters, renderYearFilterBar } from "../filters/filters.js?v=99";
-import { applyHistoricalMapLayer, getCurrentMapYear } from "../imagery/historical-maps.js";
+import { syncToolbarMetaActionsVisibility } from "../ui/toolbar.js";
 
 function setElementHidden(el, hidden) {
   if (!el) return;
@@ -186,6 +186,7 @@ export function setAppMode(mode, opts) {
   document.body.dataset.appMode = state.appMode || "";
   setElementHidden(dom.modeSwitcher, false);
   setElementHidden(dom.mapGeometrySwitcher, false);
+  syncToolbarMetaActionsVisibility();
   hideStartupOverlay();
 }
 
@@ -209,6 +210,7 @@ export function setupModeSwitcher() {
   setElementHidden(dom.modeSwitcher, true);
   setElementHidden(dom.mapGeometrySwitcher, true);
   updateLifeChrome(false);
+  syncToolbarMetaActionsVisibility();
 
   if (dom.modeSelectLife) {
     dom.modeSelectLife.addEventListener("click", function () {

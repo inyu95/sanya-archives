@@ -16,7 +16,7 @@ import { setupArchiveList } from "./ui/archive-list.js";
 import { setupAboutSheet } from "./ui/about.js?v=2";
 import { setupTimeline } from "./ui/timeline.js";
 import { setupPointCloudModal, clearPointCloudModal } from "./pointcloud/viewer.js";
-import { mountCustomToolbarButtons } from "./ui/toolbar.js";
+import { mountCustomToolbarButtons, syncToolbarMetaActionsVisibility } from "./ui/toolbar.js";
 import { initHistoricalMaps, syncMapDisplayMode, setupMapGeometrySwitcher } from "./imagery/historical-maps.js?v=135";
 import { refreshPinsForMapMode } from "./pins/pins.js";
 import { invalidatePinHeightCache } from "./pins/pin-heights.js";
@@ -468,6 +468,7 @@ function init() {
   // 水平寄りのチルトがドラッグ終了後に浅い俯瞰へ戻ることがあるためオフにする
   state.viewer.scene.screenSpaceCameraController.enableCollisionDetection = false;
   mountCustomToolbarButtons();
+  syncToolbarMetaActionsVisibility();
   setupModeSwitcher();
   setupMapGeometrySwitcher();
   setupCameraCapture();

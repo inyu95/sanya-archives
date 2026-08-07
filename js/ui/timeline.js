@@ -3,34 +3,37 @@ import { TIMELINE_IMAGE_URL } from "../config/constants.js";
 
 const MIN_DISPLAY_RATIO = 1;
 const MAX_DISPLAY_RATIO = 8;
-const ZOOM_STEP_RATIO = 0.25;
+const ZOOM_BUTTON_FACTOR = 1.2;
+const WHEEL_ZOOM_SENSITIVITY = 0.0015;
 
-let zoomLevel = 1;
-let fitZoom = 1;
-let pinchStartDistance = 0;
-let pinchStartZoom = 1;
+let scale = 1;
+let fitScale = 1;
+let panX = 0;
+let panY = 0;
 let dragState = null;
+let pinchStartDistance = 0;
+let pinchStartScale = 1;
+let rafId = 0;
 
-function centerTimelineScroll() {
-  const scroll = dom.timelineScroll;
-  if (!scroll) return;
-  scroll.scrollLeft = Math.max(0, (scroll.scrollWidth - scroll.clientWidth) / 2);
-  scroll.scrollTop = Math.max(0, (scroll.scrollHeight - scroll.clientHeight) / 2);
+function getViewportSize() {
+  const viewport = dom.timelineScroll;
+  if (!viewport) return { width: 0, height: 0 };
+  return {
+    width: viewport.clientWidth,
+    height: viewport.clientHeight
+  };
 }
 
-function getFitZoom() {
-  const scroll = dom.timelineScroll;
+function getFitScale() {
   const img = dom.timelineImage;
-  if (!scroll || !img || !img.naturalWidth) return 1;
-  return Math.min(
-    scroll.clientWidth / img.naturalWidth,
-    scroll.clientHeight / img.naturalHeight
-  );
+  const { width, height } = getViewportSize();
+  if (!img || !img.naturalWidth || !width || !height) return 1;
+  return Math.min(width / img.naturalWidth, height / img.naturalHeight);
 }
 
 function getDisplayZoomRatio() {
-  if (fitZoom <= 0) return 1;
-  return zoomLevel / fitZoom;
+  if (fitScale <= 0) return 1;
+  return scale / fitScale;
 }
 
 function updateZoomLabel() {
@@ -38,36 +41,64 @@ function updateZoomLabel() {
   dom.timelineZoomLabel.textContent = `${Math.round(getDisplayZoomRatio() * 100)}%`;
 }
 
-function applyTimelineZoom() {
-  const img = dom.timelineImage;
-  if (!img || !img.naturalWidth) return;
-
-  img.style.width = `${Math.round(img.naturalWidth * zoomLevel)}px`;
-  img.style.height = `${Math.round(img.naturalHeight * zoomLevel)}px`;
+function applyTransform() {
+  const stage = dom.timelineScrollStage;
+  if (!stage) return;
+  stage.style.transform = `translate3d(${panX}px, ${panY}px, 0) scale(${scale})`;
   updateZoomLabel();
 }
 
-function setTimelineZoom(newZoom, anchorX, anchorY) {
-  const scroll = dom.timelineScroll;
-  const prevZoom = zoomLevel;
-  const minZoom = fitZoom * MIN_DISPLAY_RATIO;
-  const maxZoom = fitZoom * MAX_DISPLAY_RATIO;
-  zoomLevel = Math.min(maxZoom, Math.max(minZoom, newZoom));
+function setImageNaturalSize() {
+  const img = dom.timelineImage;
+  if (!img || !img.naturalWidth) return;
+  img.style.width = `${img.naturalWidth}px`;
+  img.style.height = `${img.naturalHeight}px`;
+}
 
-  if (scroll && prevZoom !== zoomLevel && anchorX != null && anchorY != null) {
-    const ratio = zoomLevel / prevZoom;
-    scroll.scrollLeft = (scroll.scrollLeft + anchorX) * ratio - anchorX;
-    scroll.scrollTop = (scroll.scrollTop + anchorY) * ratio - anchorY;
-  }
+function centerPan() {
+  const img = dom.timelineImage;
+  const { width, height } = getViewportSize();
+  if (!img || !img.naturalWidth || !width || !height) return;
+  panX = (width - img.naturalWidth * scale) / 2;
+  panY = (height - img.naturalHeight * scale) / 2;
+  applyTransform();
+}
 
-  applyTimelineZoom();
+function clampScale(nextScale) {
+  const minScale = fitScale * MIN_DISPLAY_RATIO;
+  const maxScale = fitScale * MAX_DISPLAY_RATIO;
+  return Math.min(maxScale, Math.max(minScale, nextScale));
+}
+
+function zoomAt(viewportX, viewportY, nextScale) {
+  const clamped = clampScale(nextScale);
+  if (clamped === scale) return;
+
+  const worldX = (viewportX - panX) / scale;
+  const worldY = (viewportY - panY) / scale;
+  scale = clamped;
+  panX = viewportX - worldX * scale;
+  panY = viewportY - worldY * scale;
+  applyTransform();
 }
 
 function fitTimelineToView() {
-  fitZoom = getFitZoom();
-  zoomLevel = fitZoom;
-  applyTimelineZoom();
-  requestAnimationFrame(centerTimelineScroll);
+  fitScale = getFitScale();
+  scale = fitScale;
+  centerPan();
+}
+
+function revealTimelineView() {
+  fitTimelineToView();
+  if (dom.timelineScroll) {
+    dom.timelineScroll.classList.add("timeline-view--ready");
+  }
+}
+
+function prepareTimelineView() {
+  if (dom.timelineScroll) {
+    dom.timelineScroll.classList.remove("timeline-view--ready");
+  }
 }
 
 function ensureTimelineImage() {
@@ -80,10 +111,12 @@ function ensureTimelineImage() {
 function openTimelineModal() {
   if (!dom.timelineModal) return;
   ensureTimelineImage();
+  prepareTimelineView();
   dom.timelineModal.classList.remove("hidden");
   dom.timelineModal.setAttribute("aria-hidden", "false");
   if (dom.timelineImage && dom.timelineImage.complete && dom.timelineImage.naturalWidth > 0) {
-    requestAnimationFrame(fitTimelineToView);
+    revealTimelineView();
+    requestAnimationFrame(revealTimelineView);
   }
 }
 
@@ -91,6 +124,7 @@ function closeTimelineModal() {
   if (!dom.timelineModal) return;
   dom.timelineModal.classList.add("hidden");
   dom.timelineModal.setAttribute("aria-hidden", "true");
+  prepareTimelineView();
   dragState = null;
   if (dom.timelineScroll) dom.timelineScroll.classList.remove("is-dragging");
 }
@@ -101,63 +135,80 @@ function getTouchDistance(touches) {
   return Math.hypot(dx, dy);
 }
 
+function updateDragPan() {
+  rafId = 0;
+  if (!dragState) return;
+
+  panX = dragState.startPanX + (dragState.clientX - dragState.startX);
+  panY = dragState.startPanY + (dragState.clientY - dragState.startY);
+  applyTransform();
+}
+
+function queueDragPan(clientX, clientY) {
+  if (!dragState) return;
+  dragState.clientX = clientX;
+  dragState.clientY = clientY;
+  if (!rafId) {
+    rafId = requestAnimationFrame(updateDragPan);
+  }
+}
+
 function setupTimelineDragPan() {
-  const scroll = dom.timelineScroll;
-  if (!scroll) return;
+  const viewport = dom.timelineScroll;
+  if (!viewport) return;
 
   if (dom.timelineImage) {
     dom.timelineImage.draggable = false;
   }
 
-  scroll.addEventListener("mousedown", function (event) {
+  viewport.addEventListener("pointerdown", function (event) {
     if (event.button !== 0) return;
     dragState = {
       startX: event.clientX,
       startY: event.clientY,
-      scrollLeft: scroll.scrollLeft,
-      scrollTop: scroll.scrollTop
+      clientX: event.clientX,
+      clientY: event.clientY,
+      startPanX: panX,
+      startPanY: panY
     };
-    scroll.classList.add("is-dragging");
+    viewport.classList.add("is-dragging");
+    viewport.setPointerCapture(event.pointerId);
     event.preventDefault();
   });
 
-  document.addEventListener("mousemove", function (event) {
-    if (!dragState || !dom.timelineScroll) return;
-    if (!dom.timelineModal || dom.timelineModal.classList.contains("hidden")) return;
-
-    scroll.scrollLeft = dragState.scrollLeft - (event.clientX - dragState.startX);
-    scroll.scrollTop = dragState.scrollTop - (event.clientY - dragState.startY);
+  viewport.addEventListener("pointermove", function (event) {
+    if (!dragState || !viewport.hasPointerCapture(event.pointerId)) return;
+    queueDragPan(event.clientX, event.clientY);
   });
 
-  document.addEventListener("mouseup", function () {
+  function endDrag(event) {
     if (!dragState) return;
+    if (event && viewport.hasPointerCapture(event.pointerId)) {
+      viewport.releasePointerCapture(event.pointerId);
+    }
     dragState = null;
-    if (dom.timelineScroll) dom.timelineScroll.classList.remove("is-dragging");
-  });
+    viewport.classList.remove("is-dragging");
+  }
+
+  viewport.addEventListener("pointerup", endDrag);
+  viewport.addEventListener("pointercancel", endDrag);
 }
 
 function setupTimelineZoom() {
-  if (!dom.timelineScroll) return;
+  const viewport = dom.timelineScroll;
+  if (!viewport) return;
 
   if (dom.timelineZoomIn) {
     dom.timelineZoomIn.addEventListener("click", function () {
-      const rect = dom.timelineScroll.getBoundingClientRect();
-      setTimelineZoom(
-        zoomLevel + fitZoom * ZOOM_STEP_RATIO,
-        rect.width / 2,
-        rect.height / 2
-      );
+      const { width, height } = getViewportSize();
+      zoomAt(width / 2, height / 2, scale * ZOOM_BUTTON_FACTOR);
     });
   }
 
   if (dom.timelineZoomOut) {
     dom.timelineZoomOut.addEventListener("click", function () {
-      const rect = dom.timelineScroll.getBoundingClientRect();
-      setTimelineZoom(
-        zoomLevel - fitZoom * ZOOM_STEP_RATIO,
-        rect.width / 2,
-        rect.height / 2
-      );
+      const { width, height } = getViewportSize();
+      zoomAt(width / 2, height / 2, scale / ZOOM_BUTTON_FACTOR);
     });
   }
 
@@ -165,36 +216,36 @@ function setupTimelineZoom() {
     dom.timelineZoomFit.addEventListener("click", fitTimelineToView);
   }
 
-  dom.timelineScroll.addEventListener("wheel", function (event) {
+  viewport.addEventListener("wheel", function (event) {
     if (!dom.timelineModal || dom.timelineModal.classList.contains("hidden")) return;
     event.preventDefault();
 
-    const rect = dom.timelineScroll.getBoundingClientRect();
+    const rect = viewport.getBoundingClientRect();
     const anchorX = event.clientX - rect.left;
     const anchorY = event.clientY - rect.top;
-    const delta = event.deltaY > 0 ? -fitZoom * ZOOM_STEP_RATIO : fitZoom * ZOOM_STEP_RATIO;
-    setTimelineZoom(zoomLevel + delta, anchorX, anchorY);
+    const factor = Math.exp(-event.deltaY * WHEEL_ZOOM_SENSITIVITY);
+    zoomAt(anchorX, anchorY, scale * factor);
   }, { passive: false });
 
-  dom.timelineScroll.addEventListener("touchstart", function (event) {
+  viewport.addEventListener("touchstart", function (event) {
     if (event.touches.length === 2) {
       pinchStartDistance = getTouchDistance(event.touches);
-      pinchStartZoom = zoomLevel;
+      pinchStartScale = scale;
     }
   }, { passive: true });
 
-  dom.timelineScroll.addEventListener("touchmove", function (event) {
+  viewport.addEventListener("touchmove", function (event) {
     if (event.touches.length !== 2 || pinchStartDistance <= 0) return;
 
     event.preventDefault();
     const distance = getTouchDistance(event.touches);
-    const rect = dom.timelineScroll.getBoundingClientRect();
+    const rect = viewport.getBoundingClientRect();
     const anchorX = (event.touches[0].clientX + event.touches[1].clientX) / 2 - rect.left;
     const anchorY = (event.touches[0].clientY + event.touches[1].clientY) / 2 - rect.top;
-    setTimelineZoom(pinchStartZoom * (distance / pinchStartDistance), anchorX, anchorY);
+    zoomAt(anchorX, anchorY, pinchStartScale * (distance / pinchStartDistance));
   }, { passive: false });
 
-  dom.timelineScroll.addEventListener("touchend", function () {
+  viewport.addEventListener("touchend", function () {
     pinchStartDistance = 0;
   });
 }
@@ -202,9 +253,15 @@ function setupTimelineZoom() {
 export function setupTimeline() {
   if (dom.timelineImage) {
     dom.timelineImage.addEventListener("load", function () {
+      setImageNaturalSize();
       if (!dom.timelineModal || dom.timelineModal.classList.contains("hidden")) return;
-      requestAnimationFrame(fitTimelineToView);
+      prepareTimelineView();
+      requestAnimationFrame(revealTimelineView);
     });
+
+    if (dom.timelineImage.complete && dom.timelineImage.naturalWidth > 0) {
+      setImageNaturalSize();
+    }
   }
 
   setupTimelineDragPan();

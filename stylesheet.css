@@ -252,12 +252,44 @@ body:has(#year-filter-bar:not(.hidden)) {
 }
 
 /* Cesium ツールバーへ移す前は body 直下で一瞬見えるため隠す */
-body > #about-btn,
-body > #timeline-btn,
-body > #home-btn,
-body > #archive-list-btn,
+body > #toolbar-nav-actions,
+body > #toolbar-meta-actions,
 body > #camera-capture-btn {
   display: none !important;
+}
+
+.toolbar-nav-actions,
+.toolbar-meta-actions {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 0;
+  height: 32px;
+  margin: 1px 2px;
+  vertical-align: middle;
+}
+
+.toolbar-nav-actions .cesium-toolbar-btn,
+.toolbar-meta-actions .cesium-toolbar-btn {
+  margin: 0;
+  flex-shrink: 0;
+}
+
+.toolbar-nav-actions .cesium-toolbar-btn + .cesium-toolbar-btn,
+.toolbar-meta-actions .cesium-toolbar-btn + .cesium-toolbar-btn {
+  margin-left: 4px;
+}
+
+.toolbar-meta-actions.hidden {
+  display: none !important;
+}
+
+.toolbar-about-icon {
+  display: block;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  object-fit: cover;
 }
 
 #home-btn,
@@ -268,6 +300,8 @@ body > #camera-capture-btn {
   box-sizing: border-box;
   width: 32px;
   height: 32px;
+  min-height: 32px;
+  max-height: 32px;
   padding: 0;
   margin: 1px 2px;
   vertical-align: middle;
@@ -279,6 +313,7 @@ body > #camera-capture-btn {
   backdrop-filter: blur(8px);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
   transition: background 0.15s, border-color 0.15s, color 0.15s;
+  flex-shrink: 0;
 }
 
 #home-btn:hover,
@@ -298,6 +333,8 @@ body > #camera-capture-btn {
   width: auto;
   min-width: 32px;
   height: 32px;
+  min-height: 32px;
+  max-height: 32px;
   padding: 0 10px;
   border-radius: 6px;
   font-size: 11px;
@@ -1827,6 +1864,25 @@ body > #camera-capture-btn {
   z-index: 200;
 }
 
+body[data-app-mode="life"] .cesium-viewer-toolbar,
+body[data-app-mode="memory"] .cesium-viewer-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+}
+
+body[data-app-mode="life"] .cesium-viewer-toolbar > *,
+body[data-app-mode="memory"] .cesium-viewer-toolbar > * {
+  flex-shrink: 0;
+  align-self: center;
+}
+
+body[data-app-mode="life"] .cesium-viewer-toolbar .cesium-button,
+body[data-app-mode="memory"] .cesium-viewer-toolbar .cesium-button {
+  margin-top: 1px;
+  margin-bottom: 1px;
+}
+
 /* モード未選択（初期画面）では右上ツールバーを隠す */
 body:not([data-app-mode="life"]):not([data-app-mode="memory"]) .cesium-viewer-toolbar {
   display: none !important;
@@ -2107,8 +2163,8 @@ span.cesium-sceneModePicker-wrapper {
 #timeline-scroll {
   flex: 1;
   min-height: 240px;
-  overflow: auto;
-  -webkit-overflow-scrolling: touch;
+  overflow: hidden;
+  touch-action: none;
   border: 1px solid var(--jdr-border);
   background: #f5f3ef;
   cursor: grab;
@@ -2119,13 +2175,17 @@ span.cesium-sceneModePicker-wrapper {
   cursor: grabbing;
 }
 
+#timeline-scroll:not(.timeline-view--ready) #timeline-scroll-stage {
+  visibility: hidden;
+}
+
 #timeline-scroll-stage {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 100%;
-  min-height: 100%;
-  box-sizing: border-box;
+  transform-origin: 0 0;
+  will-change: transform;
+}
+
+#timeline-scroll.is-dragging #timeline-scroll-stage {
+  will-change: transform;
 }
 
 #timeline-scroll.is-dragging #timeline-image {
@@ -2140,6 +2200,7 @@ span.cesium-sceneModePicker-wrapper {
   max-height: none;
   -webkit-user-drag: none;
   user-select: none;
+  pointer-events: none;
 }
 
 .timeline-scroll-hint {
@@ -2344,6 +2405,17 @@ span.cesium-sceneModePicker-wrapper {
     line-height: 1;
     height: 32px;
     min-height: 32px;
+    max-height: 32px;
+  }
+
+  .toolbar-meta-actions .cesium-toolbar-btn--text {
+    padding: 0 5px;
+    font-size: 9px;
+  }
+
+  .toolbar-nav-actions .cesium-toolbar-btn + .cesium-toolbar-btn,
+  .toolbar-meta-actions .cesium-toolbar-btn + .cesium-toolbar-btn {
+    margin-left: 2px;
   }
 
   #photo-modal,
