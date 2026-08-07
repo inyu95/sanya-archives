@@ -1895,11 +1895,6 @@ body:not([data-app-mode="life"]):not([data-app-mode="memory"]) .cesium-viewer-to
   z-index: 300;
 }
 
-span.cesium-sceneModePicker-wrapper {
-  position: relative;
-  z-index: 200;
-}
-
 /* 全画面ボタンは常に固定位置 */
 .cesium-viewer-fullscreenContainer {
   right: 8px;

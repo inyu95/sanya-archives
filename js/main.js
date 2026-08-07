@@ -434,7 +434,7 @@ function init() {
     animation: false,
     timeline: false,
     homeButton: false,
-    sceneModePicker: true,
+    sceneModePicker: false,
     baseLayerPicker: false,
     navigationHelpButton: true,
     navigationInstructionsInitiallyVisible: false,
