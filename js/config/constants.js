@@ -82,3 +82,4 @@ export function getAppBasePath() {
 export const ASSETS_PHOTOS_BASE = getAppBasePath() + "assets/photos/";
 export const ASSETS_MEMORIES_BASE = getAppBasePath() + "assets/memories/";
 export const ASSETS_ICONS_BASE = getAppBasePath() + "assets/icons/";
+export const TIMELINE_IMAGE_URL = getAppBasePath() + "assets/timeline/sanya-timeline.png";

@@ -14,6 +14,7 @@ import { setupInfoPanel, showPinInfo, hidePinInfo, resetCameraZoomState, closePh
 import { setupHomeButton } from "./ui/home.js";
 import { setupArchiveList } from "./ui/archive-list.js";
 import { setupAboutSheet } from "./ui/about.js?v=2";
+import { setupTimeline } from "./ui/timeline.js";
 import { setupPointCloudModal, clearPointCloudModal } from "./pointcloud/viewer.js";
 import { mountCustomToolbarButtons } from "./ui/toolbar.js";
 import { initHistoricalMaps, syncMapDisplayMode, setupMapGeometrySwitcher } from "./imagery/historical-maps.js?v=135";
@@ -478,6 +479,7 @@ function init() {
   setupHomeButton();
   setupArchiveList();
   setupAboutSheet();
+  setupTimeline();
   setupPointCloudModal();
 
   setStatus("地図データとピンを読み込み中...");

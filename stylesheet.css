@@ -143,7 +143,7 @@ body:has(#year-filter-bar:not(.hidden)) {
 }
 
 .startup-about-btn {
-  margin-top: 20px;
+  margin-top: 0;
   padding: 8px 16px;
   border: none;
   background: transparent;
@@ -163,6 +163,14 @@ body:has(#year-filter-bar:not(.hidden)) {
 .startup-about-btn:focus-visible {
   outline: 2px solid #fff;
   outline-offset: 3px;
+}
+
+.startup-secondary-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-top: 20px;
 }
 
 .mode-switcher {
@@ -245,6 +253,7 @@ body:has(#year-filter-bar:not(.hidden)) {
 
 /* Cesium ツールバーへ移す前は body 直下で一瞬見えるため隠す */
 body > #about-btn,
+body > #timeline-btn,
 body > #home-btn,
 body > #archive-list-btn,
 body > #camera-capture-btn {
@@ -1962,6 +1971,127 @@ span.cesium-sceneModePicker-wrapper {
   text-decoration: underline;
 }
 
+/* ── 年表 ── */
+
+#timeline-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 530;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  box-sizing: border-box;
+  pointer-events: auto;
+}
+
+#timeline-modal.hidden {
+  display: none;
+}
+
+#timeline-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(2px);
+}
+
+#timeline-modal-dialog {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  width: min(96vw, 1400px);
+  max-height: min(92vh, 900px);
+  border-radius: 0;
+  overflow: hidden;
+  background: var(--jdr-surface);
+  border: 1px solid var(--jdr-border);
+  box-shadow: var(--jdr-shadow);
+}
+
+#timeline-modal-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  flex-shrink: 0;
+  padding: 14px 18px;
+  background: var(--jdr-surface);
+  color: var(--jdr-text);
+  border-bottom: 1px solid var(--jdr-border);
+}
+
+.timeline-modal-heading {
+  flex: 1;
+  min-width: 0;
+}
+
+#timeline-modal-header h2 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.timeline-modal-subtitle {
+  margin: 4px 0 0;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--jdr-text-muted);
+}
+
+#timeline-modal-close {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: var(--jdr-text-muted);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+#timeline-modal-close:hover {
+  color: var(--jdr-text);
+}
+
+#timeline-modal-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  padding: 12px 14px 14px;
+}
+
+#timeline-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  border: 1px solid var(--jdr-border);
+  background: #f5f3ef;
+}
+
+#timeline-image {
+  display: block;
+  height: auto;
+  max-height: calc(92vh - 140px);
+  width: auto;
+}
+
+.timeline-scroll-hint {
+  flex-shrink: 0;
+  margin: 8px 0 0;
+  font-size: 11px;
+  line-height: 1.4;
+  text-align: center;
+  color: var(--jdr-text-muted);
+}
+
 /* ── デスクトップ: フィルターは常に展開 ── */
 
 @media (min-width: 769px) {
@@ -2159,8 +2289,18 @@ span.cesium-sceneModePicker-wrapper {
 
   #photo-modal,
   #pointcloud-modal,
-  #about-sheet {
+  #about-sheet,
+  #timeline-modal {
     padding: 12px;
+  }
+
+  #timeline-modal-dialog {
+    width: 100%;
+    max-height: calc(100vh - 24px);
+  }
+
+  #timeline-image {
+    max-height: calc(100vh - 160px);
   }
 
   /* 記憶モード等：検索ボックス・年代バーと被らないようモーダル高さを調整 */

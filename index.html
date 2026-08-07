@@ -57,7 +57,7 @@
     <meta http-equiv="Expires" content="0">
 
     <link rel="stylesheet" href="node_modules/cesium/Build/Cesium/Widgets/widgets.css">
-    <link rel="stylesheet" href="stylesheet.css?v=26">
+    <link rel="stylesheet" href="stylesheet.css?v=27">
   </head>
 
   <body>
@@ -75,7 +75,10 @@
           <span class="startup-mode-btn-desc">山谷地域の過去と現代の風景<br>（過去写真）</span>
         </button>
       </div>
-      <button id="startup-about-btn" type="button" class="startup-about-btn">山谷アーカイブについて</button>
+      <div class="startup-secondary-actions">
+        <button id="startup-about-btn" type="button" class="startup-about-btn">山谷アーカイブについて</button>
+        <button id="startup-timeline-btn" type="button" class="startup-about-btn">年表</button>
+      </div>
     </div>
 
     <div id="mode-switcher" class="mode-switcher hidden" role="group" aria-label="モードの切替">
@@ -91,6 +94,8 @@
     <button id="camera-capture-btn" class="cesium-toolbar-btn cesium-toolbar-btn--text hidden" type="button" title="現在の視点をコピー（Ctrl+Shift+C）">視点コピー</button>
 
     <button id="about-btn" class="cesium-toolbar-btn cesium-toolbar-btn--text" type="button" title="山谷アーカイブの概要を表示">山谷アーカイブについて</button>
+
+    <button id="timeline-btn" class="cesium-toolbar-btn cesium-toolbar-btn--text" type="button" title="山谷地域の年表を表示">年表</button>
 
     <button id="archive-list-btn" class="cesium-toolbar-btn hidden" type="button" aria-label="アーカイブ一覧" title="登録された場所の一覧を表示">
       <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
@@ -236,6 +241,25 @@
             <figcaption id="photo-modal-caption" class="image-caption hidden"></figcaption>
           </figure>
           <button id="photo-modal-next" type="button" aria-label="次の写真">›</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="timeline-modal" class="hidden" aria-hidden="true">
+      <div id="timeline-modal-backdrop"></div>
+      <div id="timeline-modal-dialog">
+        <div id="timeline-modal-header">
+          <div class="timeline-modal-heading">
+            <h2>年表</h2>
+            <p class="timeline-modal-subtitle">山谷地域における寄せ場空間の変遷 — 政治・都市・生活</p>
+          </div>
+          <button id="timeline-modal-close" type="button" aria-label="閉じる">×</button>
+        </div>
+        <div id="timeline-modal-body">
+          <div id="timeline-scroll" tabindex="0" role="region" aria-label="年表（横スクロール）">
+            <img id="timeline-image" alt="1850年代から2020年代までの山谷地域の年表。政治・都市・生活の変遷を時系列で示した横長の図表。" loading="lazy">
+          </div>
+          <p class="timeline-scroll-hint">← 横にスクロールして閲覧できます →</p>
         </div>
       </div>
     </div>

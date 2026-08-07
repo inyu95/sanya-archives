@@ -11,6 +11,7 @@ export function mountCustomToolbarButtons() {
     dom.mapGeometrySwitcher,
     dom.cameraCaptureBtn,
     dom.aboutBtn,
+    dom.timelineBtn,
     dom.archiveListBtn,
     dom.homeBtn
   ].filter(Boolean);
