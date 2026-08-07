@@ -253,13 +253,19 @@
             <h2>年表</h2>
             <p class="timeline-modal-subtitle">山谷地域における寄せ場空間の変遷 — 政治・都市・生活</p>
           </div>
+          <div class="timeline-zoom-controls">
+            <button id="timeline-zoom-out" type="button" aria-label="縮小">−</button>
+            <span id="timeline-zoom-label" aria-live="polite">100%</span>
+            <button id="timeline-zoom-in" type="button" aria-label="拡大">＋</button>
+            <button id="timeline-zoom-fit" type="button">全体表示</button>
+          </div>
           <button id="timeline-modal-close" type="button" aria-label="閉じる">×</button>
         </div>
         <div id="timeline-modal-body">
-          <div id="timeline-scroll" tabindex="0" role="region" aria-label="年表（横スクロール）">
+          <div id="timeline-scroll" tabindex="0" role="region" aria-label="年表（拡大・スクロール）">
             <img id="timeline-image" alt="1850年代から2020年代までの山谷地域の年表。政治・都市・生活の変遷を時系列で示した横長の図表。" decoding="async">
           </div>
-          <p class="timeline-scroll-hint">← 横にスクロールして閲覧できます →</p>
+          <p class="timeline-scroll-hint">← スクロールで移動 · ホイールまたは＋/−で拡大縮小 →</p>
         </div>
       </div>
     </div>

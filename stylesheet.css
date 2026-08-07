@@ -2067,21 +2067,63 @@ span.cesium-sceneModePicker-wrapper {
   padding: 12px 14px 14px;
 }
 
+.timeline-zoom-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.timeline-zoom-controls button {
+  min-width: 32px;
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid var(--jdr-border);
+  border-radius: 0;
+  background: var(--jdr-surface);
+  color: var(--jdr-text);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.timeline-zoom-controls button:hover {
+  background: var(--jdr-surface-hover, #f0eeea);
+}
+
+#timeline-zoom-fit {
+  font-size: 11px;
+  padding: 0 10px;
+}
+
+#timeline-zoom-label {
+  min-width: 44px;
+  font-size: 11px;
+  text-align: center;
+  color: var(--jdr-text-muted);
+  user-select: none;
+}
+
 #timeline-scroll {
   flex: 1;
   min-height: 240px;
-  overflow-x: auto;
-  overflow-y: hidden;
+  overflow: auto;
   -webkit-overflow-scrolling: touch;
   border: 1px solid var(--jdr-border);
   background: #f5f3ef;
+  cursor: grab;
+}
+
+#timeline-scroll:active {
+  cursor: grabbing;
 }
 
 #timeline-image {
   display: block;
-  height: auto;
-  max-height: calc(92vh - 140px);
   width: auto;
+  height: auto;
+  max-width: none;
+  max-height: none;
 }
 
 .timeline-scroll-hint {
@@ -2301,8 +2343,28 @@ span.cesium-sceneModePicker-wrapper {
     max-height: calc(100vh - 24px);
   }
 
-  #timeline-image {
-    max-height: calc(100vh - 160px);
+  #timeline-modal-header {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .timeline-modal-heading {
+    flex: 1 1 100%;
+  }
+
+  .timeline-zoom-controls {
+    margin-right: auto;
+  }
+
+  .timeline-zoom-controls button {
+    min-width: 28px;
+    height: 28px;
+    font-size: 14px;
+  }
+
+  #timeline-zoom-fit {
+    font-size: 10px;
+    padding: 0 6px;
   }
 
   /* 記憶モード等：検索ボックス・年代バーと被らないようモーダル高さを調整 */
