@@ -31,7 +31,7 @@ function ensureCreatorFooter() {
 
   const footer = document.createElement("p");
   footer.className = "about-sheet-creator-link";
-  footer.appendChild(document.createTextNode("制作者 : "));
+  footer.appendChild(document.createTextNode("制作者HP : "));
   const link = document.createElement("a");
   link.href = ARCHIVE_CREATOR_URL;
   link.target = "_blank";
