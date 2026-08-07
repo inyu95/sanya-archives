@@ -6,11 +6,21 @@ function scrollTimelineToStart() {
   dom.timelineScroll.scrollLeft = dom.timelineScroll.scrollWidth;
 }
 
+function ensureTimelineImage() {
+  if (!dom.timelineImage) return;
+  if (dom.timelineImage.dataset.src === TIMELINE_IMAGE_URL) return;
+  dom.timelineImage.dataset.src = TIMELINE_IMAGE_URL;
+  dom.timelineImage.src = TIMELINE_IMAGE_URL;
+}
+
 function openTimelineModal() {
   if (!dom.timelineModal) return;
+  ensureTimelineImage();
   dom.timelineModal.classList.remove("hidden");
   dom.timelineModal.setAttribute("aria-hidden", "false");
-  requestAnimationFrame(scrollTimelineToStart);
+  if (dom.timelineImage && dom.timelineImage.complete && dom.timelineImage.naturalWidth > 0) {
+    requestAnimationFrame(scrollTimelineToStart);
+  }
 }
 
 function closeTimelineModal() {
@@ -21,8 +31,10 @@ function closeTimelineModal() {
 
 export function setupTimeline() {
   if (dom.timelineImage) {
-    dom.timelineImage.src = TIMELINE_IMAGE_URL;
-    dom.timelineImage.addEventListener("load", scrollTimelineToStart);
+    dom.timelineImage.addEventListener("load", function () {
+      if (!dom.timelineModal || dom.timelineModal.classList.contains("hidden")) return;
+      requestAnimationFrame(scrollTimelineToStart);
+    });
   }
 
   [dom.timelineBtn, dom.startupTimelineBtn].forEach(function (btn) {

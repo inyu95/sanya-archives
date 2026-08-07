@@ -144,7 +144,7 @@ body:has(#year-filter-bar:not(.hidden)) {
 
 .startup-about-btn {
   margin-top: 0;
-  padding: 8px 16px;
+  padding: 4px 16px;
   border: none;
   background: transparent;
   color: rgba(255, 255, 255, 0.85);
@@ -169,8 +169,8 @@ body:has(#year-filter-bar:not(.hidden)) {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
-  margin-top: 20px;
+  gap: 2px;
+  margin-top: 16px;
 }
 
 .mode-switcher {
@@ -178,7 +178,7 @@ body:has(#year-filter-bar:not(.hidden)) {
   align-items: stretch;
   box-sizing: border-box;
   height: 32px;
-  margin: 2px 3px;
+  margin: 1px 2px;
   vertical-align: middle;
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 6px;
@@ -269,7 +269,7 @@ body > #camera-capture-btn {
   width: 32px;
   height: 32px;
   padding: 0;
-  margin: 2px 3px;
+  margin: 1px 2px;
   vertical-align: middle;
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 14%;
@@ -2002,6 +2002,7 @@ span.cesium-sceneModePicker-wrapper {
   display: flex;
   flex-direction: column;
   width: min(96vw, 1400px);
+  height: min(92vh, 900px);
   max-height: min(92vh, 900px);
   border-radius: 0;
   overflow: hidden;
@@ -2068,7 +2069,7 @@ span.cesium-sceneModePicker-wrapper {
 
 #timeline-scroll {
   flex: 1;
-  min-height: 0;
+  min-height: 240px;
   overflow-x: auto;
   overflow-y: hidden;
   -webkit-overflow-scrolling: touch;
@@ -2296,6 +2297,7 @@ span.cesium-sceneModePicker-wrapper {
 
   #timeline-modal-dialog {
     width: 100%;
+    height: calc(100vh - 24px);
     max-height: calc(100vh - 24px);
   }
 
