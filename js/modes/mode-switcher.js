@@ -12,6 +12,7 @@ import {
   filterMemoryPhotosByQuery
 } from "../memory/memory-pins.js";
 import { applyFilters, renderYearFilterBar } from "../filters/filters.js?v=99";
+import { applyHistoricalMapLayer, getCurrentMapYear } from "../imagery/historical-maps.js";
 import { syncToolbarMetaActionsVisibility } from "../ui/toolbar.js";
 
 function setElementHidden(el, hidden) {
