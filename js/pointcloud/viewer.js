@@ -192,6 +192,7 @@ function createPointCloudViewer(containerId, isPreview) {
     homeButton: false,
     sceneModePicker: false,
     navigationHelpButton: false,
+    fullscreenButton: false,
     animation: false,
     timeline: false,
     infoBox: false,
