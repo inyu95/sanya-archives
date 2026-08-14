@@ -181,13 +181,7 @@
           <div id="spot-youtube-previews" class="spot-youtube-previews hidden"></div>
           <div id="pointcloud-preview-section" class="hidden">
             <h3>3Dスキャン</h3>
-            <div id="pointcloud-preview" class="pointcloud-preview" role="button" tabindex="0" aria-label="3Dスキャンを拡大表示">
-              <div id="pointcloud-preview-viewer"></div>
-              <div id="pointcloud-preview-placeholder">
-                <span>3Dスキャンを読み込み中...</span>
-              </div>
-              <span class="pointcloud-preview-hint">クリックで拡大表示</span>
-            </div>
+            <div id="pointcloud-preview-list" class="pointcloud-preview-list"></div>
           </div>
           <p id="text-view"></p>
           <div id="spot-homepage-links" class="spot-homepage-links hidden"></div>
@@ -292,6 +286,7 @@
       <div id="pointcloud-modal-dialog">
         <div id="pointcloud-modal-header">
           <h2 id="pointcloud-modal-title">点群</h2>
+          <span id="pointcloud-modal-counter"></span>
           <button id="pointcloud-modal-reset" type="button" aria-label="表示を元に戻す" title="表示を元に戻す">
             <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
               <path fill="currentColor" d="M12 3L2 12h3v8h6v-6h2v6h6v-8h3L12 3z"/>
@@ -299,8 +294,12 @@
           </button>
           <button id="pointcloud-modal-close" type="button" aria-label="閉じる">×</button>
         </div>
-        <div id="pointcloud-viewer-host">
-          <div id="pointcloud-viewer"></div>
+        <div id="pointcloud-modal-body">
+          <button id="pointcloud-modal-prev" type="button" aria-label="前の3Dスキャン">‹</button>
+          <div id="pointcloud-viewer-host">
+            <div id="pointcloud-viewer"></div>
+          </div>
+          <button id="pointcloud-modal-next" type="button" aria-label="次の3Dスキャン">›</button>
         </div>
       </div>
     </div>

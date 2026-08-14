@@ -12,7 +12,7 @@ import {
   getAppBasePath
 } from "../config/constants.js";
 import { isYouTubeUrl } from "../utils/youtube.js";
-import { parseCommaList } from "../utils/parse.js";
+import { parseCommaList, parsePointCloudAssetIds } from "../utils/parse.js";
 import { loadPinData } from "../filters/filters.js?v=99";
 import { loadMemoryData } from "../memory/memory-data.js";
 import { refreshMemoryModeIfActive } from "../modes/mode-switcher.js";
@@ -24,6 +24,89 @@ function cellValue(cell) {
   if (!cell) return "";
   if (cell.v != null) return cell.v;
   return "";
+}
+
+/** 改行を含むセルは v が空で f に入ることがある */
+function cellTextValue(cell) {
+  if (!cell) return "";
+  if (cell.v != null && cell.v !== "") return cell.v;
+  if (cell.f != null && cell.f !== "") {
+    return String(cell.f).replace(/^'/, "");
+  }
+  return "";
+}
+
+/**
+ * gviz は数値セルの改行入力を先頭行だけ v に載せる（または null）ため、
+ * 表示値 f を優先して複数 ID を読み取る。
+ */
+function cellPointCloudValue(cell) {
+  if (!cell) return "";
+  const formatted = cell.f != null && cell.f !== ""
+    ? String(cell.f).replace(/^'/, "")
+    : "";
+  const raw = cell.v != null && cell.v !== ""
+    ? String(cell.v)
+    : "";
+
+  if (formatted && (formatted.includes("\n") || formatted.includes("\r"))) {
+    return formatted;
+  }
+  if (raw && (raw.includes("\n") || raw.includes("\r"))) {
+    return raw;
+  }
+  if (formatted && formatted.length > raw.length) {
+    return formatted;
+  }
+  return raw || formatted;
+}
+
+function pointCloudTextFromGrid(grid, gvizRowIndex, gvizCell) {
+  const apiRow = grid[gvizRowIndex + 1];
+  const apiCell = apiRow && apiRow.values && apiRow.values[0];
+  if (apiCell) {
+    const entered = apiCell.userEnteredValue || {};
+    if (entered.stringValue) return entered.stringValue;
+    if (entered.numberValue != null && entered.numberValue !== "") {
+      return String(entered.numberValue);
+    }
+    if (apiCell.formattedValue) return apiCell.formattedValue;
+  }
+  return cellPointCloudValue(gvizCell);
+}
+
+function fetchPointCloudColumnGrid() {
+  if (!GOOGLE_SHEETS_API_KEY) return Promise.resolve([]);
+
+  const range = encodeURIComponent(SHEET_MAPPING + "!E1:E1000");
+  const fields = encodeURIComponent(
+    "sheets(data(rowData(values(formattedValue,userEnteredValue))))"
+  );
+  const url = "https://sheets.googleapis.com/v4/spreadsheets/" + SHEET_ID
+    + "?ranges=" + range + "&fields=" + fields + "&key=" + encodeURIComponent(GOOGLE_SHEETS_API_KEY);
+  const controller = new AbortController();
+  const timer = setTimeout(function () { controller.abort(); }, SHEET_FETCH_TIMEOUT_MS);
+
+  return fetch(url, { signal: controller.signal })
+    .then(function (res) {
+      clearTimeout(timer);
+      if (!res.ok) {
+        throw new Error("SHEET_HTTP_" + res.status);
+      }
+      return res.json();
+    })
+    .then(function (json) {
+      const rowData = json && json.sheets && json.sheets[0]
+        && json.sheets[0].data && json.sheets[0].data[0]
+        ? json.sheets[0].data[0].rowData || []
+        : [];
+      return rowData;
+    })
+    .catch(function (err) {
+      clearTimeout(timer);
+      console.warn("3Dスキャン列の Sheets API 取得に失敗:", err);
+      return [];
+    });
 }
 
 function parseLatLonCell(value) {
@@ -86,9 +169,17 @@ function getColumnIndexes(rows) {
     else if (header.indexOf("lat") !== -1 || header.indexOf("lon") !== -1 || header === "座標" || header === "緯度経度") headerMap.coords = i;
     else if (header === "imagefolder" || header === "image" || header === "写真フォルダ") headerMap.imageFolder = i;
     else if (header === "text" || header === "説明") headerMap.text = i;
-    else if (header.indexOf("pointcloud") !== -1) headerMap.pointcloud = i;
-    else if (header === "url") headerMap.url = i;
-    else if (header === "url表示名") headerMap.urlLabel = i;
+    else if (
+      header.indexOf("pointcloud") !== -1
+      || header.indexOf("3dスキャン") !== -1
+      || (header.indexOf("3d") !== -1 && header.indexOf("glb") !== -1)
+    ) headerMap.pointcloud = i;
+    else if (header.indexOf("url表示") !== -1) headerMap.urlLabel = i;
+    else if (
+      header === "url"
+      || header.indexOf("url（") !== -1
+      || header.indexOf("url(") !== -1
+    ) headerMap.url = i;
     else if (header === "開業年") headerMap.openingYear = i;
     else if (header === "閉業年") headerMap.closingYear = i;
     else if (header === "category" || header === "カテゴリ") headerMap.category = i;
@@ -368,7 +459,8 @@ function resolvePinImages(pins) {
   }));
 }
 
-function parseRows(rows) {
+function parseRows(rows, pointcloudGrid) {
+  const grid = pointcloudGrid || [];
   const list = [];
   const col = getColumnIndexes(rows);
   for (let index = 0; index < rows.length; index++) {
@@ -390,9 +482,11 @@ function parseRows(rows) {
       image: "",
       images: [],
       text: String(cellValue(c[col.text]) || ""),
-      pointcloud: cellValue(c[col.pointcloud]) !== "" ? parseInt(cellValue(c[col.pointcloud]), 10) : null,
-      url: String(cellValue(c[col.url]) || "").trim(),
-      urlLabel: String(cellValue(c[col.urlLabel]) || "").trim(),
+      pointcloud: parsePointCloudAssetIds(
+        pointCloudTextFromGrid(grid, index, c[col.pointcloud])
+      ),
+      url: String(cellTextValue(c[col.url]) || "").trim(),
+      urlLabel: String(cellTextValue(c[col.urlLabel]) || "").trim(),
       openingYear: String(cellValue(c[col.openingYear]) || "").trim(),
       closingYear: String(cellValue(c[col.closingYear]) || "").trim(),
       category: String(cellValue(c[col.category]) || ""),
@@ -603,26 +697,29 @@ export function tryLoadSheet() {
 
   return Promise.all([
     fetchSheetData(SHEET_MAPPING),
-    loadMemoryData()
+    loadMemoryData(),
+    fetchPointCloudColumnGrid()
   ])
     .then(function (results) {
       // 生活史ピンの画像解決を待たず、記憶モード表示を先に更新する
       refreshMemoryModeIfActive();
       const rows = results[0];
+      const pointcloudGrid = results[2];
       if (state.appMode !== "memory") {
         setStatus("フィルター情報を読み込み中...");
       }
       return Promise.all([
-        Promise.resolve(rows),
+        Promise.resolve({ rows: rows, pointcloudGrid: pointcloudGrid }),
         fetchCategoryList(),
         fetchRoleList()
       ]);
     })
     .then(function (results) {
-      const rows = results[0];
+      const rows = results[0].rows;
+      const pointcloudGrid = results[0].pointcloudGrid;
       const categories = results[1];
       const roleData = results[2];
-      const pins = parseRows(rows);
+      const pins = parseRows(rows, pointcloudGrid);
       if (pins.length === 0) throw new Error("データ0件");
       if (state.appMode !== "memory") {
         setStatus("写真を読み込み中...");

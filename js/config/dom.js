@@ -85,8 +85,11 @@ export const dom = {
   pointcloudModal: document.getElementById("pointcloud-modal"),
   pointcloudModalBackdrop: document.getElementById("pointcloud-modal-backdrop"),
   pointcloudModalTitle: document.getElementById("pointcloud-modal-title"),
+  pointcloudModalCounter: document.getElementById("pointcloud-modal-counter"),
+  pointcloudModalPrev: document.getElementById("pointcloud-modal-prev"),
+  pointcloudModalNext: document.getElementById("pointcloud-modal-next"),
   pointcloudModalClose: document.getElementById("pointcloud-modal-close"),
   pointcloudModalReset: document.getElementById("pointcloud-modal-reset"),
   pointcloudPreviewSection: document.getElementById("pointcloud-preview-section"),
-  pointcloudPreview: document.getElementById("pointcloud-preview")
+  pointcloudPreviewList: document.getElementById("pointcloud-preview-list")
 };

@@ -19,6 +19,9 @@ import {
   teardownPointCloudModalZoom
 } from "./camera.js";
 
+/** @type {Array<{ assetId: number, index: number, card: HTMLElement, viewerId: string, viewer: object|null, tileset: object|null }>} */
+let pointCloudPreviewEntries = [];
+
 function waitForContainerSize(containerId, maxAttempts) {
   const limit = maxAttempts || 120;
   return new Promise(function (resolve, reject) {
@@ -45,11 +48,53 @@ function showPointCloudPreviewSection(show) {
   dom.pointcloudPreviewSection.classList.toggle("hidden", !show);
 }
 
+function normalizePointCloudAssetIds(assetIds) {
+  if (assetIds == null) return [];
+  if (Array.isArray(assetIds)) {
+    return assetIds.filter(function (id) { return Number.isFinite(id) && id > 0; });
+  }
+  if (typeof assetIds === "number" && assetIds > 0) return [assetIds];
+  return [];
+}
+
+function getCurrentPointCloudAssetId() {
+  const ids = state.currentPointCloudAssetIds;
+  if (!ids.length) return null;
+  return ids[state.currentPointCloudIndex] || ids[0];
+}
+
+function buildPointCloudDisplayTitle() {
+  const total = state.currentPointCloudAssetIds.length;
+  const base = state.currentPointCloudTitle || "3Dスキャン";
+  if (total <= 1) return base;
+  return base + " (" + (state.currentPointCloudIndex + 1) + "/" + total + ")";
+}
+
+function updatePointCloudModalNav() {
+  const total = state.currentPointCloudAssetIds.length;
+  const hasMultiple = total > 1;
+  if (dom.pointcloudModalPrev) {
+    dom.pointcloudModalPrev.disabled = !hasMultiple;
+  }
+  if (dom.pointcloudModalNext) {
+    dom.pointcloudModalNext.disabled = !hasMultiple;
+  }
+  if (dom.pointcloudModalCounter) {
+    dom.pointcloudModalCounter.textContent = hasMultiple
+      ? (state.currentPointCloudIndex + 1) + " / " + total
+      : "";
+  }
+  if (dom.pointcloudModalTitle) {
+    dom.pointcloudModalTitle.textContent = buildPointCloudDisplayTitle();
+  }
+}
+
 function openPointCloudModal(title) {
   if (!dom.pointcloudModal) return;
-  if (dom.pointcloudModalTitle) {
-    dom.pointcloudModalTitle.textContent = title || "点群";
+  if (title) {
+    state.currentPointCloudTitle = title;
   }
+  updatePointCloudModalNav();
   dom.pointcloudModal.classList.remove("hidden");
 }
 
@@ -73,16 +118,69 @@ function destroyPointCloudModalViewer() {
   if (container) container.innerHTML = "";
 }
 
-function destroyPointCloudPreviewViewer() {
+function destroyPointCloudPreviewViewers() {
   state.pointCloudPreviewLoadGeneration++;
-  removeTilesetFromViewer(state.pointCloudPreviewTileset, state.pointCloudPreviewViewer);
-  state.pointCloudPreviewTileset = null;
-  if (isViewerUsable(state.pointCloudPreviewViewer)) {
-    state.pointCloudPreviewViewer.destroy();
+  pointCloudPreviewEntries.forEach(function (entry) {
+    removeTilesetFromViewer(entry.tileset, entry.viewer);
+    if (isViewerUsable(entry.viewer)) {
+      entry.viewer.destroy();
+    }
+  });
+  pointCloudPreviewEntries = [];
+  if (dom.pointcloudPreviewList) {
+    dom.pointcloudPreviewList.innerHTML = "";
   }
-  state.pointCloudPreviewViewer = null;
-  const container = document.getElementById("pointcloud-preview-viewer");
-  if (container) container.innerHTML = "";
+}
+
+function createPreviewCard(assetId, index, total) {
+  const card = document.createElement("div");
+  card.className = "pointcloud-preview loading";
+  card.setAttribute("role", "button");
+  card.tabIndex = 0;
+  card.setAttribute("aria-label", "3Dスキャンを拡大表示");
+
+  const viewerHost = document.createElement("div");
+  const viewerId = "pointcloud-preview-viewer-" + index + "-" + assetId;
+  viewerHost.className = "pointcloud-preview-viewer";
+  viewerHost.id = viewerId;
+
+  const placeholder = document.createElement("div");
+  placeholder.className = "pointcloud-preview-placeholder";
+  const placeholderLabel = document.createElement("span");
+  placeholderLabel.textContent = "3Dスキャンを読み込み中...";
+  placeholder.appendChild(placeholderLabel);
+
+  const hint = document.createElement("span");
+  hint.className = "pointcloud-preview-hint";
+  hint.textContent = "クリックで拡大表示";
+
+  card.appendChild(viewerHost);
+  card.appendChild(placeholder);
+  card.appendChild(hint);
+
+  if (total > 1) {
+    const badge = document.createElement("span");
+    badge.className = "pointcloud-preview-badge";
+    badge.textContent = (index + 1) + " / " + total;
+    card.appendChild(badge);
+  }
+
+  return { card: card, viewerId: viewerId };
+}
+
+function setPreviewCardLoading(card, loading, previewReady) {
+  if (!card) return;
+  card.classList.toggle("loading", loading);
+  const placeholder = card.querySelector(".pointcloud-preview-placeholder");
+  if (!placeholder) return;
+  const showPlaceholder = loading || !previewReady;
+  placeholder.classList.toggle("hidden", !showPlaceholder);
+  const label = placeholder.querySelector("span");
+  if (label) {
+    label.textContent = loading
+      ? "3Dスキャンを読み込み中..."
+      : "クリックして3Dスキャンを表示";
+  }
 }
 
 function createPointCloudViewer(containerId, isPreview) {
@@ -231,26 +329,6 @@ function waitForFirstTilePaint(tileset, timeoutMs) {
   });
 }
 
-function ensurePointCloudPreviewViewer() {
-  if (isViewerUsable(state.pointCloudPreviewViewer)) {
-    state.pointCloudPreviewViewer.resize();
-    return Promise.resolve(state.pointCloudPreviewViewer);
-  }
-  return waitForContainerSize("pointcloud-preview-viewer").then(function () {
-    state.pointCloudPreviewViewer = createPointCloudViewer("pointcloud-preview-viewer", true);
-    return new Promise(function (resolve, reject) {
-      requestAnimationFrame(function () {
-        if (!isViewerUsable(state.pointCloudPreviewViewer)) {
-          reject(new Error("プレビュービューアの初期化に失敗しました"));
-          return;
-        }
-        state.pointCloudPreviewViewer.resize();
-        resolve(state.pointCloudPreviewViewer);
-      });
-    });
-  });
-}
-
 function ensurePointCloudModalViewer() {
   return waitForContainerSize("pointcloud-viewer").then(function () {
     destroyPointCloudModalViewer();
@@ -343,7 +421,7 @@ function removeTilesetFromViewer(tileset, targetViewer) {
   }
 }
 
-function mountTilesetInViewer(tileset, targetViewer, isPreview, isLoadActive) {
+function mountTilesetInViewer(tileset, targetViewer, isPreview, isLoadActive, previousTileset) {
   function assertLoadActive() {
     if (!isLoadActive()) {
       const err = new Error("LOAD_CANCELLED");
@@ -359,9 +437,9 @@ function mountTilesetInViewer(tileset, targetViewer, isPreview, isLoadActive) {
 
   assertLoadActive();
   configurePointCloudTileset(tileset);
-  if (isPreview) {
-    removeTilesetFromViewer(state.pointCloudPreviewTileset, targetViewer);
-  } else {
+  if (previousTileset) {
+    removeTilesetFromViewer(previousTileset, targetViewer);
+  } else if (!isPreview) {
     removeTilesetFromViewer(state.pointCloudTileset, targetViewer);
   }
 
@@ -395,10 +473,10 @@ function mountTilesetInViewer(tileset, targetViewer, isPreview, isLoadActive) {
 }
 
 function reloadPointCloudPreviewIfNeeded() {
-  if (!state.currentPointCloudAssetId) return;
+  if (!state.currentPointCloudAssetIds.length) return;
   if (!dom.pointcloudPreviewSection || dom.pointcloudPreviewSection.classList.contains("hidden")) return;
   clearPointCloudTilesetCache();
-  loadPointCloudPreview(state.currentPointCloudAssetId, state.currentPointCloudTitle);
+  loadPointCloudPreview(state.currentPointCloudAssetIds, state.currentPointCloudTitle);
 }
 
 function resetPointCloudView() {
@@ -414,19 +492,18 @@ function resetPointCloudView() {
 export function clearPointCloudModal(reloadPreview) {
   destroyPointCloudModalViewer();
   closePointCloudModal();
-  setPointCloudPreviewLoading(false);
   if (reloadPreview) {
     reloadPointCloudPreviewIfNeeded();
   }
 }
 
 export function clearPointCloudPreview() {
-  state.pointCloudPreviewLoadGeneration++;
-  destroyPointCloudPreviewViewer();
+  destroyPointCloudPreviewViewers();
   state.currentPointCloudAssetId = null;
+  state.currentPointCloudAssetIds = [];
+  state.currentPointCloudIndex = 0;
   state.currentPointCloudTitle = "";
   showPointCloudPreviewSection(false);
-  setPointCloudPreviewLoading(false);
   clearPointCloudTilesetCache();
 }
 
@@ -435,74 +512,127 @@ export function clearPointCloud() {
   clearPointCloudPreview();
 }
 
-export function loadPointCloudPreview(assetId, title) {
-  if (state.currentPointCloudAssetId !== assetId) {
-    destroyPointCloudPreviewViewer();
-    clearPointCloudTilesetCache();
+function loadPreviewEntry(entry, loadGeneration) {
+  setPreviewCardLoading(entry.card, true, false);
+
+  waitForContainerSize(entry.viewerId)
+    .then(function () {
+      if (loadGeneration !== state.pointCloudPreviewLoadGeneration) return null;
+      entry.viewer = createPointCloudViewer(entry.viewerId, true);
+      return new Promise(function (resolve, reject) {
+        requestAnimationFrame(function () {
+          if (!isViewerUsable(entry.viewer)) {
+            reject(new Error("プレビュービューアの初期化に失敗しました"));
+            return;
+          }
+          entry.viewer.resize();
+          resolve(entry.viewer);
+        });
+      });
+    })
+    .then(function (previewViewer) {
+      if (!previewViewer || loadGeneration !== state.pointCloudPreviewLoadGeneration) return null;
+      return mountPreviewTileset(previewViewer, entry.assetId, loadGeneration, entry.tileset);
+    })
+    .then(function (tileset) {
+      if (!tileset || loadGeneration !== state.pointCloudPreviewLoadGeneration) return;
+      entry.tileset = tileset;
+      setPreviewCardLoading(entry.card, false, true);
+    })
+    .catch(function (err) {
+      if (loadGeneration !== state.pointCloudPreviewLoadGeneration) return;
+      if (err && err.code === "LOAD_CANCELLED") return;
+      entry.card.classList.remove("loading");
+      setPreviewCardLoading(entry.card, false, false);
+      const label = entry.card.querySelector(".pointcloud-preview-placeholder span");
+      if (label) {
+        label.textContent = "3Dスキャンの読み込みに失敗しました";
+      }
+      console.error("3Dスキャンプレビューの読み込みに失敗:", entry.assetId, err);
+    });
+}
+
+export function loadPointCloudPreview(assetIds, title) {
+  const ids = normalizePointCloudAssetIds(assetIds);
+  if (!ids.length) {
+    clearPointCloudPreview();
+    return;
   }
-  state.currentPointCloudAssetId = assetId;
+
+  destroyPointCloudPreviewViewers();
+  clearPointCloudTilesetCache();
+
+  state.currentPointCloudAssetIds = ids;
+  state.currentPointCloudIndex = 0;
+  state.currentPointCloudAssetId = ids[0];
   state.currentPointCloudTitle = title || "3Dスキャン";
   showPointCloudPreviewSection(true);
-  setPointCloudPreviewLoading(true);
+
+  if (!dom.pointcloudPreviewList) return;
 
   state.pointCloudPreviewLoadGeneration++;
   const loadGeneration = state.pointCloudPreviewLoadGeneration;
 
-  ensurePointCloudPreviewViewer()
-    .then(function (previewViewer) {
-      if (loadGeneration !== state.pointCloudPreviewLoadGeneration) return null;
-      return mountPreviewTileset(previewViewer, assetId, loadGeneration);
-    })
-    .then(function (tileset) {
-      if (!tileset || loadGeneration !== state.pointCloudPreviewLoadGeneration) return;
-      state.pointCloudPreviewTileset = tileset;
-      setPointCloudPreviewLoading(false, true);
-    })
-    .catch(function (err) {
-      if (loadGeneration !== state.pointCloudPreviewLoadGeneration) return;
-      showPointCloudPreviewSection(false);
-      setPointCloudPreviewLoading(false, false);
-      console.error("3Dスキャンプレビューの読み込みに失敗:", err);
-      setStatus("3Dスキャンプレビューの読み込みに失敗しました: " + err.message, "error");
+  ids.forEach(function (assetId, index) {
+    const preview = createPreviewCard(assetId, index, ids.length);
+    dom.pointcloudPreviewList.appendChild(preview.card);
+
+    const entry = {
+      assetId: assetId,
+      index: index,
+      card: preview.card,
+      viewerId: preview.viewerId,
+      viewer: null,
+      tileset: null
+    };
+    pointCloudPreviewEntries.push(entry);
+
+    preview.card.addEventListener("click", function () {
+      openPointCloudPopupAtIndex(index);
     });
+    preview.card.addEventListener("keydown", function (event) {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        openPointCloudPopupAtIndex(index);
+      }
+    });
+
+    loadPreviewEntry(entry, loadGeneration);
+  });
 }
 
-function setPointCloudPreviewLoading(loading, previewReady) {
-  if (!dom.pointcloudPreview) return;
-  dom.pointcloudPreview.classList.toggle("loading", loading);
-  const placeholder = document.getElementById("pointcloud-preview-placeholder");
-  if (placeholder) {
-    const showPlaceholder = loading || !previewReady;
-    placeholder.classList.toggle("hidden", !showPlaceholder);
-    const label = placeholder.querySelector("span");
-    if (label) {
-      label.textContent = loading
-        ? "3Dスキャンを読み込み中..."
-        : "クリックして3Dスキャンを表示";
-    }
-  }
+function stepPointCloudScan(delta) {
+  if (state.currentPointCloudAssetIds.length <= 1) return;
+  if (!dom.pointcloudModal || dom.pointcloudModal.classList.contains("hidden")) return;
+
+  const total = state.currentPointCloudAssetIds.length;
+  const newIndex = (state.currentPointCloudIndex + delta + total) % total;
+  state.currentPointCloudIndex = newIndex;
+  state.currentPointCloudAssetId = state.currentPointCloudAssetIds[newIndex];
+  updatePointCloudModalNav();
+  reloadModalTileset();
 }
 
-function mountPreviewTileset(previewViewer, assetId, loadGeneration) {
-  return getPointCloudTileset(assetId).then(function (tileset) {
+function mountPreviewTileset(previewViewer, assetId, loadGeneration, previousTileset) {
+  return createTilesetFromIon(assetId).then(function (tileset) {
     return mountTilesetInViewer(tileset, previewViewer, true, function () {
       return loadGeneration === state.pointCloudPreviewLoadGeneration;
-    });
+    }, previousTileset);
   }).catch(function (err) {
     if (err && err.code === "LOAD_CANCELLED") {
       return null;
     }
-    clearPointCloudTilesetCache();
-    return getPointCloudTileset(assetId, true).then(function (tileset) {
+    return createTilesetFromIon(assetId).then(function (tileset) {
       return mountTilesetInViewer(tileset, previewViewer, true, function () {
         return loadGeneration === state.pointCloudPreviewLoadGeneration;
-      });
+      }, previousTileset);
     });
   });
 }
 
-function mountModalTileset(modalViewer, loadGeneration) {
-  return getPointCloudTileset(state.currentPointCloudAssetId).then(function (tileset) {
+function mountModalTileset(modalViewer, loadGeneration, assetId) {
+  const targetAssetId = assetId || state.currentPointCloudAssetId;
+  return getPointCloudTileset(targetAssetId).then(function (tileset) {
     return mountTilesetInViewer(tileset, modalViewer, false, function () {
       return loadGeneration === state.pointCloudModalLoadGeneration
         && state.pointCloudViewer === modalViewer;
@@ -512,7 +642,7 @@ function mountModalTileset(modalViewer, loadGeneration) {
       return null;
     }
     clearPointCloudTilesetCache();
-    return getPointCloudTileset(state.currentPointCloudAssetId, true).then(function (tileset) {
+    return getPointCloudTileset(targetAssetId, true).then(function (tileset) {
       return mountTilesetInViewer(tileset, modalViewer, false, function () {
         return loadGeneration === state.pointCloudModalLoadGeneration
           && state.pointCloudViewer === modalViewer;
@@ -521,16 +651,63 @@ function mountModalTileset(modalViewer, loadGeneration) {
   });
 }
 
-function openPointCloudPopup() {
-  if (!state.currentPointCloudAssetId) return;
+function reloadModalTileset() {
+  const assetId = getCurrentPointCloudAssetId();
+  if (!assetId) return;
 
-  destroyPointCloudPreviewViewer();
-  openPointCloudModal(state.currentPointCloudTitle);
+  const modalViewer = state.pointCloudViewer;
+  if (!isViewerUsable(modalViewer)) return;
+
+  state.pointCloudModalLoadGeneration++;
+  const loadGeneration = state.pointCloudModalLoadGeneration;
+
+  if (state.pointCloudTileset && isViewerUsable(modalViewer)) {
+    teardownPointCloudModalZoom(modalViewer);
+    removeTilesetFromViewer(state.pointCloudTileset, modalViewer);
+  }
+  state.pointCloudTileset = null;
+  clearPointCloudTilesetCache();
+  setStatus("3Dスキャンを読み込み中...");
+
+  mountModalTileset(modalViewer, loadGeneration, assetId)
+    .then(function (tileset) {
+      if (!tileset || loadGeneration !== state.pointCloudModalLoadGeneration) {
+        if (!tileset) {
+          setStatus("3Dスキャンの読み込みが中断されました。もう一度お試しください。", "error");
+        }
+        return;
+      }
+      state.pointCloudTileset = tileset;
+      hideStatus();
+    })
+    .catch(function (err) {
+      if (loadGeneration !== state.pointCloudModalLoadGeneration) return;
+      console.error("3Dスキャンの読み込みに失敗:", err);
+      clearPointCloudModal(false);
+      setStatus("3Dスキャンの読み込みに失敗しました: " + err.message, "error");
+    });
+}
+
+function openPointCloudPopupAtIndex(index) {
+  const ids = state.currentPointCloudAssetIds;
+  if (!ids.length || index < 0 || index >= ids.length) return;
+
+  state.currentPointCloudIndex = index;
+  state.currentPointCloudAssetId = ids[index];
+  openPointCloudPopup();
+}
+
+function openPointCloudPopup() {
+  const assetId = getCurrentPointCloudAssetId();
+  if (!assetId) return;
+
+  destroyPointCloudPreviewViewers();
+  openPointCloudModal();
   setStatus("3Dスキャンを読み込み中...");
 
   Promise.all([
     ensurePointCloudModalViewer(),
-    getPointCloudTileset(state.currentPointCloudAssetId)
+    getPointCloudTileset(assetId)
   ])
     .then(function (results) {
       const modalViewer = results[0];
@@ -538,7 +715,7 @@ function openPointCloudPopup() {
       if (!isViewerUsable(modalViewer) || state.pointCloudViewer !== modalViewer) {
         return null;
       }
-      return mountModalTileset(modalViewer, loadGeneration);
+      return mountModalTileset(modalViewer, loadGeneration, assetId);
     })
     .then(function (tileset) {
       if (!tileset) {
@@ -575,21 +752,36 @@ export function setupPointCloudModal() {
     });
   }
 
-  if (dom.pointcloudPreview) {
-    dom.pointcloudPreview.addEventListener("click", openPointCloudPopup);
-    dom.pointcloudPreview.addEventListener("keydown", function (event) {
-      if (event.key === "Enter" || event.key === " ") {
-        event.preventDefault();
-        openPointCloudPopup();
-      }
+  if (dom.pointcloudModalPrev) {
+    dom.pointcloudModalPrev.addEventListener("click", function (event) {
+      event.stopPropagation();
+      stepPointCloudScan(-1);
     });
   }
 
-  window.addEventListener("resize", function () {
-    if (isViewerUsable(state.pointCloudPreviewViewer) && dom.pointcloudPreviewSection && !dom.pointcloudPreviewSection.classList.contains("hidden")) {
-      state.pointCloudPreviewViewer.resolutionScale = getPointCloudResolutionScale();
-      state.pointCloudPreviewViewer.resize();
+  if (dom.pointcloudModalNext) {
+    dom.pointcloudModalNext.addEventListener("click", function (event) {
+      event.stopPropagation();
+      stepPointCloudScan(1);
+    });
+  }
+
+  document.addEventListener("keydown", function (event) {
+    if (!dom.pointcloudModal || dom.pointcloudModal.classList.contains("hidden")) return;
+    if (event.key === "ArrowLeft") {
+      stepPointCloudScan(-1);
+    } else if (event.key === "ArrowRight") {
+      stepPointCloudScan(1);
     }
+  });
+
+  window.addEventListener("resize", function () {
+    pointCloudPreviewEntries.forEach(function (entry) {
+      if (isViewerUsable(entry.viewer)) {
+        entry.viewer.resolutionScale = getPointCloudResolutionScale();
+        entry.viewer.resize();
+      }
+    });
     if (isViewerUsable(state.pointCloudViewer) && dom.pointcloudModal && !dom.pointcloudModal.classList.contains("hidden")) {
       state.pointCloudViewer.resolutionScale = getPointCloudResolutionScale();
       state.pointCloudViewer.resize();

@@ -10,6 +10,13 @@ export function parseLineList(value) {
   return String(value).split(/\r?\n/).map(function (item) { return item.trim(); }).filter(Boolean);
 }
 
+/** Cesium Ion の asset ID を改行区切りで複数指定 */
+export function parsePointCloudAssetIds(value) {
+  return parseLineList(value)
+    .map(function (item) { return parseInt(item, 10); })
+    .filter(function (id) { return Number.isFinite(id) && id > 0; });
+}
+
 const ERA_YEAR_OFFSETS = {
   "明治": 1867,
   "大正": 1911,

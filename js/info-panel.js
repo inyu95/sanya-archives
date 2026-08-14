@@ -491,9 +491,9 @@ export function showPinInfo(entity) {
       props.closingYear ? props.closingYear.getValue() : ""
     )
   );
-  const assetId = props.pointcloudAssetId.getValue();
-  if (assetId) {
-    loadPointCloudPreview(assetId, entity.name);
+  const assetIds = props.pointcloudAssetIds ? props.pointcloudAssetIds.getValue() : [];
+  if (assetIds && assetIds.length > 0) {
+    loadPointCloudPreview(assetIds, entity.name);
   } else {
     clearPointCloudPreview();
   }

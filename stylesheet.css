@@ -1453,6 +1453,42 @@ body > #camera-capture-btn {
   color: var(--jdr-text-muted);
 }
 
+#pointcloud-preview-list,
+.pointcloud-preview-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+#pointcloud-modal-prev,
+#pointcloud-modal-next {
+  flex-shrink: 0;
+  align-self: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.35);
+  color: #fff;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+#pointcloud-modal-prev:hover,
+#pointcloud-modal-next:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.45);
+}
+
+#pointcloud-modal-prev:disabled,
+#pointcloud-modal-next:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
 .pointcloud-preview {
   position: relative;
   display: block;
@@ -1476,17 +1512,17 @@ body > #camera-capture-btn {
   pointer-events: none;
 }
 
-#pointcloud-preview-viewer {
+.pointcloud-preview-viewer {
   position: absolute;
   inset: 0;
   pointer-events: none;
 }
 
-#pointcloud-preview-viewer .cesium-viewer-bottom {
+.pointcloud-preview-viewer .cesium-viewer-bottom {
   display: none;
 }
 
-#pointcloud-preview-placeholder {
+.pointcloud-preview-placeholder {
   position: absolute;
   inset: 0;
   display: flex;
@@ -1500,11 +1536,25 @@ body > #camera-capture-btn {
   background: rgba(26, 26, 26, 0.92);
 }
 
-#pointcloud-preview-placeholder.hidden {
+.pointcloud-preview-placeholder.hidden {
   display: none;
 }
 
-#pointcloud-preview-placeholder span {
+.pointcloud-preview-placeholder span {
+  pointer-events: none;
+}
+
+.pointcloud-preview-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: rgba(17, 17, 17, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  font-size: 11px;
   pointer-events: none;
 }
 
@@ -1588,6 +1638,22 @@ body > #camera-capture-btn {
   color: #fff;
 }
 
+#pointcloud-modal-counter {
+  flex-shrink: 0;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+#pointcloud-modal-body {
+  display: flex;
+  align-items: stretch;
+  flex: 1;
+  min-height: 0;
+  gap: 8px;
+  padding: 8px;
+  box-sizing: border-box;
+}
+
 #pointcloud-modal-reset,
 #pointcloud-modal-close {
   flex-shrink: 0;
@@ -1621,6 +1687,7 @@ body > #camera-capture-btn {
 
 #pointcloud-viewer-host {
   flex: 1;
+  min-width: 0;
   min-height: 320px;
   position: relative;
   background: #1a1a1a;

@@ -121,7 +121,7 @@ function addPhotoPin(pin, groundH, onDone, generation, scene2D) {
     image: pin.image || "",
     images: pin.images || [],
     text: pin.text || "",
-    pointcloudAssetId: pin.pointcloud,
+    pointcloudAssetIds: pin.pointcloud || [],
     url: pin.url || "",
     urlLabel: pin.urlLabel || "",
     openingYear: pin.openingYear || "",
