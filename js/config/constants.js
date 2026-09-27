@@ -1,7 +1,7 @@
 /** デプロイ時に increment して ES モジュールのブラウザキャッシュを無効化 */
-export const APP_MODULE_VERSION = "142";
+export const APP_MODULE_VERSION = "143";
 
-export const PIN_CIRCLE_SIZE = 52;
+export const PIN_CIRCLE_SIZE = 48;
 /** ピン画像の描画倍率（表示サイズは PIN_CIRCLE_SIZE のまま） */
 export const PIN_RENDER_SCALE = 16;
 /**
