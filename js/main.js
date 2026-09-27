@@ -282,18 +282,10 @@ function startGoogle3DPaintMonitor(tileset) {
 }
 
 function applyMainViewerPerformanceTweaks(viewer) {
-  const dpr = window.devicePixelRatio || 1;
-  const cssPixels = (window.innerWidth || 0) * (window.innerHeight || 0);
-  // ピンの見た目を優先しつつ、Google Earth では必要最小限に抑える
-  if (needsExtraLightGoogleEarth()) {
-    viewer.resolutionScale = dpr >= 3 ? 0.65 : 0.75;
-  } else if (dpr >= 2 || cssPixels >= 2.2e6) {
-    viewer.resolutionScale = dpr >= 2.5 ? 0.8 : 0.9;
-  } else if (dpr >= 1.5) {
-    viewer.resolutionScale = 0.95;
-  } else {
-    viewer.resolutionScale = 1;
-  }
+  // ピン文字を最大シャープにするため、描画解像度は DPR フル（resolutionScale=1）。
+  // ピンはシーンと同じフレームバッファに描かれるため、ここを下げると必ず荒くなる。
+  viewer.useBrowserRecommendedResolution = false;
+  viewer.resolutionScale = 1;
   const scene = viewer.scene;
   if (typeof scene.fxaa === "boolean") {
     scene.fxaa = false;

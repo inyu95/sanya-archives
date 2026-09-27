@@ -1,9 +1,9 @@
 /** デプロイ時に increment して ES モジュールのブラウザキャッシュを無効化 */
-export const APP_MODULE_VERSION = "140";
+export const APP_MODULE_VERSION = "142";
 
-export const PIN_CIRCLE_SIZE = 48;
+export const PIN_CIRCLE_SIZE = 52;
 /** ピン画像の描画倍率（表示サイズは PIN_CIRCLE_SIZE のまま） */
-export const PIN_RENDER_SCALE = 12;
+export const PIN_RENDER_SCALE = 16;
 /**
  * 複数生活行為時の団子間隔。
  * pin-art の outerR = size/2 - 1 に合わせ、円が重ならず外縁で接する距離。
